@@ -14,8 +14,7 @@ class AdminPricingManagerPage extends StatefulWidget {
   final AdminPricingApiService? api;
 
   @override
-  State<AdminPricingManagerPage> createState() =>
-      _AdminPricingManagerPageState();
+  State<AdminPricingManagerPage> createState() => _AdminPricingManagerPageState();
 }
 
 class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
@@ -84,17 +83,13 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
     } catch (err) {
       if (!mounted) return;
       setState(() {
-        _error = userFacingError(
-          err,
-          fallback: context.l10n.t('ui_load_failed'),
-        );
+        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
         _loading = false;
       });
     }
   }
 
-  bool _isNarrow(BuildContext context) =>
-      MediaQuery.sizeOf(context).width < 600;
+  bool _isNarrow(BuildContext context) => MediaQuery.sizeOf(context).width < 600;
 
   double _filterWidth(BuildContext context, double desktopWidth) {
     if (!_isNarrow(context)) return desktopWidth;
@@ -114,9 +109,9 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
         return false;
       }
       if (_routeOriginFilter.isNotEmpty &&
-          !(map['originLocationCode'] as String? ?? '').toUpperCase().contains(
-            _routeOriginFilter.toUpperCase(),
-          )) {
+          !(map['originLocationCode'] as String? ?? '')
+              .toUpperCase()
+              .contains(_routeOriginFilter.toUpperCase())) {
         return false;
       }
       if (_routeDestFilter.isNotEmpty &&
@@ -125,10 +120,8 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
               .contains(_routeDestFilter.toUpperCase())) {
         return false;
       }
-      if (_routeActiveFilter == 'active' && map['isActive'] != true)
-        return false;
-      if (_routeActiveFilter == 'inactive' && map['isActive'] == true)
-        return false;
+      if (_routeActiveFilter == 'active' && map['isActive'] != true) return false;
+      if (_routeActiveFilter == 'inactive' && map['isActive'] == true) return false;
       if (_routeSearch.isNotEmpty) {
         final haystack =
             '${map['id']} ${map['serviceTypeCode']} ${map['originLocationCode']} ${map['destinationLocationCode']}'
@@ -142,8 +135,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
   List<dynamic> get _filteredPrices {
     return _prices.where((row) {
       final map = Map<String, dynamic>.from(row as Map);
-      if (_priceRouteFilter != null &&
-          '${map['routeId']}' != _priceRouteFilter) {
+      if (_priceRouteFilter != null && '${map['routeId']}' != _priceRouteFilter) {
         return false;
       }
       if (_priceStatusFilter != null &&
@@ -157,10 +149,8 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
   List<dynamic> get _filteredPolicies {
     return _policies.where((row) {
       final map = Map<String, dynamic>.from(row as Map);
-      if (_policyActiveFilter == 'active' && map['isActive'] != true)
-        return false;
-      if (_policyActiveFilter == 'inactive' && map['isActive'] == true)
-        return false;
+      if (_policyActiveFilter == 'active' && map['isActive'] != true) return false;
+      if (_policyActiveFilter == 'inactive' && map['isActive'] == true) return false;
       return true;
     }).toList();
   }
@@ -178,14 +168,8 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
         title: Text(title),
         content: Text(message),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.t('ui_cancel')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.t('ui_confirm_action')),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.t('ui_cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.t('ui_confirm_action'))),
         ],
       ),
     );
@@ -225,27 +209,15 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                 children: [
                   ValueListenableBuilder(
                     valueListenable: serviceType,
-                    builder: (context, selected, child) =>
-                        DropdownButtonFormField<String>(
-                          key: ValueKey(selected),
-                          initialValue: selected,
-                          decoration: InputDecoration(
-                            labelText: l10n.t(
-                              'admin_pricing_filter_service_type',
-                            ),
-                          ),
-                          items: kServiceTypes
-                              .map(
-                                (code) => DropdownMenuItem(
-                                  value: code,
-                                  child: Text(code),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: existing == null
-                              ? (v) => serviceType.value = v ?? selected
-                              : null,
-                        ),
+                    builder: (context, selected, child) => DropdownButtonFormField<String>(
+                      key: ValueKey(selected),
+                      initialValue: selected,
+                      decoration: InputDecoration(labelText: l10n.t('admin_pricing_filter_service_type')),
+                      items: kServiceTypes
+                          .map((code) => DropdownMenuItem(value: code, child: Text(code)))
+                          .toList(),
+                      onChanged: existing == null ? (v) => serviceType.value = v ?? selected : null,
+                    ),
                   ),
                   TextFormField(
                     controller: originCtrl,
@@ -254,9 +226,8 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                       errorText: fieldErrors?['originLocationCode'],
                     ),
                     enabled: existing == null,
-                    validator: (v) => v == null || v.trim().isEmpty
-                        ? context.l10n.t('admin_ui_origin_is_required')
-                        : null,
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? context.l10n.t('admin_ui_origin_is_required') : null,
                   ),
                   TextFormField(
                     controller: destCtrl,
@@ -265,9 +236,8 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                       errorText: fieldErrors?['destinationLocationCode'],
                     ),
                     enabled: existing == null,
-                    validator: (v) => v == null || v.trim().isEmpty
-                        ? context.l10n.t('admin_ui_destination_is_required')
-                        : null,
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? context.l10n.t('admin_ui_destination_is_required') : null,
                   ),
                   ValueListenableBuilder(
                     valueListenable: active,
@@ -280,20 +250,14 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                   if (fieldErrors?['general'] != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        fieldErrors!['general']!,
-                        style: const TextStyle(color: Colors.red),
-                      ),
+                      child: Text(fieldErrors!['general']!, style: const TextStyle(color: Colors.red)),
                     ),
                 ],
               ),
             ),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(l10n.t('ui_cancel')),
-            ),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.t('ui_cancel'))),
             FilledButton(
               onPressed: _saving
                   ? null
@@ -305,12 +269,8 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                         if (existing == null) {
                           await _api.createRoute({
                             'serviceTypeCode': serviceType.value,
-                            'originLocationCode': originCtrl.text
-                                .trim()
-                                .toUpperCase(),
-                            'destinationLocationCode': destCtrl.text
-                                .trim()
-                                .toUpperCase(),
+                            'originLocationCode': originCtrl.text.trim().toUpperCase(),
+                            'destinationLocationCode': destCtrl.text.trim().toUpperCase(),
                             'isActive': active.value,
                           });
                         } else {
@@ -321,19 +281,11 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                         if (ctx.mounted) Navigator.pop(ctx);
                         await _loadAll();
                       } on AdminPricingApiException catch (err) {
-                        setDialogState(
-                          () => fieldErrors =
-                              err.fieldErrors ?? {'general': err.message},
-                        );
+                        setDialogState(() => fieldErrors = err.fieldErrors ?? {'general': err.message});
                       } catch (err) {
-                        setDialogState(
-                          () => fieldErrors = {
-                            'general': userFacingError(
-                              err,
-                              fallback: context.l10n.t('ui_action_failed'),
-                            ),
-                          },
-                        );
+                        setDialogState(() => fieldErrors = {
+                              'general': userFacingError(err, fallback: context.l10n.t('ui_action_failed')),
+                            });
                       } finally {
                         if (mounted) setState(() => _saving = false);
                       }
@@ -368,9 +320,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: Text(
-            l10n
-                .t('admin_pricing_dialog_copy_route')
-                .replaceAll('{id}', '${route['id']}'),
+            l10n.t('admin_pricing_dialog_copy_route').replaceAll('{id}', '${route['id']}'),
           ),
           content: Form(
             key: formKey,
@@ -380,16 +330,12 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                 labelText: context.l10n.t('admin_ui_new_destination_code'),
                 errorText: fieldErrors?['destinationLocationCode'],
               ),
-              validator: (v) => v == null || v.trim().isEmpty
-                  ? context.l10n.t('admin_ui_destination_is_required')
-                  : null,
+              validator: (v) =>
+                  v == null || v.trim().isEmpty ? context.l10n.t('admin_ui_destination_is_required') : null,
             ),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(l10n.t('ui_cancel')),
-            ),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.t('ui_cancel'))),
             FilledButton(
               onPressed: _saving
                   ? null
@@ -399,26 +345,16 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                       try {
                         await _api.copyRoute(route['id'] as int, {
                           'originLocationId': route['originLocationId'],
-                          'destinationLocationCode': destCtrl.text
-                              .trim()
-                              .toUpperCase(),
+                          'destinationLocationCode': destCtrl.text.trim().toUpperCase(),
                         });
                         if (ctx.mounted) Navigator.pop(ctx);
                         await _loadAll();
                       } on AdminPricingApiException catch (err) {
-                        setDialogState(
-                          () => fieldErrors =
-                              err.fieldErrors ?? {'general': err.message},
-                        );
+                        setDialogState(() => fieldErrors = err.fieldErrors ?? {'general': err.message});
                       } catch (err) {
-                        setDialogState(
-                          () => fieldErrors = {
-                            'general': userFacingError(
-                              err,
-                              fallback: context.l10n.t('ui_action_failed'),
-                            ),
-                          },
-                        );
+                        setDialogState(() => fieldErrors = {
+                              'general': userFacingError(err, fallback: context.l10n.t('ui_action_failed')),
+                            });
                       } finally {
                         if (mounted) setState(() => _saving = false);
                       }
@@ -435,25 +371,15 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
   Future<void> _showPriceDialog({Map<String, dynamic>? existing}) async {
     final l10n = context.l10n;
     final routeId = ValueNotifier<String?>(
-      existing != null
-          ? '${existing['routeId']}'
-          : (_routes.isNotEmpty ? '${_routes.first['id']}' : null),
+      existing != null ? '${existing['routeId']}' : (_routes.isNotEmpty ? '${_routes.first['id']}' : null),
     );
     final vehicleType = ValueNotifier<String>(
       existing?['vehicleTypeCode'] as String? ?? _vehicleTypes.first,
     );
-    final priceCtrl = TextEditingController(
-      text: '${existing?['price'] ?? ''}',
-    );
-    final currencyCtrl = TextEditingController(
-      text: existing?['currency'] as String? ?? 'THB',
-    );
-    final fromCtrl = TextEditingController(
-      text: existing?['effectiveFrom'] as String? ?? '',
-    );
-    final toCtrl = TextEditingController(
-      text: existing?['effectiveTo'] as String? ?? '',
-    );
+    final priceCtrl = TextEditingController(text: '${existing?['price'] ?? ''}');
+    final currencyCtrl = TextEditingController(text: existing?['currency'] as String? ?? 'THB');
+    final fromCtrl = TextEditingController(text: existing?['effectiveFrom'] as String? ?? '');
+    final toCtrl = TextEditingController(text: existing?['effectiveTo'] as String? ?? '');
     final active = ValueNotifier<bool>(existing?['isActive'] as bool? ?? true);
     final formKey = GlobalKey<FormState>();
     Map<String, String>? fieldErrors;
@@ -477,46 +403,33 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                   children: [
                     ValueListenableBuilder(
                       valueListenable: routeId,
-                      builder: (context, selected, child) =>
-                          DropdownButtonFormField<String>(
-                            key: ValueKey(selected),
-                            initialValue: selected,
-                            decoration: InputDecoration(labelText: 'Route'),
-                            items: _routes.map((row) {
+                      builder: (context, selected, child) => DropdownButtonFormField<String>(
+                        key: ValueKey(selected),
+                        initialValue: selected,
+                        decoration: InputDecoration(labelText: 'Route'),
+                        items: _routes
+                            .map((row) {
                               final map = Map<String, dynamic>.from(row as Map);
                               return DropdownMenuItem(
                                 value: '${map['id']}',
                                 child: Text(_routeLabel(map)),
                               );
-                            }).toList(),
-                            onChanged: existing == null
-                                ? (v) => routeId.value = v
-                                : null,
-                          ),
+                            })
+                            .toList(),
+                        onChanged: existing == null ? (v) => routeId.value = v : null,
+                      ),
                     ),
                     ValueListenableBuilder(
                       valueListenable: vehicleType,
-                      builder: (context, selected, child) =>
-                          DropdownButtonFormField<String>(
-                            key: ValueKey(selected),
-                            initialValue: selected,
-                            decoration: InputDecoration(
-                              labelText: context.l10n.t(
-                                'admin_ui_vehicle_type',
-                              ),
-                            ),
-                            items: _vehicleTypes
-                                .map(
-                                  (code) => DropdownMenuItem(
-                                    value: code,
-                                    child: Text(code),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: existing == null
-                                ? (v) => vehicleType.value = v ?? selected
-                                : null,
-                          ),
+                      builder: (context, selected, child) => DropdownButtonFormField<String>(
+                        key: ValueKey(selected),
+                        initialValue: selected,
+                        decoration: InputDecoration(labelText: context.l10n.t('admin_ui_vehicle_type')),
+                        items: _vehicleTypes
+                            .map((code) => DropdownMenuItem(value: code, child: Text(code)))
+                            .toList(),
+                        onChanged: existing == null ? (v) => vehicleType.value = v ?? selected : null,
+                      ),
                     ),
                     TextFormField(
                       controller: priceCtrl,
@@ -527,10 +440,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                       keyboardType: TextInputType.number,
                       validator: (v) {
                         final n = double.tryParse(v ?? '');
-                        if (n == null || n <= 0)
-                          return context.l10n.t(
-                            'admin_ui_price_must_be_greater_than_0',
-                          );
+                        if (n == null || n <= 0) return context.l10n.t('admin_ui_price_must_be_greater_than_0');
                         return null;
                       },
                     ),
@@ -545,17 +455,13 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                     TextFormField(
                       controller: fromCtrl,
                       decoration: InputDecoration(
-                        labelText: context.l10n.t(
-                          'admin_ui_effective_from_iso_optional',
-                        ),
+                        labelText: context.l10n.t('admin_ui_effective_from_iso_optional'),
                       ),
                     ),
                     TextFormField(
                       controller: toCtrl,
                       decoration: InputDecoration(
-                        labelText: context.l10n.t(
-                          'admin_ui_effective_to_iso_optional',
-                        ),
+                        labelText: context.l10n.t('admin_ui_effective_to_iso_optional'),
                       ),
                     ),
                     ValueListenableBuilder(
@@ -572,10 +478,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
             ),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(l10n.t('ui_cancel')),
-            ),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.t('ui_cancel'))),
             FilledButton(
               onPressed: _saving
                   ? null
@@ -599,27 +502,16 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                           body['vehicleTypeCode'] = vehicleType.value;
                           await _api.createVehiclePrice(body);
                         } else {
-                          await _api.updateVehiclePrice(
-                            existing['id'] as int,
-                            body,
-                          );
+                          await _api.updateVehiclePrice(existing['id'] as int, body);
                         }
                         if (ctx.mounted) Navigator.pop(ctx);
                         await _loadAll();
                       } on AdminPricingApiException catch (err) {
-                        setDialogState(
-                          () => fieldErrors =
-                              err.fieldErrors ?? {'general': err.message},
-                        );
+                        setDialogState(() => fieldErrors = err.fieldErrors ?? {'general': err.message});
                       } catch (err) {
-                        setDialogState(
-                          () => fieldErrors = {
-                            'general': userFacingError(
-                              err,
-                              fallback: context.l10n.t('ui_action_failed'),
-                            ),
-                          },
-                        );
+                        setDialogState(() => fieldErrors = {
+                              'general': userFacingError(err, fallback: context.l10n.t('ui_action_failed')),
+                            });
                       } finally {
                         if (mounted) setState(() => _saving = false);
                       }
@@ -648,15 +540,9 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
     final calcType = ValueNotifier<String>(
       existing?['calculationType'] as String? ?? kCalculationTypes.first,
     );
-    final amountCtrl = TextEditingController(
-      text: '${existing?['amount'] ?? ''}',
-    );
-    final fromCtrl = TextEditingController(
-      text: existing?['effectiveFrom'] as String? ?? '',
-    );
-    final toCtrl = TextEditingController(
-      text: existing?['effectiveTo'] as String? ?? '',
-    );
+    final amountCtrl = TextEditingController(text: '${existing?['amount'] ?? ''}');
+    final fromCtrl = TextEditingController(text: existing?['effectiveFrom'] as String? ?? '');
+    final toCtrl = TextEditingController(text: existing?['effectiveTo'] as String? ?? '');
     final active = ValueNotifier<bool>(existing?['isActive'] as bool? ?? true);
     final formKey = GlobalKey<FormState>();
 
@@ -678,78 +564,45 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                 children: [
                   ValueListenableBuilder(
                     valueListenable: chargeType,
-                    builder: (context, selected, child) =>
-                        DropdownButtonFormField<String>(
-                          key: ValueKey(selected),
-                          initialValue: selected,
-                          decoration: InputDecoration(
-                            labelText: context.l10n.t('admin_ui_charge_type'),
-                          ),
-                          items: kChargePolicyTypes
-                              .map(
-                                (code) => DropdownMenuItem(
-                                  value: code,
-                                  child: Text(code),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: existing == null
-                              ? (v) => chargeType.value = v ?? selected
-                              : null,
-                        ),
+                    builder: (context, selected, child) => DropdownButtonFormField<String>(
+                      key: ValueKey(selected),
+                      initialValue: selected,
+                      decoration: InputDecoration(labelText: context.l10n.t('admin_ui_charge_type')),
+                      items: kChargePolicyTypes
+                          .map((code) => DropdownMenuItem(value: code, child: Text(code)))
+                          .toList(),
+                      onChanged: existing == null ? (v) => chargeType.value = v ?? selected : null,
+                    ),
                   ),
                   ValueListenableBuilder(
                     valueListenable: calcType,
-                    builder: (context, selected, child) =>
-                        DropdownButtonFormField<String>(
-                          key: ValueKey(selected),
-                          initialValue: selected,
-                          decoration: InputDecoration(
-                            labelText: context.l10n.t(
-                              'admin_ui_calculation_type',
-                            ),
-                          ),
-                          items: kCalculationTypes
-                              .map(
-                                (code) => DropdownMenuItem(
-                                  value: code,
-                                  child: Text(code),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (v) => calcType.value = v ?? selected,
-                        ),
+                    builder: (context, selected, child) => DropdownButtonFormField<String>(
+                      key: ValueKey(selected),
+                      initialValue: selected,
+                      decoration: InputDecoration(labelText: context.l10n.t('admin_ui_calculation_type')),
+                      items: kCalculationTypes
+                          .map((code) => DropdownMenuItem(value: code, child: Text(code)))
+                          .toList(),
+                      onChanged: (v) => calcType.value = v ?? selected,
+                    ),
                   ),
                   TextFormField(
                     controller: amountCtrl,
-                    decoration: InputDecoration(
-                      labelText: context.l10n.t('admin_ui_amount'),
-                    ),
+                    decoration: InputDecoration(labelText: context.l10n.t('admin_ui_amount')),
                     keyboardType: TextInputType.number,
                     validator: (v) {
                       final n = double.tryParse(v ?? '');
-                      if (n == null || n < 0)
-                        return context.l10n.t(
-                          'admin_ui_amount_must_be_zero_or_greater',
-                        );
+                      if (n == null || n < 0) return context.l10n.t('admin_ui_amount_must_be_zero_or_greater');
                       return null;
                     },
                   ),
                   TextFormField(
                     controller: fromCtrl,
-                    decoration: InputDecoration(
-                      labelText: context.l10n.t(
-                        'admin_ui_effective_from_optional',
-                      ),
-                    ),
+                    decoration: InputDecoration(labelText: context.l10n.t('admin_ui_effective_from_optional')),
                   ),
                   TextFormField(
                     controller: toCtrl,
-                    decoration: InputDecoration(
-                      labelText: context.l10n.t(
-                        'admin_ui_effective_to_optional',
-                      ),
-                    ),
+                    decoration: InputDecoration(labelText: context.l10n.t('admin_ui_effective_to_optional')),
                   ),
                   ValueListenableBuilder(
                     valueListenable: active,
@@ -765,10 +618,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(context.l10n.t('admin_ui_cancel')),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.l10n.t('admin_ui_cancel'))),
           FilledButton(
             onPressed: _saving
                 ? null
@@ -781,19 +631,14 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                         'amount': double.parse(amountCtrl.text.trim()),
                         'isActive': active.value,
                       };
-                      if (fromCtrl.text.trim().isNotEmpty)
-                        body['effectiveFrom'] = fromCtrl.text.trim();
-                      if (toCtrl.text.trim().isNotEmpty)
-                        body['effectiveTo'] = toCtrl.text.trim();
+                      if (fromCtrl.text.trim().isNotEmpty) body['effectiveFrom'] = fromCtrl.text.trim();
+                      if (toCtrl.text.trim().isNotEmpty) body['effectiveTo'] = toCtrl.text.trim();
                       if (existing == null) {
                         body['chargeType'] = chargeType.value;
                         await _api.createChargePolicy(body);
                       } else {
                         body['chargeType'] = chargeType.value;
-                        await _api.updateChargePolicy(
-                          existing['id'] as int,
-                          body,
-                        );
+                        await _api.updateChargePolicy(existing['id'] as int, body);
                       }
                       if (ctx.mounted) Navigator.pop(ctx);
                       await _loadAll();
@@ -819,36 +664,11 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
     final l10n = context.l10n;
     final summary = _summary ?? {};
     final cards = [
-      (
-        l10n.t('admin_pricing_kpi_active_routes'),
-        summary['activeRouteCount'] ?? 0,
-        Icons.route,
-        AppStatusTone.info,
-      ),
-      (
-        l10n.t('admin_pricing_kpi_active_prices'),
-        summary['activeVehiclePriceCount'] ?? 0,
-        Icons.directions_car_filled_outlined,
-        AppStatusTone.success,
-      ),
-      (
-        l10n.t('admin_pricing_kpi_active_policies'),
-        summary['activeChargePolicyCount'] ?? 0,
-        Icons.policy_outlined,
-        AppStatusTone.neutral,
-      ),
-      (
-        l10n.t('admin_pricing_kpi_current_prices'),
-        summary['currentPriceCount'] ?? 0,
-        Icons.payments_outlined,
-        AppStatusTone.success,
-      ),
-      (
-        l10n.t('admin_pricing_kpi_expiring_soon'),
-        summary['expiringSoonPriceCount'] ?? 0,
-        Icons.schedule,
-        AppStatusTone.warning,
-      ),
+      (l10n.t('admin_pricing_kpi_active_routes'), summary['activeRouteCount'] ?? 0, Icons.route, AppStatusTone.info),
+      (l10n.t('admin_pricing_kpi_active_prices'), summary['activeVehiclePriceCount'] ?? 0, Icons.directions_car_filled_outlined, AppStatusTone.success),
+      (l10n.t('admin_pricing_kpi_active_policies'), summary['activeChargePolicyCount'] ?? 0, Icons.policy_outlined, AppStatusTone.neutral),
+      (l10n.t('admin_pricing_kpi_current_prices'), summary['currentPriceCount'] ?? 0, Icons.payments_outlined, AppStatusTone.success),
+      (l10n.t('admin_pricing_kpi_expiring_soon'), summary['expiringSoonPriceCount'] ?? 0, Icons.schedule, AppStatusTone.warning),
     ];
 
     if (_isNarrow(context)) {
@@ -902,19 +722,10 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                     key: ValueKey(_routeServiceFilter),
                     initialValue: _routeServiceFilter,
                     isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: l10n.t('admin_pricing_filter_service_type'),
-                      isDense: true,
-                    ),
+                    decoration: InputDecoration(labelText: l10n.t('admin_pricing_filter_service_type'), isDense: true),
                     items: [
-                      DropdownMenuItem(
-                        value: null,
-                        child: Text(l10n.t('ui_all')),
-                      ),
-                      ...kServiceTypes.map(
-                        (code) =>
-                            DropdownMenuItem(value: code, child: Text(code)),
-                      ),
+                      DropdownMenuItem(value: null, child: Text(l10n.t('ui_all'))),
+                      ...kServiceTypes.map((code) => DropdownMenuItem(value: code, child: Text(code))),
                     ],
                     onChanged: (v) => setState(() => _routeServiceFilter = v),
                   ),
@@ -922,20 +733,14 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                 SizedBox(
                   width: _filterWidth(context, 120),
                   child: TextField(
-                    decoration: InputDecoration(
-                      labelText: l10n.t('admin_pricing_filter_origin'),
-                      isDense: true,
-                    ),
+                    decoration: InputDecoration(labelText: l10n.t('admin_pricing_filter_origin'), isDense: true),
                     onChanged: (v) => setState(() => _routeOriginFilter = v),
                   ),
                 ),
                 SizedBox(
                   width: _filterWidth(context, 120),
                   child: TextField(
-                    decoration: InputDecoration(
-                      labelText: l10n.t('admin_pricing_filter_destination'),
-                      isDense: true,
-                    ),
+                    decoration: InputDecoration(labelText: l10n.t('admin_pricing_filter_destination'), isDense: true),
                     onChanged: (v) => setState(() => _routeDestFilter = v),
                   ),
                 ),
@@ -945,23 +750,11 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                     key: ValueKey(_routeActiveFilter),
                     initialValue: _routeActiveFilter,
                     isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: l10n.t('admin_pricing_filter_active'),
-                      isDense: true,
-                    ),
+                    decoration: InputDecoration(labelText: l10n.t('admin_pricing_filter_active'), isDense: true),
                     items: [
-                      DropdownMenuItem(
-                        value: null,
-                        child: Text(l10n.t('ui_all')),
-                      ),
-                      DropdownMenuItem(
-                        value: 'active',
-                        child: Text(l10n.t('ui_active')),
-                      ),
-                      DropdownMenuItem(
-                        value: 'inactive',
-                        child: Text(l10n.t('ui_inactive')),
-                      ),
+                      DropdownMenuItem(value: null, child: Text(l10n.t('ui_all'))),
+                      DropdownMenuItem(value: 'active', child: Text(l10n.t('ui_active'))),
+                      DropdownMenuItem(value: 'inactive', child: Text(l10n.t('ui_inactive'))),
                     ],
                     onChanged: (v) => setState(() => _routeActiveFilter = v),
                   ),
@@ -969,10 +762,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                 SizedBox(
                   width: _filterWidth(context, 160),
                   child: TextField(
-                    decoration: InputDecoration(
-                      labelText: l10n.t('admin_pricing_filter_search'),
-                      isDense: true,
-                    ),
+                    decoration: InputDecoration(labelText: l10n.t('admin_pricing_filter_search'), isDense: true),
                     onChanged: (v) => setState(() => _routeSearch = v),
                   ),
                 ),
@@ -987,64 +777,44 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
               child: _filteredRoutes.isEmpty
                   ? Center(child: Text(l10n.t('admin_pricing_no_routes')))
                   : narrow
-                  ? ListView.separated(
-                      padding: AppUi.pagePadding(context),
-                      itemCount: _filteredRoutes.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: AppTokens.spaceSm),
-                      itemBuilder: (context, index) {
-                        final map = Map<String, dynamic>.from(
-                          _filteredRoutes[index] as Map,
-                        );
-                        return _routeCard(map);
-                      },
-                    )
-                  : SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: DataTable(
-                        columns: [
-                          DataColumn(label: Text('ID')),
-                          DataColumn(label: Text('Service')),
-                          DataColumn(label: Text('Origin')),
-                          DataColumn(label: Text('Destination')),
-                          DataColumn(
-                            label: Text(context.l10n.t('admin_ui_active')),
-                          ),
-                          DataColumn(label: Text('Prices')),
-                          DataColumn(label: Text('Updated')),
-                          DataColumn(
-                            label: Text(context.l10n.t('admin_ui_actions')),
-                          ),
-                        ],
-                        rows: _filteredRoutes.map((row) {
-                          final map = Map<String, dynamic>.from(row as Map);
-                          return DataRow(
-                            cells: [
-                              DataCell(Text('${map['id']}')),
-                              DataCell(Text('${map['serviceTypeCode']}')),
-                              DataCell(Text('${map['originLocationCode']}')),
-                              DataCell(
-                                Text('${map['destinationLocationCode']}'),
-                              ),
-                              DataCell(
-                                Text(
-                                  map['isActive'] == true
-                                      ? context.l10n.t('admin_ui_yes')
-                                      : context.l10n.t('admin_ui_no'),
-                                ),
-                              ),
-                              DataCell(
-                                Text(
-                                  '${_priceCountForRoute(map['id'] as int)}',
-                                ),
-                              ),
-                              DataCell(Text('${map['updatedAt'] ?? '-'}')),
-                              DataCell(_routeActions(map)),
+                      ? ListView.separated(
+                          padding: AppUi.pagePadding(context),
+                          itemCount: _filteredRoutes.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: AppTokens.spaceSm),
+                          itemBuilder: (context, index) {
+                            final map = Map<String, dynamic>.from(_filteredRoutes[index] as Map);
+                            return _routeCard(map);
+                          },
+                        )
+                      : SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: DataTable(
+                            columns: [
+                              DataColumn(label: Text('ID')),
+                              DataColumn(label: Text('Service')),
+                              DataColumn(label: Text('Origin')),
+                              DataColumn(label: Text('Destination')),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_active'))),
+                              DataColumn(label: Text('Prices')),
+                              DataColumn(label: Text('Updated')),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_actions'))),
                             ],
-                          );
-                        }).toList(),
-                      ),
-                    ),
+                            rows: _filteredRoutes.map((row) {
+                              final map = Map<String, dynamic>.from(row as Map);
+                              return DataRow(cells: [
+                                DataCell(Text('${map['id']}')),
+                                DataCell(Text('${map['serviceTypeCode']}')),
+                                DataCell(Text('${map['originLocationCode']}')),
+                                DataCell(Text('${map['destinationLocationCode']}')),
+                                DataCell(Text(map['isActive'] == true ? context.l10n.t('admin_ui_yes') : context.l10n.t('admin_ui_no'))),
+                                DataCell(Text('${_priceCountForRoute(map['id'] as int)}')),
+                                DataCell(Text('${map['updatedAt'] ?? '-'}')),
+                                DataCell(_routeActions(map)),
+                              ]);
+                            }).toList(),
+                          ),
+                        ),
             ),
           ],
         );
@@ -1083,9 +853,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
             onPressed: () async {
               if (!await _confirm(
                 context.l10n.t('admin_ui_deactivate_route'),
-                context.l10n.t(
-                  'admin_ui_this_route_will_be_excluded_from_customer_pricing',
-                ),
+                context.l10n.t('admin_ui_this_route_will_be_excluded_from_customer_pricing'),
               )) {
                 return;
               }
@@ -1114,10 +882,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
               Expanded(
                 child: Text(
                   '#${map['id']}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
                 ),
               ),
               AppUi.statusBadge(
@@ -1127,23 +892,16 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
             ],
           ),
           const SizedBox(height: AppTokens.spaceSm),
-          AppUi.summaryRow(
-            label: 'Service',
-            value: '${map['serviceTypeCode']}',
-          ),
+          AppUi.summaryRow(label: 'Service', value: '${map['serviceTypeCode']}'),
           AppUi.summaryRow(
             label: 'Route',
-            value:
-                '${map['originLocationCode']} → ${map['destinationLocationCode']}',
+            value: '${map['originLocationCode']} → ${map['destinationLocationCode']}',
           ),
           AppUi.summaryRow(
             label: 'Prices',
             value: '${_priceCountForRoute(map['id'] as int)}',
           ),
-          AppUi.summaryRow(
-            label: 'Updated',
-            value: '${map['updatedAt'] ?? '-'}',
-          ),
+          AppUi.summaryRow(label: 'Updated', value: '${map['updatedAt'] ?? '-'}'),
           const SizedBox(height: AppTokens.spaceSm),
           _routeActions(map),
         ],
@@ -1165,15 +923,11 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
             onPressed: () async {
               if (!await _confirm(
                 context.l10n.t('admin_ui_deactivate_price'),
-                context.l10n.t(
-                  'admin_ui_this_price_will_no_longer_apply_to_customer_pricing',
-                ),
+                context.l10n.t('admin_ui_this_price_will_no_longer_apply_to_customer_pricing'),
               )) {
                 return;
               }
-              await _api.updateVehiclePrice(map['id'] as int, {
-                'isActive': false,
-              });
+              await _api.updateVehiclePrice(map['id'] as int, {'isActive': false});
               await _loadAll();
             },
           ),
@@ -1196,12 +950,11 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
 
   Widget _priceCard(Map<String, dynamic> map) {
     final route = _routes.cast<Map?>().firstWhere(
-      (r) => r?['id'] == map['routeId'],
-      orElse: () => null,
-    );
-    final routeLabel = route != null
-        ? _routeLabel(Map<String, dynamic>.from(route))
-        : '${map['routeId']}';
+          (r) => r?['id'] == map['routeId'],
+          orElse: () => null,
+        );
+    final routeLabel =
+        route != null ? _routeLabel(Map<String, dynamic>.from(route)) : '${map['routeId']}';
     final status = vehiclePriceStatus(map);
 
     return AppUi.adminQueueCard(
@@ -1213,32 +966,17 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
               Expanded(
                 child: Text(
                   routeLabel,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
                 ),
               ),
               AppUi.statusBadge(status, tone: _toneForPriceStatus(status)),
             ],
           ),
           const SizedBox(height: AppTokens.spaceSm),
-          AppUi.summaryRow(
-            label: context.l10n.t('admin_ui_vehicle'),
-            value: '${map['vehicleTypeCode']}',
-          ),
-          AppUi.summaryRow(
-            label: context.l10n.t('admin_ui_price'),
-            value: '${map['price']} ${map['currency']}',
-          ),
-          AppUi.summaryRow(
-            label: context.l10n.t('admin_ui_effective_from'),
-            value: '${map['effectiveFrom'] ?? '-'}',
-          ),
-          AppUi.summaryRow(
-            label: context.l10n.t('admin_ui_effective_to'),
-            value: '${map['effectiveTo'] ?? '-'}',
-          ),
+          AppUi.summaryRow(label: context.l10n.t('admin_ui_vehicle'), value: '${map['vehicleTypeCode']}'),
+          AppUi.summaryRow(label: context.l10n.t('admin_ui_price'), value: '${map['price']} ${map['currency']}'),
+          AppUi.summaryRow(label: context.l10n.t('admin_ui_effective_from'), value: '${map['effectiveFrom'] ?? '-'}'),
+          AppUi.summaryRow(label: context.l10n.t('admin_ui_effective_to'), value: '${map['effectiveTo'] ?? '-'}'),
           const SizedBox(height: AppTokens.spaceSm),
           _priceActions(map),
         ],
@@ -1262,15 +1000,9 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                     key: ValueKey(_priceRouteFilter),
                     initialValue: _priceRouteFilter,
                     isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: l10n.t('admin_pricing_filter_route'),
-                      isDense: true,
-                    ),
+                    decoration: InputDecoration(labelText: l10n.t('admin_pricing_filter_route'), isDense: true),
                     items: [
-                      DropdownMenuItem(
-                        value: null,
-                        child: Text(l10n.t('admin_pricing_filter_all_routes')),
-                      ),
+                      DropdownMenuItem(value: null, child: Text(l10n.t('admin_pricing_filter_all_routes'))),
                       ..._routes.map((row) {
                         final map = Map<String, dynamic>.from(row as Map);
                         return DropdownMenuItem(
@@ -1288,31 +1020,13 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                     key: ValueKey(_priceStatusFilter),
                     initialValue: _priceStatusFilter,
                     isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: l10n.t('admin_pricing_filter_status'),
-                      isDense: true,
-                    ),
+                    decoration: InputDecoration(labelText: l10n.t('admin_pricing_filter_status'), isDense: true),
                     items: [
-                      DropdownMenuItem(
-                        value: null,
-                        child: Text(l10n.t('ui_all')),
-                      ),
-                      DropdownMenuItem(
-                        value: 'current',
-                        child: Text(l10n.t('admin_pricing_status_current')),
-                      ),
-                      DropdownMenuItem(
-                        value: 'future',
-                        child: Text(l10n.t('admin_pricing_status_future')),
-                      ),
-                      DropdownMenuItem(
-                        value: 'expired',
-                        child: Text(l10n.t('admin_pricing_status_expired')),
-                      ),
-                      DropdownMenuItem(
-                        value: 'inactive',
-                        child: Text(l10n.t('admin_pricing_status_inactive')),
-                      ),
+                      DropdownMenuItem(value: null, child: Text(l10n.t('ui_all'))),
+                      DropdownMenuItem(value: 'current', child: Text(l10n.t('admin_pricing_status_current'))),
+                      DropdownMenuItem(value: 'future', child: Text(l10n.t('admin_pricing_status_future'))),
+                      DropdownMenuItem(value: 'expired', child: Text(l10n.t('admin_pricing_status_expired'))),
+                      DropdownMenuItem(value: 'inactive', child: Text(l10n.t('admin_pricing_status_inactive'))),
                     ],
                     onChanged: (v) => setState(() => _priceStatusFilter = v),
                   ),
@@ -1328,77 +1042,51 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
               child: _filteredPrices.isEmpty
                   ? Center(child: Text(l10n.t('admin_pricing_no_prices')))
                   : narrow
-                  ? ListView.separated(
-                      padding: AppUi.pagePadding(context),
-                      itemCount: _filteredPrices.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: AppTokens.spaceSm),
-                      itemBuilder: (context, index) {
-                        final map = Map<String, dynamic>.from(
-                          _filteredPrices[index] as Map,
-                        );
-                        return _priceCard(map);
-                      },
-                    )
-                  : SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: DataTable(
-                        columns: [
-                          DataColumn(label: Text('Route')),
-                          DataColumn(
-                            label: Text(context.l10n.t('admin_ui_vehicle')),
-                          ),
-                          DataColumn(
-                            label: Text(context.l10n.t('admin_ui_price')),
-                          ),
-                          DataColumn(label: Text('Currency')),
-                          DataColumn(
-                            label: Text(
-                              context.l10n.t('admin_ui_effective_from'),
-                            ),
-                          ),
-                          DataColumn(
-                            label: Text(
-                              context.l10n.t('admin_ui_effective_to'),
-                            ),
-                          ),
-                          DataColumn(
-                            label: Text(context.l10n.t('admin_ui_status')),
-                          ),
-                          DataColumn(
-                            label: Text(context.l10n.t('admin_ui_actions')),
-                          ),
-                        ],
-                        rows: _filteredPrices.map((row) {
-                          final map = Map<String, dynamic>.from(row as Map);
-                          final route = _routes.cast<Map?>().firstWhere(
-                            (r) => r?['id'] == map['routeId'],
-                            orElse: () => null,
-                          );
-                          final status = vehiclePriceStatus(map);
-                          return DataRow(
-                            cells: [
-                              DataCell(
-                                Text(
-                                  route != null
-                                      ? _routeLabel(
-                                          Map<String, dynamic>.from(route),
-                                        )
-                                      : '${map['routeId']}',
-                                ),
-                              ),
-                              DataCell(Text('${map['vehicleTypeCode']}')),
-                              DataCell(Text('${map['price']}')),
-                              DataCell(Text('${map['currency']}')),
-                              DataCell(Text('${map['effectiveFrom'] ?? '-'}')),
-                              DataCell(Text('${map['effectiveTo'] ?? '-'}')),
-                              DataCell(Text(status)),
-                              DataCell(_priceActions(map)),
+                      ? ListView.separated(
+                          padding: AppUi.pagePadding(context),
+                          itemCount: _filteredPrices.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: AppTokens.spaceSm),
+                          itemBuilder: (context, index) {
+                            final map = Map<String, dynamic>.from(_filteredPrices[index] as Map);
+                            return _priceCard(map);
+                          },
+                        )
+                      : SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: DataTable(
+                            columns: [
+                              DataColumn(label: Text('Route')),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_vehicle'))),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_price'))),
+                              DataColumn(label: Text('Currency')),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_effective_from'))),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_effective_to'))),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_status'))),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_actions'))),
                             ],
-                          );
-                        }).toList(),
-                      ),
-                    ),
+                            rows: _filteredPrices.map((row) {
+                              final map = Map<String, dynamic>.from(row as Map);
+                              final route = _routes.cast<Map?>().firstWhere(
+                                    (r) => r?['id'] == map['routeId'],
+                                    orElse: () => null,
+                                  );
+                              final status = vehiclePriceStatus(map);
+                              return DataRow(cells: [
+                                DataCell(Text(route != null
+                                    ? _routeLabel(Map<String, dynamic>.from(route))
+                                    : '${map['routeId']}')),
+                                DataCell(Text('${map['vehicleTypeCode']}')),
+                                DataCell(Text('${map['price']}')),
+                                DataCell(Text('${map['currency']}')),
+                                DataCell(Text('${map['effectiveFrom'] ?? '-'}')),
+                                DataCell(Text('${map['effectiveTo'] ?? '-'}')),
+                                DataCell(Text(status)),
+                                DataCell(_priceActions(map)),
+                              ]);
+                            }).toList(),
+                          ),
+                        ),
             ),
           ],
         );
@@ -1420,15 +1108,11 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
             onPressed: () async {
               if (!await _confirm(
                 context.l10n.t('admin_ui_deactivate_policy'),
-                context.l10n.t(
-                  'admin_ui_this_policy_will_be_excluded_from_pricing_calculations',
-                ),
+                context.l10n.t('admin_ui_this_policy_will_be_excluded_from_pricing_calculations'),
               )) {
                 return;
               }
-              await _api.updateChargePolicy(map['id'] as int, {
-                'isActive': false,
-              });
+              await _api.updateChargePolicy(map['id'] as int, {'isActive': false});
               await _loadAll();
             },
           ),
@@ -1449,10 +1133,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
               Expanded(
                 child: Text(
                   '${map['chargeType']}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
                 ),
               ),
               AppUi.statusBadge(
@@ -1462,18 +1143,11 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
             ],
           ),
           const SizedBox(height: AppTokens.spaceSm),
-          AppUi.summaryRow(
-            label: context.l10n.t('admin_ui_calculation'),
-            value: '${map['calculationType']}',
-          ),
-          AppUi.summaryRow(
-            label: context.l10n.t('admin_ui_amount'),
-            value: '${map['amount']}',
-          ),
+          AppUi.summaryRow(label: context.l10n.t('admin_ui_calculation'), value: '${map['calculationType']}'),
+          AppUi.summaryRow(label: context.l10n.t('admin_ui_amount'), value: '${map['amount']}'),
           AppUi.summaryRow(
             label: context.l10n.t('admin_ui_period'),
-            value:
-                '${map['effectiveFrom'] ?? '-'} → ${map['effectiveTo'] ?? '-'}',
+            value: '${map['effectiveFrom'] ?? '-'} → ${map['effectiveTo'] ?? '-'}',
           ),
           const SizedBox(height: AppTokens.spaceSm),
           _policyActions(map),
@@ -1498,23 +1172,11 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                     key: ValueKey(_policyActiveFilter),
                     initialValue: _policyActiveFilter,
                     isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: l10n.t('admin_pricing_filter_active'),
-                      isDense: true,
-                    ),
+                    decoration: InputDecoration(labelText: l10n.t('admin_pricing_filter_active'), isDense: true),
                     items: [
-                      DropdownMenuItem(
-                        value: null,
-                        child: Text(l10n.t('ui_all')),
-                      ),
-                      DropdownMenuItem(
-                        value: 'active',
-                        child: Text(l10n.t('ui_active')),
-                      ),
-                      DropdownMenuItem(
-                        value: 'inactive',
-                        child: Text(l10n.t('ui_inactive')),
-                      ),
+                      DropdownMenuItem(value: null, child: Text(l10n.t('ui_all'))),
+                      DropdownMenuItem(value: 'active', child: Text(l10n.t('ui_active'))),
+                      DropdownMenuItem(value: 'inactive', child: Text(l10n.t('ui_inactive'))),
                     ],
                     onChanged: (v) => setState(() => _policyActiveFilter = v),
                   ),
@@ -1530,71 +1192,44 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
               child: _filteredPolicies.isEmpty
                   ? Center(child: Text(l10n.t('admin_pricing_no_policies')))
                   : narrow
-                  ? ListView.separated(
-                      padding: AppUi.pagePadding(context),
-                      itemCount: _filteredPolicies.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: AppTokens.spaceSm),
-                      itemBuilder: (context, index) {
-                        final map = Map<String, dynamic>.from(
-                          _filteredPolicies[index] as Map,
-                        );
-                        return _policyCard(map);
-                      },
-                    )
-                  : SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: DataTable(
-                        columns: [
-                          DataColumn(
-                            label: Text(context.l10n.t('admin_ui_type')),
-                          ),
-                          DataColumn(
-                            label: Text(context.l10n.t('admin_ui_calculation')),
-                          ),
-                          DataColumn(
-                            label: Text(context.l10n.t('admin_ui_amount')),
-                          ),
-                          DataColumn(
-                            label: Text(context.l10n.t('admin_ui_active')),
-                          ),
-                          DataColumn(
-                            label: Text(context.l10n.t('admin_ui_period')),
-                          ),
-                          DataColumn(
-                            label: Text(context.l10n.t('admin_ui_status')),
-                          ),
-                          DataColumn(
-                            label: Text(context.l10n.t('admin_ui_actions')),
-                          ),
-                        ],
-                        rows: _filteredPolicies.map((row) {
-                          final map = Map<String, dynamic>.from(row as Map);
-                          final status = chargePolicyStatus(map);
-                          return DataRow(
-                            cells: [
-                              DataCell(Text('${map['chargeType']}')),
-                              DataCell(Text('${map['calculationType']}')),
-                              DataCell(Text('${map['amount']}')),
-                              DataCell(
-                                Text(
-                                  map['isActive'] == true
-                                      ? context.l10n.t('admin_ui_yes')
-                                      : context.l10n.t('admin_ui_no'),
-                                ),
-                              ),
-                              DataCell(
-                                Text(
-                                  '${map['effectiveFrom'] ?? '-'} → ${map['effectiveTo'] ?? '-'}',
-                                ),
-                              ),
-                              DataCell(Text(status)),
-                              DataCell(_policyActions(map)),
+                      ? ListView.separated(
+                          padding: AppUi.pagePadding(context),
+                          itemCount: _filteredPolicies.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: AppTokens.spaceSm),
+                          itemBuilder: (context, index) {
+                            final map = Map<String, dynamic>.from(_filteredPolicies[index] as Map);
+                            return _policyCard(map);
+                          },
+                        )
+                      : SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: DataTable(
+                            columns: [
+                              DataColumn(label: Text(context.l10n.t('admin_ui_type'))),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_calculation'))),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_amount'))),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_active'))),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_period'))),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_status'))),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_actions'))),
                             ],
-                          );
-                        }).toList(),
-                      ),
-                    ),
+                            rows: _filteredPolicies.map((row) {
+                              final map = Map<String, dynamic>.from(row as Map);
+                              final status = chargePolicyStatus(map);
+                              return DataRow(cells: [
+                                DataCell(Text('${map['chargeType']}')),
+                                DataCell(Text('${map['calculationType']}')),
+                                DataCell(Text('${map['amount']}')),
+                                DataCell(Text(map['isActive'] == true ? context.l10n.t('admin_ui_yes') : context.l10n.t('admin_ui_no'))),
+                                DataCell(Text(
+                                    '${map['effectiveFrom'] ?? '-'} → ${map['effectiveTo'] ?? '-'}')),
+                                DataCell(Text(status)),
+                                DataCell(_policyActions(map)),
+                              ]);
+                            }).toList(),
+                          ),
+                        ),
             ),
           ],
         );
@@ -1629,13 +1264,13 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
           child: AppUi.sectionHeader(
             context,
             title: l10n.t('admin_pricing_manager'),
-            trailing: IconButton(
-              onPressed: _loadAll,
-              icon: const Icon(Icons.refresh),
-            ),
+            trailing: IconButton(onPressed: _loadAll, icon: const Icon(Icons.refresh)),
           ),
         ),
-        Padding(padding: AppUi.pagePadding(context), child: _summaryCards()),
+        Padding(
+          padding: AppUi.pagePadding(context),
+          child: _summaryCards(),
+        ),
         Material(
           color: AppTokens.surface,
           child: TabBar(
@@ -1695,16 +1330,12 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
   String? _error;
   Map<String, dynamic>? _result;
 
-  List<Map<String, dynamic>> get _activeRoutes => widget.routes
-      .where((row) => row['isActive'] == true)
-      .map((row) => Map<String, dynamic>.from(row as Map))
-      .toList();
+  List<Map<String, dynamic>> get _activeRoutes =>
+      widget.routes.where((row) => row['isActive'] == true).map((row) => Map<String, dynamic>.from(row as Map)).toList();
 
   List<Map<String, dynamic>> _vehicleOptionsForRoute(String? routeId) {
     if (routeId == null) return [];
-    final routePrices = widget.prices.where(
-      (row) => '${row['routeId']}' == routeId,
-    );
+    final routePrices = widget.prices.where((row) => '${row['routeId']}' == routeId);
     final seen = <String>{};
     final options = <Map<String, dynamic>>[];
     for (final row in routePrices) {
@@ -1717,14 +1348,11 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
 
   Future<void> _run() async {
     final route = _activeRoutes.cast<Map<String, dynamic>?>().firstWhere(
-      (row) => '${row?['id']}' == _routeId,
-      orElse: () => null,
-    );
+          (row) => '${row?['id']}' == _routeId,
+          orElse: () => null,
+        );
     if (route == null || _vehicleTypeId == null) {
-      setState(
-        () =>
-            _error = context.l10n.t('admin_ui_select_a_route_and_vehicle_type'),
-      );
+      setState(() => _error = context.l10n.t('admin_ui_select_a_route_and_vehicle_type'));
       return;
     }
 
@@ -1740,7 +1368,9 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
         'originLocationId': route['originLocationId'],
         'destinationLocationId': route['destinationLocationId'],
         'vehicleTypeId': int.parse(_vehicleTypeId!),
-        'options': {'nameSign': _nameSign},
+        'options': {
+          'nameSign': _nameSign,
+        },
       });
       setState(() {
         _result = result;
@@ -1748,10 +1378,7 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
       });
     } catch (err) {
       setState(() {
-        _error = userFacingError(
-          err,
-          fallback: context.l10n.t('ui_load_failed'),
-        );
+        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
         _loading = false;
       });
     }
@@ -1770,51 +1397,41 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               DropdownButtonFormField<String?>(
-                key: Key('simulator_route_dropdown:${_routeId ?? ''}'),
-                initialValue: _routeId,
-                isExpanded: true,
-                decoration: InputDecoration(
-                  labelText: l10n.t('admin_pricing_filter_route'),
+          key: Key('simulator_route_dropdown:${_routeId ?? ''}'),
+          initialValue: _routeId,
+          isExpanded: true,
+          decoration: InputDecoration(labelText: l10n.t('admin_pricing_filter_route')),
+          items: _activeRoutes
+              .map(
+                (route) => DropdownMenuItem(
+                  value: '${route['id']}',
+                  child: Text(
+                    '${route['serviceTypeCode']} ${route['originLocationCode']} → ${route['destinationLocationCode']}',
+                  ),
                 ),
-                items: _activeRoutes
-                    .map(
-                      (route) => DropdownMenuItem(
-                        value: '${route['id']}',
-                        child: Text(
-                          '${route['serviceTypeCode']} ${route['originLocationCode']} → ${route['destinationLocationCode']}',
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => setState(() {
-                  _routeId = v;
-                  _vehicleTypeId = null;
-                }),
-              ),
-              DropdownButtonFormField<String?>(
-                key: Key('simulator_vehicle_dropdown:${_vehicleTypeId ?? ''}'),
-                initialValue: _vehicleTypeId,
-                isExpanded: true,
-                decoration: InputDecoration(
-                  labelText: context.l10n.t('admin_ui_vehicle_type'),
+              )
+              .toList(),
+          onChanged: (v) => setState(() {
+            _routeId = v;
+            _vehicleTypeId = null;
+          }),
+        ),
+        DropdownButtonFormField<String?>(
+          key: Key('simulator_vehicle_dropdown:${_vehicleTypeId ?? ''}'),
+          initialValue: _vehicleTypeId,
+          isExpanded: true,
+          decoration: InputDecoration(labelText: context.l10n.t('admin_ui_vehicle_type')),
+          items: vehicleOptions
+              .map(
+                (price) => DropdownMenuItem(
+                  value: '${price['vehicleTypeId']}',
+                  child: Text('${price['vehicleTypeCode']} (${price['price']} ${price['currency']})'),
                 ),
-                items: vehicleOptions
-                    .map(
-                      (price) => DropdownMenuItem(
-                        value: '${price['vehicleTypeId']}',
-                        child: Text(
-                          '${price['vehicleTypeCode']} (${price['price']} ${price['currency']})',
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => setState(() => _vehicleTypeId = v),
-              ),
-              SwitchListTile(
-                title: Text(l10n.t('admin_pricing_sim_name_sign')),
-                value: _nameSign,
-                onChanged: (v) => setState(() => _nameSign = v),
-              ),
+              )
+              .toList(),
+          onChanged: (v) => setState(() => _vehicleTypeId = v),
+        ),
+        SwitchListTile(title: Text(l10n.t('admin_pricing_sim_name_sign')), value: _nameSign, onChanged: (v) => setState(() => _nameSign = v)),
             ],
           ),
         ),
@@ -1824,11 +1441,7 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
           child: FilledButton(
             onPressed: _loading ? null : _run,
             child: _loading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                 : Text(l10n.t('admin_pricing_sim_calculate')),
           ),
         ),
@@ -1836,10 +1449,7 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
           const SizedBox(height: AppTokens.spaceSm),
           AppUi.surfaceCard(
             backgroundColor: AppTokens.errorLight,
-            child: Text(
-              _error!,
-              style: const TextStyle(color: AppTokens.error),
-            ),
+            child: Text(_error!, style: const TextStyle(color: AppTokens.error)),
           ),
         ],
         if (_result != null) ...[
@@ -1860,18 +1470,9 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
                   ),
                 ),
                 const SizedBox(height: AppTokens.spaceSm),
-                Text(
-                  context.l10n
-                      .t('admin_ui_subtotal_subtotal_discount_discount')
-                      .replaceAll('{subtotal}', '${_result!['subtotal']}')
-                      .replaceAll('{discount}', '${_result!['discount']}'),
-                ),
+                Text(context.l10n.t('admin_ui_subtotal_subtotal_discount_discount').replaceAll('{subtotal}', '${_result!['subtotal']}').replaceAll('{discount}', '${_result!['discount']}')),
                 const SizedBox(height: AppTokens.spaceSm),
-                Text(
-                  context.l10n
-                      .t('admin_ui_matched_route_id')
-                      .replaceAll('{id}', '${_result!['matchedRoute']?['id']}'),
-                ),
+                Text(context.l10n.t('admin_ui_matched_route_id').replaceAll('{id}', '${_result!['matchedRoute']?['id']}')),
                 Text(
                   'Base price: ${_result!['vehicleBasePrice']?['price']} ${_result!['vehicleBasePrice']?['currency']}',
                 ),
@@ -1883,24 +1484,20 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
             context: context,
             title: context.l10n.t('admin_ui_charge_items'),
             child: Column(
-              children: ((_result!['chargeItems'] as List<dynamic>? ?? []).map((
-                item,
-              ) {
-                final map = Map<String, dynamic>.from(item as Map);
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '${map['description'] ?? map['chargeType']}',
-                        ),
-                      ),
-                      Text('${map['amount']}'),
-                    ],
-                  ),
-                );
-              })).toList(),
+              children: ((_result!['chargeItems'] as List<dynamic>? ?? []).map(
+                (item) {
+                  final map = Map<String, dynamic>.from(item as Map);
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        Expanded(child: Text('${map['description'] ?? map['chargeType']}')),
+                        Text('${map['amount']}'),
+                      ],
+                    ),
+                  );
+                },
+              )).toList(),
             ),
           ),
         ],

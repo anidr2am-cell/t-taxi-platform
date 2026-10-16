@@ -50,18 +50,10 @@ class AdminPricingApiService {
         response = await http.get(uri, headers: headers);
         break;
       case 'POST':
-        response = await http.post(
-          uri,
-          headers: headers,
-          body: jsonEncode(body ?? {}),
-        );
+        response = await http.post(uri, headers: headers, body: jsonEncode(body ?? {}));
         break;
       case 'PATCH':
-        response = await http.patch(
-          uri,
-          headers: headers,
-          body: jsonEncode(body ?? {}),
-        );
+        response = await http.patch(uri, headers: headers, body: jsonEncode(body ?? {}));
         break;
       case 'DELETE':
         response = await http.delete(uri, headers: headers);
@@ -111,11 +103,9 @@ class AdminPricingApiService {
   }
 
   Future<List<dynamic>> listRoutes({bool includeInactive = true}) async {
-    final data = await _request(
-      'GET',
-      '/admin/routes',
-      query: {'includeInactive': includeInactive.toString()},
-    );
+    final data = await _request('GET', '/admin/routes', query: {
+      'includeInactive': includeInactive.toString(),
+    });
     return data as List<dynamic>;
   }
 
@@ -124,18 +114,12 @@ class AdminPricingApiService {
     return Map<String, dynamic>.from(data as Map);
   }
 
-  Future<Map<String, dynamic>> updateRoute(
-    int id,
-    Map<String, dynamic> body,
-  ) async {
+  Future<Map<String, dynamic>> updateRoute(int id, Map<String, dynamic> body) async {
     final data = await _request('PATCH', '/admin/routes/$id', body: body);
     return Map<String, dynamic>.from(data as Map);
   }
 
-  Future<Map<String, dynamic>> copyRoute(
-    int id,
-    Map<String, dynamic> body,
-  ) async {
+  Future<Map<String, dynamic>> copyRoute(int id, Map<String, dynamic> body) async {
     final data = await _request('POST', '/admin/routes/$id/copy', body: body);
     return Map<String, dynamic>.from(data as Map);
   }
@@ -144,66 +128,40 @@ class AdminPricingApiService {
     int? routeId,
     bool includeInactive = true,
   }) async {
-    final query = <String, String>{
-      'includeInactive': includeInactive.toString(),
-    };
+    final query = <String, String>{'includeInactive': includeInactive.toString()};
     if (routeId != null) query['routeId'] = '$routeId';
     final data = await _request('GET', '/admin/vehicle-prices', query: query);
     return data as List<dynamic>;
   }
 
-  Future<Map<String, dynamic>> createVehiclePrice(
-    Map<String, dynamic> body,
-  ) async {
+  Future<Map<String, dynamic>> createVehiclePrice(Map<String, dynamic> body) async {
     final data = await _request('POST', '/admin/vehicle-prices', body: body);
     return Map<String, dynamic>.from(data as Map);
   }
 
-  Future<Map<String, dynamic>> updateVehiclePrice(
-    int id,
-    Map<String, dynamic> body,
-  ) async {
-    final data = await _request(
-      'PATCH',
-      '/admin/vehicle-prices/$id',
-      body: body,
-    );
+  Future<Map<String, dynamic>> updateVehiclePrice(int id, Map<String, dynamic> body) async {
+    final data = await _request('PATCH', '/admin/vehicle-prices/$id', body: body);
     return Map<String, dynamic>.from(data as Map);
   }
 
-  Future<List<dynamic>> listChargePolicies({
-    bool includeInactive = true,
-  }) async {
-    final data = await _request(
-      'GET',
-      '/admin/charge-policies',
-      query: {'includeInactive': includeInactive.toString()},
-    );
+  Future<List<dynamic>> listChargePolicies({bool includeInactive = true}) async {
+    final data = await _request('GET', '/admin/charge-policies', query: {
+      'includeInactive': includeInactive.toString(),
+    });
     return data as List<dynamic>;
   }
 
-  Future<Map<String, dynamic>> createChargePolicy(
-    Map<String, dynamic> body,
-  ) async {
+  Future<Map<String, dynamic>> createChargePolicy(Map<String, dynamic> body) async {
     final data = await _request('POST', '/admin/charge-policies', body: body);
     return Map<String, dynamic>.from(data as Map);
   }
 
-  Future<Map<String, dynamic>> updateChargePolicy(
-    int id,
-    Map<String, dynamic> body,
-  ) async {
-    final data = await _request(
-      'PATCH',
-      '/admin/charge-policies/$id',
-      body: body,
-    );
+  Future<Map<String, dynamic>> updateChargePolicy(int id, Map<String, dynamic> body) async {
+    final data = await _request('PATCH', '/admin/charge-policies/$id', body: body);
     return Map<String, dynamic>.from(data as Map);
   }
 
-  Future<Map<String, dynamic>> simulatePricing(
-    Map<String, dynamic> body,
-  ) async {
+  Future<Map<String, dynamic>> simulatePricing(Map<String, dynamic> body) async {
     final data = await _request('POST', '/admin/pricing/simulate', body: body);
     return Map<String, dynamic>.from(data as Map);
   }
@@ -216,7 +174,13 @@ const kServiceTypes = [
   'GOLF_TRANSFER',
 ];
 
-const kVehicleTypes = ['SEDAN', 'SUV', 'VIP_SUV', 'VAN', 'LUXURY'];
+const kVehicleTypes = [
+  'SEDAN',
+  'SUV',
+  'VIP_SUV',
+  'VAN',
+  'LUXURY',
+];
 
 const kChargePolicyTypes = [
   'NAME_SIGN',
@@ -228,7 +192,11 @@ const kChargePolicyTypes = [
   'AIRPORT',
 ];
 
-const kCalculationTypes = ['FIXED', 'PERCENT_OF_BASE', 'PERCENT_OF_SUBTOTAL'];
+const kCalculationTypes = [
+  'FIXED',
+  'PERCENT_OF_BASE',
+  'PERCENT_OF_SUBTOTAL',
+];
 
 String vehiclePriceStatus(Map<String, dynamic> price) {
   final isActive = price['isActive'] == true;
@@ -237,9 +205,7 @@ String vehiclePriceStatus(Map<String, dynamic> price) {
   final now = DateTime.now().toUtc();
   final fromRaw = price['effectiveFrom'];
   final toRaw = price['effectiveTo'];
-  final from = fromRaw != null
-      ? DateTime.tryParse(fromRaw as String)?.toUtc()
-      : null;
+  final from = fromRaw != null ? DateTime.tryParse(fromRaw as String)?.toUtc() : null;
   final to = toRaw != null ? DateTime.tryParse(toRaw as String)?.toUtc() : null;
 
   if (to != null && now.isAfter(to)) return 'expired';
@@ -254,9 +220,7 @@ String chargePolicyStatus(Map<String, dynamic> policy) {
   final now = DateTime.now().toUtc();
   final fromRaw = policy['effectiveFrom'];
   final toRaw = policy['effectiveTo'];
-  final from = fromRaw != null
-      ? DateTime.tryParse(fromRaw as String)?.toUtc()
-      : null;
+  final from = fromRaw != null ? DateTime.tryParse(fromRaw as String)?.toUtc() : null;
   final to = toRaw != null ? DateTime.tryParse(toRaw as String)?.toUtc() : null;
 
   if (to != null && now.isAfter(to)) return 'expired';
@@ -266,18 +230,10 @@ String chargePolicyStatus(Map<String, dynamic> policy) {
 
 class AdminRegionPricingApiService extends AdminPricingApiService {
   const AdminRegionPricingApiService();
-  Future<List<dynamic>> listRegionFareCandidates() async =>
-      await _request('GET', '/admin/pricing/region-candidates')
-          as List<dynamic>;
-  Future<List<dynamic>> listPricingRegions() async =>
-      await _request('GET', '/admin/pricing/regions') as List<dynamic>;
-  Future<void> updatePricingRegion(int id, Map<String, dynamic> body) async {
-    await _request('PATCH', '/admin/pricing/regions/$id', body: body);
-  }
-
-  Future<void> updateRegionFare(int id, Map<String, dynamic> body) async {
-    await _request('PATCH', '/admin/pricing/region-fares/$id', body: body);
-  }
+  Future<List<dynamic>> listRegionFareCandidates() async => await _request('GET', '/admin/pricing/region-candidates') as List<dynamic>;
+  Future<List<dynamic>> listPricingRegions() async => await _request('GET', '/admin/pricing/regions') as List<dynamic>;
+  Future<void> updatePricingRegion(int id, Map<String,dynamic> body) async { await _request('PATCH', '/admin/pricing/regions/$id', body: body); }
+  Future<void> updateRegionFare(int id, Map<String,dynamic> body) async { await _request('PATCH', '/admin/pricing/region-fares/$id', body: body); }
 }
 
 class AdminGolfPricingApiService extends AdminPricingApiService {

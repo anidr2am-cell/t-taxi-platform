@@ -64,8 +64,7 @@ bool _bookingDetailBool(dynamic value) {
 String normalizeAdminManualPhone(String dialCode, String value) {
   final trimmed = value.trim();
   if (trimmed.startsWith('+')) {
-    final international =
-        '+${trimmed.substring(1).replaceAll(RegExp(r'\D'), '')}';
+    final international = '+${trimmed.substring(1).replaceAll(RegExp(r'\D'), '')}';
     return RegExp(r'^\+[1-9]\d{6,14}$').hasMatch(international)
         ? international
         : '';
@@ -254,11 +253,9 @@ class _AdminManualBookingCreatePageState
       if (_originAirportIata != null && _originAirportIata!.isNotEmpty)
         'airportIata': _originAirportIata,
       'flightNumber': normalized.isEmpty ? null : normalized,
-      if (_flightScheduledArrivalAt != null &&
-          _flightScheduledArrivalAt!.isNotEmpty)
+      if (_flightScheduledArrivalAt != null && _flightScheduledArrivalAt!.isNotEmpty)
         'flightScheduledArrivalAt': _flightScheduledArrivalAt,
-      if (_flightEstimatedArrivalAt != null &&
-          _flightEstimatedArrivalAt!.isNotEmpty)
+      if (_flightEstimatedArrivalAt != null && _flightEstimatedArrivalAt!.isNotEmpty)
         'flightEstimatedArrivalAt': _flightEstimatedArrivalAt,
     };
   }
@@ -305,9 +302,7 @@ class _AdminManualBookingCreatePageState
   Future<void> _loadVehicleTypes() async {
     try {
       final values = await _vehicleTypeApi.listActiveCodes();
-      final supportedValues = values
-          .where((code) => code != 'VIP_VAN')
-          .toList();
+      final supportedValues = values.where((code) => code != 'VIP_VAN').toList();
       if (!mounted) return;
       setState(() {
         if (supportedValues.isNotEmpty) {
@@ -338,15 +333,15 @@ class _AdminManualBookingCreatePageState
       .where((driver) {
         final archive = _bookingDetailMap(driver['archive']);
         final vehicle = _bookingDetailMap(driver['primaryVehicle']);
-        final vehicleCodes = _bookingDetailList(
-          driver['vehicleTypeCodes'],
-        ).map((code) => code.toString()).toList(growable: false);
-        return driver['activeState'] == 'ACTIVE' &&
-            driver['driverStatus'] != 'SUSPENDED' &&
-            driver['assignmentEligible'] == true &&
-            archive['isArchived'] != true &&
-            (vehicleCodes.any(_vehicleCodeCompatible) ||
-                _vehicleCodeCompatible(
+        final vehicleCodes = _bookingDetailList(driver['vehicleTypeCodes'])
+            .map((code) => code.toString())
+            .toList(growable: false);
+        return driver['activeState'] == 'ACTIVE'
+            && driver['driverStatus'] != 'SUSPENDED'
+            && driver['assignmentEligible'] == true
+            && archive['isArchived'] != true
+            && (vehicleCodes.any(_vehicleCodeCompatible)
+                || _vehicleCodeCompatible(
                   _bookingDetailString(vehicle['vehicleTypeCode']),
                 ));
       })
@@ -365,8 +360,7 @@ class _AdminManualBookingCreatePageState
             .toList(growable: false);
         _loadingDirectDrivers = false;
         if (!_eligibleDirectDrivers.any(
-          (driver) =>
-              _bookingDetailInt(driver['driverId']) == _selectedDirectDriverId,
+          (driver) => _bookingDetailInt(driver['driverId']) == _selectedDirectDriverId,
         )) {
           _selectedDirectDriverId = null;
         }
@@ -439,8 +433,7 @@ class _AdminManualBookingCreatePageState
   }
 
   List<String> get _vehicleTypeOptions {
-    if (_activeVehicleTypes.contains(_vehicleTypeCode))
-      return _activeVehicleTypes;
+    if (_activeVehicleTypes.contains(_vehicleTypeCode)) return _activeVehicleTypes;
     if (_vehicleTypeCode == 'VIP_VAN') return _activeVehicleTypes;
     return [..._activeVehicleTypes, _vehicleTypeCode];
   }
@@ -449,7 +442,7 @@ class _AdminManualBookingCreatePageState
       _serviceTypeCode == 'AIRPORT_PICKUP' ||
       _serviceTypeCode == 'AIRPORT_DROPOFF';
 
-  Map<String, dynamic>? _golf;
+  Map<String,dynamic>? _golf;
 
   bool get _showsGolfSection => _serviceTypeCode == 'GOLF_TRANSFER';
 
@@ -467,9 +460,7 @@ class _AdminManualBookingCreatePageState
       if (!_bookingDetailBool(manualActions['canEdit'])) {
         setState(() {
           _loadingEdit = false;
-          _loadEditError = context.l10n.t(
-            'admin_manual_booking_edit_not_allowed',
-          );
+          _loadEditError = context.l10n.t('admin_manual_booking_edit_not_allowed');
         });
         return;
       }
@@ -495,12 +486,10 @@ class _AdminManualBookingCreatePageState
           }
         }
       }
-      final nameSign =
-          options['nameSign'] == true ||
-          items.any(
+      final nameSign = options['nameSign'] == true
+          || items.any(
             (item) =>
-                item is Map &&
-                _bookingDetailString(item['chargeType']) == 'NAME_SIGN',
+                item is Map && _bookingDetailString(item['chargeType']) == 'NAME_SIGN',
           );
       final pickupAt = ThailandPickupDateTime.tryBangkokWallFromIso(
         _bookingDetailString(detail['scheduledPickupAt']),
@@ -511,7 +500,10 @@ class _AdminManualBookingCreatePageState
       final customerUserId = _bookingDetailInt(customer['customerUserId']);
 
       setState(() {
-        _origin = _routeLocation(origin, fallbackId: '$bookingNumber-origin');
+        _origin = _routeLocation(
+          origin,
+          fallbackId: '$bookingNumber-origin',
+        );
         _destination = _routeLocation(
           destination,
           fallbackId: '$bookingNumber-destination',
@@ -523,17 +515,12 @@ class _AdminManualBookingCreatePageState
                 .toUpperCase();
         final adultsRaw = _bookingDetailInt(passengers['adults']);
         _adults = (adultsRaw ?? 1).clamp(1, 8);
-        _children = (_bookingDetailInt(passengers['children']) ?? 0).clamp(
-          0,
-          8,
-        );
+        _children = (_bookingDetailInt(passengers['children']) ?? 0).clamp(0, 8);
         _infants = (_bookingDetailInt(passengers['infants']) ?? 0).clamp(0, 8);
-        _luggage20 = (_bookingDetailInt(luggage['carriers20Inch']) ?? 0).clamp(
-          0,
-          20,
-        );
-        _luggage24 = (_bookingDetailInt(luggage['carriers24InchPlus']) ?? 0)
-            .clamp(0, 20);
+        _luggage20 =
+            (_bookingDetailInt(luggage['carriers20Inch']) ?? 0).clamp(0, 20);
+        _luggage24 =
+            (_bookingDetailInt(luggage['carriers24InchPlus']) ?? 0).clamp(0, 20);
         _golfBags = (_bookingDetailInt(luggage['golfBags']) ?? 0).clamp(0, 20);
         _specialItemsTextController.clear();
         _applySpecialLuggageFromDetail(
@@ -541,9 +528,8 @@ class _AdminManualBookingCreatePageState
           setCount: (value) => _specialLuggageCount = value,
           setText: (value) => _specialItemsTextController.text = value,
         );
-        final serviceCode = _bookingDetailString(
-          serviceType['code'],
-        )?.toUpperCase();
+        final serviceCode =
+            _bookingDetailString(serviceType['code'])?.toUpperCase();
         if (serviceCode != null && serviceCode.isNotEmpty) {
           _serviceTypeCode = _serviceTypeCodes.contains(serviceCode)
               ? serviceCode
@@ -552,12 +538,10 @@ class _AdminManualBookingCreatePageState
         _preferFemaleDriver = _bookingDetailBool(options['preferFemaleDriver']);
         _flightNumber = _bookingDetailString(flight['flightNumber']) ?? '';
         _originAirportIata = _bookingDetailString(flight['airportIata']);
-        _flightScheduledArrivalAt = _bookingDetailString(
-          flight['scheduledArrivalAt'],
-        );
-        _flightEstimatedArrivalAt = _bookingDetailString(
-          flight['estimatedArrivalAt'],
-        );
+        _flightScheduledArrivalAt =
+            _bookingDetailString(flight['scheduledArrivalAt']);
+        _flightEstimatedArrivalAt =
+            _bookingDetailString(flight['estimatedArrivalAt']);
         _golfRegion = _bookingDetailString(flight['golfRegion']);
         _golfCourseId = _bookingDetailInt(flight['golfCourseId']);
         _driverIncluded = _bookingDetailBool(flight['driverIncluded']);
@@ -566,11 +550,9 @@ class _AdminManualBookingCreatePageState
         }
         _payoutController.text = payout > 0 ? '$payout' : '';
         _customerChargeController.clear();
-        _paymentCollection = paymentMethod == 'ADMIN_COLLECTED'
-            ? 'ADMIN_COLLECTED'
-            : 'DRIVER_COLLECTS';
-        _memoController.text =
-            _bookingDetailString(detail['specialRequests']) ?? '';
+        _paymentCollection =
+            paymentMethod == 'ADMIN_COLLECTED' ? 'ADMIN_COLLECTED' : 'DRIVER_COLLECTS';
+        _memoController.text = _bookingDetailString(detail['specialRequests']) ?? '';
         _nameSign = nameSign;
         _nameSignTextController.text =
             _bookingDetailString(options['nameSignText']) ??
@@ -588,12 +570,9 @@ class _AdminManualBookingCreatePageState
             email: _bookingDetailString(customer['email']),
           );
         } else {
-          _guestNameController.text =
-              _bookingDetailString(customer['name']) ?? '';
-          _guestPhoneController.text =
-              _bookingDetailString(customer['phone']) ?? '';
-          _guestEmailController.text =
-              _bookingDetailString(customer['email']) ?? '';
+          _guestNameController.text = _bookingDetailString(customer['name']) ?? '';
+          _guestPhoneController.text = _bookingDetailString(customer['phone']) ?? '';
+          _guestEmailController.text = _bookingDetailString(customer['email']) ?? '';
         }
         _loadingEdit = false;
         _createdBookingNumber = null;
@@ -648,15 +627,13 @@ class _AdminManualBookingCreatePageState
       await _dispatchApi.assignDriver(bookingNumber, result.driverId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.t('admin_manual_booking_assign_success')),
-        ),
+        SnackBar(content: Text(context.l10n.t('admin_manual_booking_assign_success'))),
       );
     } on AdminDispatchApiException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -707,15 +684,15 @@ class _AdminManualBookingCreatePageState
     } on AdminDispatchApiException catch (error) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
     } catch (_) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.t('ui_action_failed'))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.t('ui_action_failed'))),
+      );
     }
   }
 
@@ -835,8 +812,7 @@ class _AdminManualBookingCreatePageState
   void _onQuoteInputsChanged() {
     if (_isEditMode || _origin == null || _destination == null) return;
     if (_customerChargeManuallyEdited) {
-      if (!_standardPriceStale && mounted)
-        setState(() => _standardPriceStale = true);
+      if (!_standardPriceStale && mounted) setState(() => _standardPriceStale = true);
       return;
     }
     _fillStandardPrice();
@@ -848,14 +824,9 @@ class _AdminManualBookingCreatePageState
     final service = BookingServiceTypeX.fromApiCode(_serviceTypeCode);
     if (origin == null || destination == null || service == null) return;
     final generation = ++_pricingRequestGeneration;
-    setState(() {
-      _loadingStandardPrice = true;
-      _standardPriceError = null;
-    });
+    setState(() { _loadingStandardPrice = true; _standardPriceError = null; });
     final locations = pricingLocationParams(
-      service: service,
-      origin: origin,
-      destination: destination,
+      service: service, origin: origin, destination: destination,
     );
     try {
       final result = await _bookingApi.calculatePricing(
@@ -867,20 +838,12 @@ class _AdminManualBookingCreatePageState
         originLocationCode: locations['originLocationCode'],
         destinationLocationCode: locations['destinationLocationCode'],
         nameSign: _nameSign,
-        scheduledPickupAt: _pickupAt == null
-            ? null
-            : ThailandPickupDateTime.serializeWallClock(_pickupAt!),
-        adults: _adults,
-        children: _children,
-        infants: _infants,
-        luggage20: _luggage20,
-        luggage24: _luggage24,
-        golfBags: _golfBags,
-        specialLuggageCount: _specialLuggageCount,
-        originLat: origin.latitude,
-        originLng: origin.longitude,
-        destinationLat: destination.latitude,
-        destinationLng: destination.longitude,
+        scheduledPickupAt: _pickupAt == null ? null : ThailandPickupDateTime.serializeWallClock(_pickupAt!),
+        adults: _adults, children: _children, infants: _infants,
+        luggage20: _luggage20, luggage24: _luggage24,
+        golfBags: _golfBags, specialLuggageCount: _specialLuggageCount,
+        originLat: origin.latitude, originLng: origin.longitude,
+        destinationLat: destination.latitude, destinationLng: destination.longitude,
       );
       if (!mounted || generation != _pricingRequestGeneration) return;
       _applyingStandardPrice = true;
@@ -895,9 +858,7 @@ class _AdminManualBookingCreatePageState
       if (!mounted || generation != _pricingRequestGeneration) return;
       setState(() {
         _loadingStandardPrice = false;
-        _standardPriceError = context.l10n.t(
-          'admin_manual_booking_standard_price_error',
-        );
+        _standardPriceError = context.l10n.t('admin_manual_booking_standard_price_error');
       });
     }
   }
@@ -905,11 +866,7 @@ class _AdminManualBookingCreatePageState
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_origin == null || _destination == null || _pickupAt == null) {
-      setState(
-        () => _submitError = context.l10n.t(
-          'admin_manual_booking_validation_required',
-        ),
-      );
+      setState(() => _submitError = context.l10n.t('admin_manual_booking_validation_required'));
       return;
     }
     final enteredMessengerId = _messengerIdController.text.trim();
@@ -918,18 +875,12 @@ class _AdminManualBookingCreatePageState
     final guestPhone = enteredPhone.isEmpty
         ? ''
         : normalizeAdminManualPhone(_guestPhoneDialCode, enteredPhone);
-    final phoneRequired = const {
-      'KAKAO',
-      'WHATSAPP',
-      'SMS',
-    }.contains(_messengerType);
+    final phoneRequired = const {'KAKAO', 'WHATSAPP', 'SMS'}
+        .contains(_messengerType);
     if ((phoneRequired && guestPhone.isEmpty) ||
         (enteredPhone.isNotEmpty && guestPhone.isEmpty)) {
-      setState(
-        () => _submitError = context.l10n.t(
-          'admin_manual_booking_validation_customer',
-        ),
-      );
+      setState(() => _submitError =
+          context.l10n.t('admin_manual_booking_validation_customer'));
       return;
     }
     final messengerId = const {'WHATSAPP', 'SMS'}.contains(_messengerType)
@@ -938,27 +889,17 @@ class _AdminManualBookingCreatePageState
     if (_selectedCustomer == null &&
         (_guestNameController.text.trim().isEmpty ||
             (guestPhone.isEmpty && !hasMessenger))) {
-      setState(
-        () => _submitError = context.l10n.t(
-          'admin_manual_booking_validation_customer',
-        ),
-      );
+      setState(() => _submitError = context.l10n.t('admin_manual_booking_validation_customer'));
       return;
     }
     if (!_isEditMode &&
         _dispatchMode == 'DIRECT' &&
         _selectedDirectDriverId == null) {
-      setState(
-        () => _submitError = context.l10n.t(
-          'admin_manual_booking_driver_required',
-        ),
-      );
+      setState(() => _submitError = context.l10n.t('admin_manual_booking_driver_required'));
       return;
     }
     if (_nameSign && _nameSignTextController.text.trim().isEmpty) {
-      setState(
-        () => _submitError = context.l10n.t('wizard_required_name_sign_text'),
-      );
+      setState(() => _submitError = context.l10n.t('wizard_required_name_sign_text'));
       return;
     }
 
@@ -969,15 +910,12 @@ class _AdminManualBookingCreatePageState
     });
 
     try {
-      final customerCharge = int.tryParse(
-        _customerChargeController.text.trim(),
-      );
+      final customerCharge = int.tryParse(_customerChargeController.text.trim());
       final payload = {
         'origin': _locationPayload(_origin!),
         'destination': _locationPayload(_destination!),
-        'scheduledPickupAt': ThailandPickupDateTime.serializeWallClock(
-          _pickupAt!,
-        ),
+        'scheduledPickupAt':
+            ThailandPickupDateTime.serializeWallClock(_pickupAt!),
         'vehicleTypeCode': _vehicleTypeCode,
         if (_showsGolfSection && _golf != null) 'golf': _golf,
         'serviceTypeCode': _serviceTypeCode,
@@ -1074,20 +1012,16 @@ class _AdminManualBookingCreatePageState
       }
       if (_isEditMode && widget.editBookingNumber == null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              context.l10n.t('admin_manual_booking_update_success'),
-            ),
-          ),
+          SnackBar(content: Text(context.l10n.t('admin_manual_booking_update_success'))),
         );
       } else if (!_isEditMode && bookingNumber != null) {
         final successMessage = _dispatchMode == 'DIRECT'
             ? '${context.l10n.t('admin_manual_booking_assign_success')} · '
-                  '${context.l10n.t('booking_number_label')}: $bookingNumber'
+                '${context.l10n.t('booking_number_label')}: $bookingNumber'
             : '${context.l10n.t('admin_manual_booking_success')} $bookingNumber';
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(successMessage)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(successMessage)),
+        );
         await _openDetail();
       }
     } on AdminDispatchApiException catch (error) {
@@ -1114,11 +1048,8 @@ class _AdminManualBookingCreatePageState
   }
 
   Widget _phoneInput(AppLocalizations l10n) {
-    final required = const {
-      'KAKAO',
-      'WHATSAPP',
-      'SMS',
-    }.contains(_messengerType);
+    final required = const {'KAKAO', 'WHATSAPP', 'SMS'}
+        .contains(_messengerType);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1174,10 +1105,7 @@ class _AdminManualBookingCreatePageState
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              _loadEditError!,
-              style: const TextStyle(color: AppTokens.error),
-            ),
+            Text(_loadEditError!, style: const TextStyle(color: AppTokens.error)),
             const SizedBox(height: AppTokens.spaceMd),
             FilledButton(
               onPressed: _loadForEdit,
@@ -1194,782 +1122,702 @@ class _AdminManualBookingCreatePageState
         child: ListView(
           padding: AppUi.pagePadding(context),
           children: [
-            AppUi.sectionHeader(
-              context,
-              title: _isEditMode
-                  ? l10n.t('admin_manual_booking_edit_title')
-                  : l10n.t('admin_manual_booking_title'),
-            ),
-            if (_createdBookingNumber != null && !_isEditMode) ...[
+              AppUi.sectionHeader(
+                context,
+                title: _isEditMode
+                    ? l10n.t('admin_manual_booking_edit_title')
+                    : l10n.t('admin_manual_booking_title'),
+              ),
+              if (_createdBookingNumber != null && !_isEditMode) ...[
+                AppUi.surfaceCard(
+                  backgroundColor: AppTokens.successLight,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        l10n.t('admin_manual_booking_success'),
+                        style: const TextStyle(
+                          color: AppTokens.success,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: AppTokens.spaceSm),
+                      SelectableText(
+                        _createdBookingNumber!,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: AppTokens.spaceMd),
+                      Wrap(
+                        spacing: AppTokens.spaceSm,
+                        runSpacing: AppTokens.spaceSm,
+                        children: [
+                          FilledButton.tonalIcon(
+                            onPressed: _submitting ? null : _openDetail,
+                            icon: const Icon(Icons.open_in_new),
+                            label: Text(l10n.t('admin_manual_booking_view_detail')),
+                          ),
+                          FilledButton.tonalIcon(
+                            onPressed: _submitting ? null : _assignDriver,
+                            icon: const Icon(Icons.person_add_alt),
+                            label: Text(l10n.t('admin_manual_booking_assign_driver')),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: _submitting
+                                ? null
+                                : () {
+                                    setState(
+                                      () => _editingBookingNumber =
+                                          _createdBookingNumber,
+                                    );
+                                    WidgetsBinding.instance.addPostFrameCallback(
+                                      (_) => _loadForEdit(),
+                                    );
+                                  },
+                            icon: const Icon(Icons.edit_outlined),
+                            label: Text(l10n.t('admin_manual_booking_edit')),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: _submitting ? null : _cancelBooking,
+                            icon: const Icon(Icons.cancel_outlined),
+                            label: Text(l10n.t('admin_manual_booking_cancel')),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppTokens.spaceMd),
+              ],
+              if (_isEditMode && widget.editBookingNumber != null) ...[
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: OutlinedButton.icon(
+                    onPressed: _submitting ? null : _cancelBooking,
+                    icon: const Icon(Icons.cancel_outlined),
+                    label: Text(l10n.t('admin_manual_booking_cancel')),
+                  ),
+                ),
+                const SizedBox(height: AppTokens.spaceSm),
+              ],
+              if (!_isEditMode) ...[
+                AppUi.surfaceCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        l10n.t('admin_manual_booking_dispatch_mode'),
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      RadioListTile<String>(
+                        key: const Key('adminManualDispatchOpen'),
+                        contentPadding: EdgeInsets.zero,
+                        value: 'OPEN',
+                        groupValue: _dispatchMode,
+                        onChanged: _submitting ? null : (value) => setState(() {
+                          _dispatchMode = value ?? 'OPEN';
+                          _selectedDirectDriverId = null;
+                        }),
+                        title: Text(l10n.t('admin_manual_booking_dispatch_open')),
+                      ),
+                      RadioListTile<String>(
+                        key: const Key('adminManualDispatchDirect'),
+                        contentPadding: EdgeInsets.zero,
+                        value: 'DIRECT',
+                        groupValue: _dispatchMode,
+                        onChanged: _submitting ? null : (value) => setState(
+                          () => _dispatchMode = value ?? 'OPEN',
+                        ),
+                        title: Text(l10n.t('admin_manual_booking_dispatch_direct')),
+                      ),
+                      if (_dispatchMode == 'DIRECT') ...[
+                        const SizedBox(height: AppTokens.spaceSm),
+                        if (_loadingDirectDrivers)
+                          const Center(child: CircularProgressIndicator())
+                        else
+                          DropdownButtonFormField<int>(
+                            key: const Key('adminManualDirectDriver'),
+                            value: _eligibleDirectDrivers.any(
+                              (driver) => _bookingDetailInt(driver['driverId'])
+                                  == _selectedDirectDriverId,
+                            ) ? _selectedDirectDriverId : null,
+                            decoration: InputDecoration(
+                              labelText: l10n.t('admin_manual_booking_driver'),
+                              hintText: l10n.t('admin_manual_booking_driver_hint'),
+                            ),
+                            items: _eligibleDirectDrivers.map((driver) {
+                              final vehicle = _bookingDetailMap(driver['primaryVehicle']);
+                              final name = _bookingDetailString(driver['displayName'])
+                                  ?? '#${driver['driverId']}';
+                              final vehicleCode = _bookingDetailString(
+                                vehicle['vehicleTypeCode'],
+                              );
+                              return DropdownMenuItem<int>(
+                                value: _bookingDetailInt(driver['driverId']),
+                                child: Text(
+                                  vehicleCode == null ? name : '$name · $vehicleCode',
+                                ),
+                              );
+                            }).toList(growable: false),
+                            onChanged: _submitting ? null : (value) => setState(
+                              () => _selectedDirectDriverId = value,
+                            ),
+                          ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppTokens.spaceMd),
+              ],
               AppUi.surfaceCard(
-                backgroundColor: AppTokens.successLight,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      l10n.t('admin_manual_booking_success'),
-                      style: const TextStyle(
-                        color: AppTokens.success,
-                        fontWeight: FontWeight.w700,
-                      ),
+                backgroundColor: AppTokens.primaryLight,
+                child: InkWell(
+                  onTap: _submitting ? null : _pickPickupDateTime,
+                  borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppTokens.spaceSm,
                     ),
-                    const SizedBox(height: AppTokens.spaceSm),
-                    SelectableText(
-                      _createdBookingNumber!,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: AppTokens.spaceMd),
-                    Wrap(
-                      spacing: AppTokens.spaceSm,
-                      runSpacing: AppTokens.spaceSm,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        FilledButton.tonalIcon(
-                          onPressed: _submitting ? null : _openDetail,
-                          icon: const Icon(Icons.open_in_new),
-                          label: Text(
-                            l10n.t('admin_manual_booking_view_detail'),
+                        const Icon(
+                          Icons.schedule,
+                          color: AppTokens.primary,
+                          size: 28,
+                        ),
+                        const SizedBox(width: AppTokens.spaceMd),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                l10n.t('admin_manual_booking_pickup_datetime'),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                      color: AppTokens.primary,
+                                    ),
+                              ),
+                              const SizedBox(height: AppTokens.spaceXs),
+                              Text(
+                                _formatPickupDisplay(l10n),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: AppTokens.spaceXs),
+                              Text(
+                                l10n.t('admin_manual_booking_pickup_timezone'),
+                                style: const TextStyle(
+                                  color: AppTokens.textSecondary,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        FilledButton.tonalIcon(
-                          onPressed: _submitting ? null : _assignDriver,
-                          icon: const Icon(Icons.person_add_alt),
-                          label: Text(
-                            l10n.t('admin_manual_booking_assign_driver'),
-                          ),
-                        ),
-                        OutlinedButton.icon(
-                          onPressed: _submitting
-                              ? null
-                              : () {
-                                  setState(
-                                    () => _editingBookingNumber =
-                                        _createdBookingNumber,
-                                  );
-                                  WidgetsBinding.instance.addPostFrameCallback(
-                                    (_) => _loadForEdit(),
-                                  );
-                                },
-                          icon: const Icon(Icons.edit_outlined),
-                          label: Text(l10n.t('admin_manual_booking_edit')),
-                        ),
-                        OutlinedButton.icon(
-                          onPressed: _submitting ? null : _cancelBooking,
-                          icon: const Icon(Icons.cancel_outlined),
-                          label: Text(l10n.t('admin_manual_booking_cancel')),
-                        ),
+                        const Icon(Icons.chevron_right),
                       ],
                     ),
-                  ],
+                  ),
                 ),
               ),
               const SizedBox(height: AppTokens.spaceMd),
-            ],
-            if (_isEditMode && widget.editBookingNumber != null) ...[
-              Align(
-                alignment: Alignment.centerRight,
-                child: OutlinedButton.icon(
-                  onPressed: _submitting ? null : _cancelBooking,
-                  icon: const Icon(Icons.cancel_outlined),
-                  label: Text(l10n.t('admin_manual_booking_cancel')),
-                ),
-              ),
-              const SizedBox(height: AppTokens.spaceSm),
-            ],
-            if (!_isEditMode) ...[
               AppUi.surfaceCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      l10n.t('admin_manual_booking_dispatch_mode'),
-                      style: Theme.of(context).textTheme.titleSmall,
+                    GooglePlacesSearchField(
+                      label: l10n.t('admin_manual_booking_origin'),
+                      languageCode: languageCode,
+                      selected: _origin,
+                      onSelected: (value) {
+                        setState(() => _origin = value);
+                        _onQuoteInputsChanged();
+                      },
                     ),
-                    RadioListTile<String>(
-                      key: const Key('adminManualDispatchOpen'),
-                      contentPadding: EdgeInsets.zero,
-                      value: 'OPEN',
-                      groupValue: _dispatchMode,
-                      onChanged: _submitting
-                          ? null
-                          : (value) => setState(() {
-                              _dispatchMode = value ?? 'OPEN';
-                              _selectedDirectDriverId = null;
-                            }),
-                      title: Text(l10n.t('admin_manual_booking_dispatch_open')),
+                    const SizedBox(height: AppTokens.spaceMd),
+                    GooglePlacesSearchField(
+                      label: l10n.t('admin_manual_booking_destination'),
+                      languageCode: languageCode,
+                      selected: _destination,
+                      onSelected: (value) {
+                        setState(() => _destination = value);
+                        _onQuoteInputsChanged();
+                      },
                     ),
-                    RadioListTile<String>(
-                      key: const Key('adminManualDispatchDirect'),
-                      contentPadding: EdgeInsets.zero,
-                      value: 'DIRECT',
-                      groupValue: _dispatchMode,
-                      onChanged: _submitting
-                          ? null
-                          : (value) =>
-                                setState(() => _dispatchMode = value ?? 'OPEN'),
-                      title: Text(
-                        l10n.t('admin_manual_booking_dispatch_direct'),
+                    const SizedBox(height: AppTokens.spaceMd),
+                    DropdownButtonFormField<String>(
+                      key: const Key('adminManualBookingServiceType'),
+                      value: _serviceTypeCode,
+                      decoration: InputDecoration(
+                        labelText: l10n.t('service_type'),
                       ),
+                      items: (_serviceTypeCodes.contains(_serviceTypeCode)
+                              ? _serviceTypeCodes
+                              : [..._serviceTypeCodes, _serviceTypeCode])
+                          .map((code) {
+                            final type = BookingServiceTypeX.fromApiCode(code);
+                            final label = type != null
+                                ? l10n.t(type.labelKey)
+                                : code;
+                            return DropdownMenuItem(
+                              value: code,
+                              child: Text(label),
+                            );
+                          })
+                          .toList(growable: false),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _serviceTypeCode = value;
+                            if (!_showsFlightSection) {
+                              _flightNumber = '';
+                              _originAirportIata = null;
+                              _applyFlightLookup(null);
+                            }
+                            if (!_showsGolfSection) {
+                              _golfRegion = null;
+                              _golfCourseId = null;
+                              _driverIncluded = false;
+                              _golfCourses = const [];
+                            }
+                          });
+                          _onQuoteInputsChanged();
+                        }
+                      },
                     ),
-                    if (_dispatchMode == 'DIRECT') ...[
-                      const SizedBox(height: AppTokens.spaceSm),
-                      if (_loadingDirectDrivers)
-                        const Center(child: CircularProgressIndicator())
-                      else
-                        DropdownButtonFormField<int>(
-                          key: const Key('adminManualDirectDriver'),
-                          value:
-                              _eligibleDirectDrivers.any(
-                                (driver) =>
-                                    _bookingDetailInt(driver['driverId']) ==
-                                    _selectedDirectDriverId,
-                              )
-                              ? _selectedDirectDriverId
-                              : null,
-                          decoration: InputDecoration(
-                            labelText: l10n.t('admin_manual_booking_driver'),
-                            hintText: l10n.t(
-                              'admin_manual_booking_driver_hint',
-                            ),
-                          ),
-                          items: _eligibleDirectDrivers
-                              .map((driver) {
-                                final vehicle = _bookingDetailMap(
-                                  driver['primaryVehicle'],
-                                );
-                                final name =
-                                    _bookingDetailString(
-                                      driver['displayName'],
-                                    ) ??
-                                    '#${driver['driverId']}';
-                                final vehicleCode = _bookingDetailString(
-                                  vehicle['vehicleTypeCode'],
-                                );
-                                return DropdownMenuItem<int>(
-                                  value: _bookingDetailInt(driver['driverId']),
-                                  child: Text(
-                                    vehicleCode == null
-                                        ? name
-                                        : '$name · $vehicleCode',
-                                  ),
-                                );
-                              })
-                              .toList(growable: false),
-                          onChanged: _submitting
-                              ? null
-                              : (value) => setState(
-                                  () => _selectedDirectDriverId = value,
-                                ),
+                    if (_showsGolfSection) GolfTripFields(value:_golf,onChanged:(selection,course) {
+                      setState(() {
+                        final previous=_golf?['tripType'];
+                        _golf=selection;
+                        if(course!=null) {
+                          _golfCourseId=course['id'] as int;
+                          _golfRegion='PATTAYA';
+                          final point=LocationOption(id:'golf:${course['id']}',displayName:course['name'].toString(),kind:LocationKind.golf,
+                            code:'GOLF_${course['id']}',name:course['name'].toString(),address:course['name'].toString(),
+                            latitude:(course['lat'] as num).toDouble(),longitude:(course['lng'] as num).toDouble());
+                          if(selection['tripType']=='RETURN') {
+                            if(previous!='RETURN' && _origin?.kind!=LocationKind.golf)_destination=_origin;
+                            _origin=point;
+                          } else {
+                            if(previous=='RETURN' && _destination?.kind!=LocationKind.golf)_origin=_destination;
+                            _destination=point;
+                          }
+                        }
+                        _driverIncluded=true;
+                      });
+                      _onQuoteInputsChanged();
+                    }),
+                    if (_showsFlightSection) ...[
+                      const SizedBox(height: AppTokens.spaceMd),
+                      AdminManualFlightSection(
+                        flightNumber: _flightNumber,
+                        pickupDateIsoOrBangkokDate: _pickupDateYmdForFlight,
+                        pickupAtBangkok: _pickupAt,
+                        enabled: !_submitting,
+                        onFlightNumberChanged: (value) =>
+                            setState(() => _flightNumber = value),
+                        onConfirmedLookup: (result) => setState(
+                          () => _applyFlightLookup(result),
                         ),
+                        onPickupAtApply: (value) {
+                          setState(() => _pickupAt = value);
+                          _onQuoteInputsChanged();
+                        },
+                        flightLookupApi: widget.flightLookupApi,
+                      ),
+                    ],
+                    const SizedBox(height: AppTokens.spaceMd),
+                    DropdownButtonFormField<String>(
+                      key: const Key('adminManualBookingVehicleType'),
+                      value: _vehicleTypeCode,
+                      decoration: InputDecoration(
+                        labelText: l10n.t('admin_manual_booking_vehicle_type'),
+                      ),
+                      items: _vehicleTypeOptions
+                          .map(
+                            (code) => DropdownMenuItem(
+                              value: code,
+                              child: Text(code),
+                            ),
+                          )
+                          .toList(growable: false),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _vehicleTypeCode = value;
+                            if (!_eligibleDirectDrivers.any(
+                              (driver) => _bookingDetailInt(driver['driverId'])
+                                  == _selectedDirectDriverId,
+                            )) {
+                              _selectedDirectDriverId = null;
+                            }
+                          });
+                          _onQuoteInputsChanged();
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppTokens.spaceMd),
+              AppUi.sectionHeader(context, title: l10n.t('passengers')),
+              AppUi.surfaceCard(
+                child: Column(
+                  children: [
+                    AppUi.counterRow(
+                      label: l10n.t('adults'),
+                      value: _adults,
+                      min: 1,
+                      onChanged: (value) {
+                        if (_submitting) return;
+                        setState(() => _adults = value.clamp(1, 8));
+                      },
+                    ),
+                    AppUi.counterRow(
+                      label: l10n.t('children'),
+                      value: _children,
+                      onChanged: (value) {
+                        if (_submitting) return;
+                        setState(() => _children = value.clamp(0, 8));
+                      },
+                    ),
+                    AppUi.counterRow(
+                      label: l10n.t('infants'),
+                      value: _infants,
+                      onChanged: (value) {
+                        if (_submitting) return;
+                        setState(() => _infants = value.clamp(0, 8));
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppTokens.spaceMd),
+              AppUi.sectionHeader(context, title: l10n.t('luggage')),
+              AppUi.surfaceCard(
+                child: Column(
+                  children: [
+                    AppUi.counterRow(
+                      label: l10n.t('small_carriers'),
+                      value: _luggage20,
+                      onChanged: (value) {
+                        if (_submitting) return;
+                        setState(() => _luggage20 = value.clamp(0, 20));
+                      },
+                    ),
+                    AppUi.counterRow(
+                      label: l10n.t('large_carriers'),
+                      value: _luggage24,
+                      onChanged: (value) {
+                        if (_submitting) return;
+                        setState(() => _luggage24 = value.clamp(0, 20));
+                      },
+                    ),
+                    AppUi.counterRow(
+                      label: l10n.t('golf_bags'),
+                      value: _golfBags,
+                      onChanged: (value) {
+                        if (_submitting) return;
+                        setState(() => _golfBags = value.clamp(0, 20));
+                      },
+                    ),
+                    AppUi.counterRow(
+                      label: l10n.t('special_luggage'),
+                      value: _specialLuggageCount,
+                      onChanged: (value) {
+                        if (_submitting) return;
+                        setState(() {
+                          _specialLuggageCount = value.clamp(0, 20);
+                          if (value > 0) _specialItemsTextController.clear();
+                        });
+                      },
+                    ),
+                    const SizedBox(height: AppTokens.spaceSm),
+                    TextFormField(
+                      key: const Key('adminManualSpecialItemsText'),
+                      controller: _specialItemsTextController,
+                      enabled: !_submitting,
+                      decoration: InputDecoration(
+                        labelText: l10n.t('admin_manual_booking_special_items_text'),
+                        hintText: l10n.t('admin_manual_booking_special_items_hint'),
+                      ),
+                      onChanged: (_) {
+                        if (_specialItemsTextController.text.trim().isNotEmpty) {
+                          setState(() => _specialLuggageCount = 0);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppTokens.spaceMd),
+              AppUi.surfaceCard(
+                child: SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.t('booking_prefer_female_driver')),
+                  subtitle: Text(l10n.t('booking_preference_disclaimer')),
+                  value: _preferFemaleDriver,
+                  onChanged: _submitting
+                      ? null
+                      : (value) => setState(() => _preferFemaleDriver = value),
+                ),
+              ),
+              const SizedBox(height: AppTokens.spaceMd),
+              AppUi.surfaceCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SwitchListTile(
+                      key: const Key('adminManualBookingNameSign'),
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(l10n.t('pricing_name_sign_with_picket')),
+                      subtitle: Text(l10n.t('admin_manual_booking_name_sign_hint')),
+                      value: _nameSign,
+                      onChanged: _submitting ? null : _onNameSignChanged,
+                    ),
+                    if (_nameSign) ...[
+                      const SizedBox(height: AppTokens.spaceSm),
+                      TextFormField(
+                        key: const Key('adminManualBookingNameSignText'),
+                        controller: _nameSignTextController,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: InputDecoration(
+                          labelText: l10n.t('name_sign_text_label'),
+                          hintText: l10n.t('name_sign_text_hint'),
+                        ),
+                        validator: (value) {
+                          if (!_nameSign) return null;
+                          if (value == null || value.trim().isEmpty) {
+                            return l10n.t('wizard_required_name_sign_text');
+                          }
+                          return null;
+                        },
+                      ),
                     ],
                   ],
                 ),
               ),
               const SizedBox(height: AppTokens.spaceMd),
-            ],
-            AppUi.surfaceCard(
-              backgroundColor: AppTokens.primaryLight,
-              child: InkWell(
-                onTap: _submitting ? null : _pickPickupDateTime,
-                borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: AppTokens.spaceSm,
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.schedule,
-                        color: AppTokens.primary,
-                        size: 28,
-                      ),
-                      const SizedBox(width: AppTokens.spaceMd),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              l10n.t('admin_manual_booking_pickup_datetime'),
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    color: AppTokens.primary,
-                                  ),
-                            ),
-                            const SizedBox(height: AppTokens.spaceXs),
-                            Text(
-                              _formatPickupDisplay(l10n),
-                              style: Theme.of(context).textTheme.titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.w600),
-                            ),
-                            const SizedBox(height: AppTokens.spaceXs),
-                            Text(
-                              l10n.t('admin_manual_booking_pickup_timezone'),
-                              style: const TextStyle(
-                                color: AppTokens.textSecondary,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.chevron_right),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppTokens.spaceMd),
-            AppUi.surfaceCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  GooglePlacesSearchField(
-                    label: l10n.t('admin_manual_booking_origin'),
-                    languageCode: languageCode,
-                    selected: _origin,
-                    onSelected: (value) {
-                      setState(() => _origin = value);
-                      _onQuoteInputsChanged();
-                    },
-                  ),
-                  const SizedBox(height: AppTokens.spaceMd),
-                  GooglePlacesSearchField(
-                    label: l10n.t('admin_manual_booking_destination'),
-                    languageCode: languageCode,
-                    selected: _destination,
-                    onSelected: (value) {
-                      setState(() => _destination = value);
-                      _onQuoteInputsChanged();
-                    },
-                  ),
-                  const SizedBox(height: AppTokens.spaceMd),
-                  DropdownButtonFormField<String>(
-                    key: const Key('adminManualBookingServiceType'),
-                    value: _serviceTypeCode,
-                    decoration: InputDecoration(
-                      labelText: l10n.t('service_type'),
-                    ),
-                    items:
-                        (_serviceTypeCodes.contains(_serviceTypeCode)
-                                ? _serviceTypeCodes
-                                : [..._serviceTypeCodes, _serviceTypeCode])
-                            .map((code) {
-                              final type = BookingServiceTypeX.fromApiCode(
-                                code,
-                              );
-                              final label = type != null
-                                  ? l10n.t(type.labelKey)
-                                  : code;
-                              return DropdownMenuItem(
-                                value: code,
-                                child: Text(label),
-                              );
-                            })
-                            .toList(growable: false),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _serviceTypeCode = value;
-                          if (!_showsFlightSection) {
-                            _flightNumber = '';
-                            _originAirportIata = null;
-                            _applyFlightLookup(null);
-                          }
-                          if (!_showsGolfSection) {
-                            _golfRegion = null;
-                            _golfCourseId = null;
-                            _driverIncluded = false;
-                            _golfCourses = const [];
-                          }
-                        });
-                        _onQuoteInputsChanged();
-                      }
-                    },
-                  ),
-                  if (_showsGolfSection)
-                    GolfTripFields(
-                      value: _golf,
-                      onChanged: (selection, course) {
-                        setState(() {
-                          final previous = _golf?['tripType'];
-                          _golf = selection;
-                          if (course != null) {
-                            _golfCourseId = course['id'] as int;
-                            _golfRegion = 'PATTAYA';
-                            final point = LocationOption(
-                              id: 'golf:${course['id']}',
-                              displayName: course['name'].toString(),
-                              kind: LocationKind.golf,
-                              code: 'GOLF_${course['id']}',
-                              name: course['name'].toString(),
-                              address: course['name'].toString(),
-                              latitude: (course['lat'] as num).toDouble(),
-                              longitude: (course['lng'] as num).toDouble(),
-                            );
-                            if (selection['tripType'] == 'RETURN') {
-                              if (previous != 'RETURN' &&
-                                  _origin?.kind != LocationKind.golf)
-                                _destination = _origin;
-                              _origin = point;
-                            } else {
-                              if (previous == 'RETURN' &&
-                                  _destination?.kind != LocationKind.golf)
-                                _origin = _destination;
-                              _destination = point;
-                            }
-                          }
-                          _driverIncluded = true;
-                        });
-                        _onQuoteInputsChanged();
-                      },
-                    ),
-                  if (_showsFlightSection) ...[
-                    const SizedBox(height: AppTokens.spaceMd),
-                    AdminManualFlightSection(
-                      flightNumber: _flightNumber,
-                      pickupDateIsoOrBangkokDate: _pickupDateYmdForFlight,
-                      pickupAtBangkok: _pickupAt,
-                      enabled: !_submitting,
-                      onFlightNumberChanged: (value) =>
-                          setState(() => _flightNumber = value),
-                      onConfirmedLookup: (result) =>
-                          setState(() => _applyFlightLookup(result)),
-                      onPickupAtApply: (value) {
-                        setState(() => _pickupAt = value);
-                        _onQuoteInputsChanged();
-                      },
-                      flightLookupApi: widget.flightLookupApi,
-                    ),
-                  ],
-                  const SizedBox(height: AppTokens.spaceMd),
-                  DropdownButtonFormField<String>(
-                    key: const Key('adminManualBookingVehicleType'),
-                    value: _vehicleTypeCode,
-                    decoration: InputDecoration(
-                      labelText: l10n.t('admin_manual_booking_vehicle_type'),
-                    ),
-                    items: _vehicleTypeOptions
-                        .map(
-                          (code) =>
-                              DropdownMenuItem(value: code, child: Text(code)),
-                        )
-                        .toList(growable: false),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _vehicleTypeCode = value;
-                          if (!_eligibleDirectDrivers.any(
-                            (driver) =>
-                                _bookingDetailInt(driver['driverId']) ==
-                                _selectedDirectDriverId,
-                          )) {
-                            _selectedDirectDriverId = null;
-                          }
-                        });
-                        _onQuoteInputsChanged();
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppTokens.spaceMd),
-            AppUi.sectionHeader(context, title: l10n.t('passengers')),
-            AppUi.surfaceCard(
-              child: Column(
-                children: [
-                  AppUi.counterRow(
-                    label: l10n.t('adults'),
-                    value: _adults,
-                    min: 1,
-                    onChanged: (value) {
-                      if (_submitting) return;
-                      setState(() => _adults = value.clamp(1, 8));
-                    },
-                  ),
-                  AppUi.counterRow(
-                    label: l10n.t('children'),
-                    value: _children,
-                    onChanged: (value) {
-                      if (_submitting) return;
-                      setState(() => _children = value.clamp(0, 8));
-                    },
-                  ),
-                  AppUi.counterRow(
-                    label: l10n.t('infants'),
-                    value: _infants,
-                    onChanged: (value) {
-                      if (_submitting) return;
-                      setState(() => _infants = value.clamp(0, 8));
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppTokens.spaceMd),
-            AppUi.sectionHeader(context, title: l10n.t('luggage')),
-            AppUi.surfaceCard(
-              child: Column(
-                children: [
-                  AppUi.counterRow(
-                    label: l10n.t('small_carriers'),
-                    value: _luggage20,
-                    onChanged: (value) {
-                      if (_submitting) return;
-                      setState(() => _luggage20 = value.clamp(0, 20));
-                    },
-                  ),
-                  AppUi.counterRow(
-                    label: l10n.t('large_carriers'),
-                    value: _luggage24,
-                    onChanged: (value) {
-                      if (_submitting) return;
-                      setState(() => _luggage24 = value.clamp(0, 20));
-                    },
-                  ),
-                  AppUi.counterRow(
-                    label: l10n.t('golf_bags'),
-                    value: _golfBags,
-                    onChanged: (value) {
-                      if (_submitting) return;
-                      setState(() => _golfBags = value.clamp(0, 20));
-                    },
-                  ),
-                  AppUi.counterRow(
-                    label: l10n.t('special_luggage'),
-                    value: _specialLuggageCount,
-                    onChanged: (value) {
-                      if (_submitting) return;
-                      setState(() {
-                        _specialLuggageCount = value.clamp(0, 20);
-                        if (value > 0) _specialItemsTextController.clear();
-                      });
-                    },
-                  ),
-                  const SizedBox(height: AppTokens.spaceSm),
-                  TextFormField(
-                    key: const Key('adminManualSpecialItemsText'),
-                    controller: _specialItemsTextController,
-                    enabled: !_submitting,
-                    decoration: InputDecoration(
-                      labelText: l10n.t(
-                        'admin_manual_booking_special_items_text',
-                      ),
-                      hintText: l10n.t(
-                        'admin_manual_booking_special_items_hint',
-                      ),
-                    ),
-                    onChanged: (_) {
-                      if (_specialItemsTextController.text.trim().isNotEmpty) {
-                        setState(() => _specialLuggageCount = 0);
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppTokens.spaceMd),
-            AppUi.surfaceCard(
-              child: SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(l10n.t('booking_prefer_female_driver')),
-                subtitle: Text(l10n.t('booking_preference_disclaimer')),
-                value: _preferFemaleDriver,
-                onChanged: _submitting
-                    ? null
-                    : (value) => setState(() => _preferFemaleDriver = value),
-              ),
-            ),
-            const SizedBox(height: AppTokens.spaceMd),
-            AppUi.surfaceCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SwitchListTile(
-                    key: const Key('adminManualBookingNameSign'),
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(l10n.t('pricing_name_sign_with_picket')),
-                    subtitle: Text(
-                      l10n.t('admin_manual_booking_name_sign_hint'),
-                    ),
-                    value: _nameSign,
-                    onChanged: _submitting ? null : _onNameSignChanged,
-                  ),
-                  if (_nameSign) ...[
-                    const SizedBox(height: AppTokens.spaceSm),
+              AppUi.surfaceCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                     TextFormField(
-                      key: const Key('adminManualBookingNameSignText'),
-                      controller: _nameSignTextController,
-                      textCapitalization: TextCapitalization.characters,
+                      key: const Key('adminManualBookingPayoutAmount'),
+                      controller: _payoutController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       decoration: InputDecoration(
-                        labelText: l10n.t('name_sign_text_label'),
-                        hintText: l10n.t('name_sign_text_hint'),
+                        labelText: l10n.t('admin_manual_booking_payout_amount'),
                       ),
                       validator: (value) {
-                        if (!_nameSign) return null;
-                        if (value == null || value.trim().isEmpty) {
-                          return l10n.t('wizard_required_name_sign_text');
-                        }
+                        final amount = int.tryParse(value?.trim() ?? '');
+                        if (amount == null || amount <= 0) return l10n.t('admin_manual_booking_validation_required');
                         return null;
                       },
                     ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: AppTokens.spaceMd),
-            AppUi.surfaceCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextFormField(
-                    key: const Key('adminManualBookingPayoutAmount'),
-                    controller: _payoutController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: InputDecoration(
-                      labelText: l10n.t('admin_manual_booking_payout_amount'),
-                    ),
-                    validator: (value) {
-                      final amount = int.tryParse(value?.trim() ?? '');
-                      if (amount == null || amount <= 0)
-                        return l10n.t(
-                          'admin_manual_booking_validation_required',
-                        );
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: AppTokens.spaceMd),
-                  TextFormField(
-                    key: const Key('adminManualBookingCustomerChargeAmount'),
-                    controller: _customerChargeController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: InputDecoration(
-                      labelText: l10n.t(
-                        'admin_manual_booking_customer_charge_amount',
-                      ),
-                      helperText: l10n.t(
-                        'admin_manual_booking_customer_charge_hint',
-                      ),
-                    ),
-                  ),
-                  if (_loadingStandardPrice)
-                    Padding(
-                      padding: const EdgeInsets.only(top: AppTokens.spaceSm),
-                      child: Text(
-                        l10n.t('admin_manual_booking_standard_price_loading'),
-                      ),
-                    )
-                  else if (_standardPriceStale)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: OutlinedButton.icon(
-                        key: const Key('adminManualBookingRefillStandardPrice'),
-                        onPressed: _submitting ? null : _fillStandardPrice,
-                        icon: const Icon(Icons.refresh),
-                        label: Text(
-                          l10n.t('admin_manual_booking_standard_price_refill'),
-                        ),
-                      ),
-                    )
-                  else if (_standardPriceError != null)
-                    Text(
-                      _standardPriceError!,
-                      style: const TextStyle(color: AppTokens.error),
-                    )
-                  else if (_customerChargeController.text.isNotEmpty &&
-                      !_isEditMode)
-                    Text(
-                      l10n.t('admin_manual_booking_standard_price_applied'),
-                      style: const TextStyle(color: AppTokens.success),
-                    ),
-                  const SizedBox(height: AppTokens.spaceLg),
-                  Text(
-                    l10n.t('admin_manual_booking_payment_method'),
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                  RadioListTile<String>(
-                    value: 'ADMIN_COLLECTED',
-                    groupValue: _paymentCollection,
-                    onChanged: (value) {
-                      if (value != null)
-                        setState(() => _paymentCollection = value);
-                    },
-                    title: Text(
-                      l10n.t('admin_manual_booking_payment_admin_collected'),
-                    ),
-                  ),
-                  RadioListTile<String>(
-                    value: 'DRIVER_COLLECTS',
-                    groupValue: _paymentCollection,
-                    onChanged: (value) {
-                      if (value != null)
-                        setState(() => _paymentCollection = value);
-                    },
-                    title: Text(
-                      l10n.t('admin_manual_booking_payment_driver_collects'),
-                    ),
-                  ),
-                  if (_paymentCollection == 'ADMIN_COLLECTED') ...[
-                    const SizedBox(height: AppTokens.spaceSm),
-                    DriverAdminManualCallNotice(
-                      isAdminManualCall: true,
-                      requiresBankAccountConfirmation: true,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: AppTokens.spaceSm),
-                      child: Text(
-                        l10n.t('admin_manual_booking_preview_notice'),
-                        style: const TextStyle(color: AppTokens.textSecondary),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: AppTokens.spaceMd),
-            AppUi.surfaceCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    l10n.t('admin_manual_booking_customer_section'),
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                  const SizedBox(height: AppTokens.spaceSm),
-                  TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      labelText: l10n.t('admin_coupon_search_hint'),
-                      suffixIcon: IconButton(
-                        onPressed: _searching ? null : _searchCustomers,
-                        icon: _searching
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.search),
-                      ),
-                    ),
-                    onSubmitted: (_) => _searchCustomers(),
-                  ),
-                  if (_searchError != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: AppTokens.spaceSm),
-                      child: Text(
-                        _searchError!,
-                        style: const TextStyle(color: AppTokens.error),
-                      ),
-                    ),
-                  if (_searchResults.isNotEmpty)
-                    ..._searchResults.map((customer) {
-                      final selected = _selectedCustomer?.id == customer.id;
-                      final label = _customerLabel(customer);
-                      return ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(label.isEmpty ? '#${customer.id}' : label),
-                        trailing: selected
-                            ? const Icon(
-                                Icons.check_circle,
-                                color: AppTokens.primary,
-                              )
-                            : null,
-                        onTap: () => setState(() {
-                          _selectedCustomer = customer;
-                          _guestNameController.clear();
-                          _guestPhoneController.clear();
-                          _guestEmailController.clear();
-                        }),
-                      );
-                    }),
-                  if (_selectedCustomer == null) ...[
                     const SizedBox(height: AppTokens.spaceMd),
                     TextFormField(
-                      key: const Key('adminManualBookingGuestName'),
-                      controller: _guestNameController,
+                      key: const Key('adminManualBookingCustomerChargeAmount'),
+                      controller: _customerChargeController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       decoration: InputDecoration(
-                        labelText: l10n.t('admin_manual_booking_guest_name'),
+                        labelText: l10n.t('admin_manual_booking_customer_charge_amount'),
+                        helperText: l10n.t('admin_manual_booking_customer_charge_hint'),
                       ),
                     ),
-                    const SizedBox(height: AppTokens.spaceSm),
-                    _phoneInput(l10n),
-                    const SizedBox(height: AppTokens.spaceSm),
-                    TextFormField(
-                      controller: _guestEmailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        labelText: l10n.t('admin_manual_booking_guest_email'),
+                    if (_loadingStandardPrice)
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppTokens.spaceSm),
+                        child: Text(l10n.t('admin_manual_booking_standard_price_loading')),
+                      )
+                    else if (_standardPriceStale)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton.icon(
+                          key: const Key('adminManualBookingRefillStandardPrice'),
+                          onPressed: _submitting ? null : _fillStandardPrice,
+                          icon: const Icon(Icons.refresh),
+                          label: Text(l10n.t('admin_manual_booking_standard_price_refill')),
+                        ),
+                      )
+                    else if (_standardPriceError != null)
+                      Text(_standardPriceError!, style: const TextStyle(color: AppTokens.error))
+                    else if (_customerChargeController.text.isNotEmpty && !_isEditMode)
+                      Text(
+                        l10n.t('admin_manual_booking_standard_price_applied'),
+                        style: const TextStyle(color: AppTokens.success),
                       ),
-                    ),
-                  ] else ...[
-                    const SizedBox(height: AppTokens.spaceSm),
+                    const SizedBox(height: AppTokens.spaceLg),
                     Text(
-                      '${l10n.t('admin_coupon_selected_customer')}: ${_customerLabel(_selectedCustomer!)}',
+                      l10n.t('admin_manual_booking_payment_method'),
+                      style: Theme.of(context).textTheme.titleSmall,
                     ),
-                    TextButton(
-                      onPressed: () => setState(() => _selectedCustomer = null),
-                      child: Text(
-                        l10n.t('admin_manual_booking_clear_customer'),
+                    RadioListTile<String>(
+                      value: 'ADMIN_COLLECTED',
+                      groupValue: _paymentCollection,
+                      onChanged: (value) {
+                        if (value != null) setState(() => _paymentCollection = value);
+                      },
+                      title: Text(l10n.t('admin_manual_booking_payment_admin_collected')),
+                    ),
+                    RadioListTile<String>(
+                      value: 'DRIVER_COLLECTS',
+                      groupValue: _paymentCollection,
+                      onChanged: (value) {
+                        if (value != null) setState(() => _paymentCollection = value);
+                      },
+                      title: Text(l10n.t('admin_manual_booking_payment_driver_collects')),
+                    ),
+                    if (_paymentCollection == 'ADMIN_COLLECTED') ...[
+                      const SizedBox(height: AppTokens.spaceSm),
+                      DriverAdminManualCallNotice(
+                        isAdminManualCall: true,
+                        requiresBankAccountConfirmation: true,
                       ),
-                    ),
-                  ],
-                  const SizedBox(height: AppTokens.spaceMd),
-                  DropdownButtonFormField<String?>(
-                    key: const Key('adminManualMessengerType'),
-                    value: _messengerType,
-                    decoration: InputDecoration(
-                      labelText: l10n.t('admin_manual_booking_messenger_type'),
-                    ),
-                    items: [
-                      DropdownMenuItem<String?>(
-                        value: null,
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppTokens.spaceSm),
                         child: Text(
-                          l10n.t('admin_manual_booking_messenger_none'),
+                          l10n.t('admin_manual_booking_preview_notice'),
+                          style: const TextStyle(color: AppTokens.textSecondary),
                         ),
                       ),
-                      for (final type in const [
-                        'KAKAO',
-                        'LINE',
-                        'WHATSAPP',
-                        'SMS',
-                      ])
-                        DropdownMenuItem<String?>(
-                          value: type,
-                          child: Text(
-                            l10n.t(
-                              'admin_manual_booking_messenger_${type.toLowerCase()}',
-                            ),
-                          ),
-                        ),
                     ],
-                    onChanged: _submitting
-                        ? null
-                        : (value) => setState(() {
-                            _messengerType = value;
-                            _guestPhoneDialCode = value == 'KAKAO'
-                                ? '+82'
-                                : '+66';
-                            if (value == null ||
-                                const {'WHATSAPP', 'SMS'}.contains(value)) {
-                              _messengerIdController.clear();
-                            }
-                          }),
-                  ),
-                  if (_messengerType != null) ...[
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppTokens.spaceMd),
+              AppUi.surfaceCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      l10n.t('admin_manual_booking_customer_section'),
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
                     const SizedBox(height: AppTokens.spaceSm),
-                    if (_selectedCustomer != null) ...[
+                    TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        labelText: l10n.t('admin_coupon_search_hint'),
+                        suffixIcon: IconButton(
+                          onPressed: _searching ? null : _searchCustomers,
+                          icon: _searching
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.search),
+                        ),
+                      ),
+                      onSubmitted: (_) => _searchCustomers(),
+                    ),
+                    if (_searchError != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppTokens.spaceSm),
+                        child: Text(
+                          _searchError!,
+                          style: const TextStyle(color: AppTokens.error),
+                        ),
+                      ),
+                    if (_searchResults.isNotEmpty)
+                      ..._searchResults.map((customer) {
+                        final selected = _selectedCustomer?.id == customer.id;
+                        final label = _customerLabel(customer);
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(label.isEmpty ? '#${customer.id}' : label),
+                          trailing: selected
+                              ? const Icon(Icons.check_circle, color: AppTokens.primary)
+                              : null,
+                          onTap: () => setState(() {
+                            _selectedCustomer = customer;
+                            _guestNameController.clear();
+                            _guestPhoneController.clear();
+                            _guestEmailController.clear();
+                          }),
+                        );
+                      }),
+                    if (_selectedCustomer == null) ...[
+                      const SizedBox(height: AppTokens.spaceMd),
+                      TextFormField(
+                        key: const Key('adminManualBookingGuestName'),
+                        controller: _guestNameController,
+                        decoration: InputDecoration(
+                          labelText: l10n.t('admin_manual_booking_guest_name'),
+                        ),
+                      ),
+                      const SizedBox(height: AppTokens.spaceSm),
                       _phoneInput(l10n),
                       const SizedBox(height: AppTokens.spaceSm),
-                    ],
-                    if (const {'KAKAO', 'LINE'}.contains(_messengerType))
                       TextFormField(
+                        controller: _guestEmailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: InputDecoration(
+                          labelText: l10n.t('admin_manual_booking_guest_email'),
+                        ),
+                      ),
+                    ] else ...[
+                      const SizedBox(height: AppTokens.spaceSm),
+                      Text(
+                        '${l10n.t('admin_coupon_selected_customer')}: ${_customerLabel(_selectedCustomer!)}',
+                      ),
+                      TextButton(
+                        onPressed: () => setState(() => _selectedCustomer = null),
+                        child: Text(l10n.t('admin_manual_booking_clear_customer')),
+                      ),
+                    ],
+                    const SizedBox(height: AppTokens.spaceMd),
+                    DropdownButtonFormField<String?>(
+                      key: const Key('adminManualMessengerType'),
+                      value: _messengerType,
+                      decoration: InputDecoration(
+                        labelText: l10n.t('admin_manual_booking_messenger_type'),
+                      ),
+                      items: [
+                        DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text(l10n.t('admin_manual_booking_messenger_none')),
+                        ),
+                        for (final type in const [
+                          'KAKAO',
+                          'LINE',
+                          'WHATSAPP',
+                          'SMS',
+                        ])
+                          DropdownMenuItem<String?>(
+                            value: type,
+                            child: Text(l10n.t(
+                              'admin_manual_booking_messenger_${type.toLowerCase()}',
+                            )),
+                          ),
+                      ],
+                      onChanged: _submitting ? null : (value) => setState(() {
+                        _messengerType = value;
+                        _guestPhoneDialCode = value == 'KAKAO' ? '+82' : '+66';
+                        if (value == null ||
+                            const {'WHATSAPP', 'SMS'}.contains(value)) {
+                          _messengerIdController.clear();
+                        }
+                      }),
+                    ),
+                    if (_messengerType != null) ...[
+                      const SizedBox(height: AppTokens.spaceSm),
+                      if (_selectedCustomer != null) ...[
+                        _phoneInput(l10n),
+                        const SizedBox(height: AppTokens.spaceSm),
+                      ],
+                      if (const {'KAKAO', 'LINE'}.contains(_messengerType))
+                        TextFormField(
                         key: const Key('adminManualMessengerId'),
                         controller: _messengerIdController,
                         keyboardType: TextInputType.text,
@@ -1977,66 +1825,61 @@ class _AdminManualBookingCreatePageState
                           labelText: _messengerType == 'KAKAO'
                               ? l10n.t('admin_manual_booking_kakao_id_optional')
                               : l10n.t('admin_manual_booking_messenger_id'),
-                          hintText: l10n.t(
-                            'admin_manual_booking_messenger_id_hint',
-                          ),
+                          hintText: l10n.t('admin_manual_booking_messenger_id_hint'),
                         ),
                         validator: (value) {
                           if (_messengerType == null ||
-                              _messengerType == 'KAKAO')
-                            return null;
+                              _messengerType == 'KAKAO') return null;
                           if (value == null || value.trim().isEmpty) {
-                            return l10n.t(
-                              'admin_manual_booking_validation_required',
-                            );
+                            return l10n.t('admin_manual_booking_validation_required');
                           }
                           return null;
                         },
                       ),
+                    ],
                   ],
-                ],
-              ),
-            ),
-            const SizedBox(height: AppTokens.spaceMd),
-            AppUi.surfaceCard(
-              child: TextFormField(
-                controller: _memoController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  labelText: l10n.t('admin_manual_booking_memo'),
-                  alignLabelWithHint: true,
                 ),
               ),
-            ),
-            if (_submitError != null) ...[
-              const SizedBox(height: AppTokens.spaceSm),
-              Text(
-                _submitError!,
-                style: const TextStyle(color: AppTokens.error),
-              ),
-            ],
-            const SizedBox(height: AppTokens.spaceLg),
-            SizedBox(
-              height: 52,
-              child: FilledButton.icon(
-                key: const Key('adminManualBookingSubmit'),
-                onPressed: _submitting ? null : _submit,
-                icon: _submitting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.add_call),
-                label: Text(
-                  _isEditMode
-                      ? l10n.t('admin_manual_booking_update_submit')
-                      : _dispatchMode == 'DIRECT'
-                      ? l10n.t('admin_manual_booking_direct_submit')
-                      : l10n.t('admin_manual_booking_submit'),
+              const SizedBox(height: AppTokens.spaceMd),
+              AppUi.surfaceCard(
+                child: TextFormField(
+                  controller: _memoController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: l10n.t('admin_manual_booking_memo'),
+                    alignLabelWithHint: true,
+                  ),
                 ),
               ),
-            ),
+              if (_submitError != null) ...[
+                const SizedBox(height: AppTokens.spaceSm),
+                Text(
+                  _submitError!,
+                  style: const TextStyle(color: AppTokens.error),
+                ),
+              ],
+              const SizedBox(height: AppTokens.spaceLg),
+              SizedBox(
+                height: 52,
+                child: FilledButton.icon(
+                  key: const Key('adminManualBookingSubmit'),
+                  onPressed: _submitting ? null : _submit,
+                  icon: _submitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.add_call),
+                  label: Text(
+                    _isEditMode
+                        ? l10n.t('admin_manual_booking_update_submit')
+                        : _dispatchMode == 'DIRECT'
+                            ? l10n.t('admin_manual_booking_direct_submit')
+                            : l10n.t('admin_manual_booking_submit'),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
