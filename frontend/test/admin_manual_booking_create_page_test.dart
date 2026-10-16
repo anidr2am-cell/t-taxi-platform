@@ -86,6 +86,7 @@ class _FakeDispatchApi extends AdminDispatchApiService {
 
   @override
   Future<Map<String, dynamic>> createManualBooking({
+    Map<String,dynamic>? golf,
     required Map<String, dynamic> origin,
     required Map<String, dynamic> destination,
     required String scheduledPickupAt,

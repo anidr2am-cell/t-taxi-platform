@@ -45,16 +45,17 @@ class ApiService {
   Future<List<dynamic>> getAirports() =>
       _get('/api/airports') as Future<List<dynamic>>;
 
-  Future<List<dynamic>> getGolfCourses({String? region}) =>
-      _get(
-            '/api/golf-courses',
-            query: region != null ? {'region': region} : null,
-          )
-          as Future<List<dynamic>>;
+  Future<List<dynamic>> getGolfCourses({String? region}) async {
+    final result = await _get(
+      '/api/v1/golf-courses',
+      query: region == null ? null : {'region': region},
+    );
+    return List<dynamic>.from(result['data'] as List);
+  }
 
   Future<List<String>> getGolfRegions() async {
-    final result = await _get('/api/golf-regions');
-    return (result as List).map((e) => e.toString()).toList();
+    final result = await _get('/api/v1/golf-regions');
+    return (result['data'] as List).map((e) => e.toString()).toList();
   }
 
   Future<Map<String, dynamic>> recommendVehicle(Map<String, dynamic> data) =>

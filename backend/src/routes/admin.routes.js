@@ -26,6 +26,7 @@ router.use(adminDriverVehicleRoutes);
 router.use(adminSettingsRoutes);
 router.use(adminCouponRoutes);
 router.use(adminHomeBannerRoutes);
+router.use(require('./admin.golf.routes'));
 
 // TODO: golf, airports, users, translations, settings
 

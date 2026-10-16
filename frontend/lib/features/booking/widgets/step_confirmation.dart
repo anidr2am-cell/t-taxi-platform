@@ -67,6 +67,18 @@ class StepConfirmation extends StatelessWidget {
           title: l10n.t('customer_confirmation_trip'),
           editStep: BookingWizardSteps.route,
           children: [
+            if (state.serviceType == BookingServiceType.golfTransfer &&
+                state.golf != null) ...[
+              AppUi.summaryRow(
+                label: l10n.t('golf_trip_type'),
+                value: l10n.t('golf_trip_${state.golf!['tripType']}'),
+              ),
+              if (state.golf!['tripType'] == 'ROUND_TRIP')
+                AppUi.summaryRow(
+                  label: l10n.t('golf_holes'),
+                  value: '${state.golf!['holes']}',
+                ),
+            ],
             AppUi.summaryRow(
               label: l10n.t('service_type'),
               value: l10n.t(state.serviceType?.labelKey ?? ''),

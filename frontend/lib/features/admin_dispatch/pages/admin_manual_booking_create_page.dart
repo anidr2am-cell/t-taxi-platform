@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../booking/widgets/golf_trip_fields.dart';
 import 'package:flutter/services.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -441,6 +442,8 @@ class _AdminManualBookingCreatePageState
       _serviceTypeCode == 'AIRPORT_PICKUP' ||
       _serviceTypeCode == 'AIRPORT_DROPOFF';
 
+  Map<String,dynamic>? _golf;
+
   bool get _showsGolfSection => _serviceTypeCode == 'GOLF_TRANSFER';
 
   Future<void> _loadForEdit() async {
@@ -828,6 +831,7 @@ class _AdminManualBookingCreatePageState
     try {
       final result = await _bookingApi.calculatePricing(
         serviceTypeCode: _serviceTypeCode,
+        golf: _showsGolfSection ? _golf : null,
         vehicleTypeCode: _vehicleTypeCode,
         originAirportIata: locations['originAirportIata'],
         destinationRegion: locations['destinationRegion'],
@@ -913,6 +917,7 @@ class _AdminManualBookingCreatePageState
         'scheduledPickupAt':
             ThailandPickupDateTime.serializeWallClock(_pickupAt!),
         'vehicleTypeCode': _vehicleTypeCode,
+        if (_showsGolfSection && _golf != null) 'golf': _golf,
         'serviceTypeCode': _serviceTypeCode,
         'payoutAmount': int.parse(_payoutController.text.trim()),
         'customerChargeAmount': customerCharge,
@@ -973,6 +978,7 @@ class _AdminManualBookingCreatePageState
         );
       } else {
         result = await _dispatchApi.createManualBooking(
+          golf: _showsGolfSection ? _golf : null,
           origin: payload['origin'] as Map<String, dynamic>,
           destination: payload['destination'] as Map<String, dynamic>,
           scheduledPickupAt: payload['scheduledPickupAt'] as String,
@@ -1386,68 +1392,28 @@ class _AdminManualBookingCreatePageState
                         }
                       },
                     ),
-                    if (_showsGolfSection) ...[
-                      const SizedBox(height: AppTokens.spaceMd),
-                      DropdownButtonFormField<String>(
-                        value: _golfRegions.contains(_golfRegion)
-                            ? _golfRegion
-                            : null,
-                        decoration: InputDecoration(
-                          labelText: l10n.t('golf_region'),
-                        ),
-                        items: _golfRegions
-                            .map(
-                              (region) => DropdownMenuItem(
-                                value: region,
-                                child: Text(region),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: _submitting
-                            ? null
-                            : (value) async {
-                                setState(() {
-                                  _golfRegion = value;
-                                  _golfCourseId = null;
-                                  _golfCourses = const [];
-                                });
-                                if (value != null) {
-                                  await _loadGolfCourses(value);
-                                }
-                              },
-                      ),
-                      const SizedBox(height: AppTokens.spaceMd),
-                      DropdownButtonFormField<int>(
-                        value: _golfCourses.any((c) => c['id'] == _golfCourseId)
-                            ? _golfCourseId
-                            : null,
-                        decoration: InputDecoration(
-                          labelText: l10n.t('golf_course'),
-                        ),
-                        items: _golfCourses
-                            .map(
-                              (course) => DropdownMenuItem(
-                                value: course['id'] as int?,
-                                child: Text(
-                                  course['name']?.toString() ?? '—',
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: _submitting
-                            ? null
-                            : (value) => setState(() => _golfCourseId = value),
-                      ),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(l10n.t('driver_included')),
-                        value: _driverIncluded,
-                        onChanged: _submitting
-                            ? null
-                            : (value) =>
-                                setState(() => _driverIncluded = value),
-                      ),
-                    ],
+                    if (_showsGolfSection) GolfTripFields(value:_golf,onChanged:(selection,course) {
+                      setState(() {
+                        final previous=_golf?['tripType'];
+                        _golf=selection;
+                        if(course!=null) {
+                          _golfCourseId=course['id'] as int;
+                          _golfRegion='PATTAYA';
+                          final point=LocationOption(id:'golf:${course['id']}',displayName:course['name'].toString(),kind:LocationKind.golf,
+                            code:'GOLF_${course['id']}',name:course['name'].toString(),address:course['name'].toString(),
+                            latitude:(course['lat'] as num).toDouble(),longitude:(course['lng'] as num).toDouble());
+                          if(selection['tripType']=='RETURN') {
+                            if(previous!='RETURN' && _origin?.kind!=LocationKind.golf)_destination=_origin;
+                            _origin=point;
+                          } else {
+                            if(previous=='RETURN' && _destination?.kind!=LocationKind.golf)_origin=_destination;
+                            _destination=point;
+                          }
+                        }
+                        _driverIncluded=true;
+                      });
+                      _onQuoteInputsChanged();
+                    }),
                     if (_showsFlightSection) ...[
                       const SizedBox(height: AppTokens.spaceMd),
                       AdminManualFlightSection(

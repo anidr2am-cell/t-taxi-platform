@@ -208,6 +208,7 @@ const adminManualTransferSchema = Joi.object({
 }).optional();
 
 const adminManualBookingCreateSchema = Joi.object({
+  golf: require('./golf.validator').optional(),
   driverId: Joi.number().integer().positive().optional(),
   origin: adminManualLocationSchema.required(),
   destination: adminManualLocationSchema.required(),

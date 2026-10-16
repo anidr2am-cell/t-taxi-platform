@@ -542,6 +542,7 @@ class BookingService {
 
   buildPricingInput(input) {
     const body = {
+      ...(input.golf ? {golf: input.golf} : {}),
       serviceTypeCode: input.serviceTypeCode,
       vehicleTypeCode: input.vehicleTypeCode,
       vehicleCount: input.vehicleCount ?? 1,
@@ -1178,6 +1179,7 @@ class BookingService {
         : this.addDays(now, 30);
 
       const metadata = {};
+      if (input.golf) metadata.golf = pricing.golf;
       metadata.locale = await this.bookingRepository.resolveBookingLocale(conn, customerUserId, input.locale);
       const customerPayment = normalizeCustomerPayment(input.payment);
       metadata.customerPayment = customerPayment;
@@ -1288,9 +1290,9 @@ class BookingService {
         flightNumber: flightInfo.flightNumber,
         airlineCode: flightInfo.airlineCode,
         flightDate: flightInfo.flightDate,
-        golfCourseId: input.transfer?.golfCourseId ?? null,
+        golfCourseId: input.golf?.courseId ?? input.transfer?.golfCourseId ?? null,
         golfRegion: input.transfer?.golfRegion ?? null,
-        driverIncluded: Boolean(input.transfer?.driverIncluded),
+        driverIncluded: input.golf?.tripType==='ROUND_TRIP' || Boolean(input.transfer?.driverIncluded),
       });
 
       for (const item of chargeItems) {
@@ -2107,7 +2109,7 @@ class BookingService {
         { ...input, paymentMethod },
         { payoutAmount, nameSign },
       );
-      const metadata = { adminManualPricing: manualPricing };
+      const metadata = { adminManualPricing: manualPricing, ...(input.golf?{golf:input.golf}:{}) };
       const messengerMetadata = pickPersistableMessengerMetadata(input.customer);
       if (messengerMetadata.messengerType) {
         metadata.messengerType = messengerMetadata.messengerType;

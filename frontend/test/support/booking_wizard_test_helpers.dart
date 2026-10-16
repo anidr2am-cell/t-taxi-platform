@@ -38,6 +38,7 @@ class CapturingBookingApi implements BookingApiService {
 
   @override
   Future<PricingResult> calculatePricing({
+    Map<String,dynamic>? golf,
     required String serviceTypeCode,
     required String vehicleTypeCode,
     int vehicleCount = 1,

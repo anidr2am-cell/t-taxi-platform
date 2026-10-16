@@ -235,3 +235,14 @@ class AdminRegionPricingApiService extends AdminPricingApiService {
   Future<void> updatePricingRegion(int id, Map<String,dynamic> body) async { await _request('PATCH', '/admin/pricing/regions/$id', body: body); }
   Future<void> updateRegionFare(int id, Map<String,dynamic> body) async { await _request('PATCH', '/admin/pricing/region-fares/$id', body: body); }
 }
+
+class AdminGolfPricingApiService extends AdminPricingApiService {
+  const AdminGolfPricingApiService();
+  Future<List<dynamic>> listGolfPrices() async =>
+      List<dynamic>.from(await _request('GET', '/admin/golf/prices') as List);
+  Future<List<dynamic>> listGolfCourses() async =>
+      List<dynamic>.from(await _request('GET', '/admin/golf/courses') as List);
+  Future<void> updateGolfPrice(int id, int price) async {
+    await _request('PATCH', '/admin/golf/prices/$id', body: {'price': price});
+  }
+}

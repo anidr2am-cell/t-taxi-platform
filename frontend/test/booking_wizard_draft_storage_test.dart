@@ -41,6 +41,7 @@ class DraftTrackingApi implements BookingApiService {
   @override
   Future<PricingResult> calculatePricing({
     required String serviceTypeCode,
+    Map<String,dynamic>? golf,
     required String vehicleTypeCode,
     int vehicleCount = 1,
     String? originAirportIata,

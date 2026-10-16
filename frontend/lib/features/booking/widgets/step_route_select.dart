@@ -12,6 +12,7 @@ import 'step_flight_lookup.dart';
 import '../models/service_type_option.dart';
 import '../services/flight_lookup_api_service.dart';
 import 'wizard_compact.dart';
+import 'golf_trip_fields.dart';
 
 class StepRouteSelect extends StatefulWidget {
   const StepRouteSelect({
@@ -60,6 +61,11 @@ class _StepRouteSelectState extends State<StepRouteSelect> {
           onSelected: controller.selectService,
         ),
         const SizedBox(height: WizardCompact.sectionGap),
+        if (state.serviceType == BookingServiceType.golfTransfer)
+          GolfTripFields(
+            value: state.golf,
+            onChanged: controller.selectGolfCourse,
+          ),
         if (state.serviceType == BookingServiceType.airportPickup)
           StepFlightLookup(
             state: state,
@@ -69,54 +75,63 @@ class _StepRouteSelectState extends State<StepRouteSelect> {
               setState(() => _originEditingResetToken++);
             },
           ),
-        AppUi.sectionHeader(context, title: l10n.t('origin')),
-        StepOriginSelect(
-          embedded: true,
-          serviceType: state.serviceType,
-          selected: state.origin,
-          excludedRecentLocation: state.destination,
-          languageCode: widget.languageCode,
-          focusNode: widget.originFocusNode,
-          editingResetToken: _originEditingResetToken,
-          onSearchFailed: (category) => controller.reportPlaceSearchFailed(
-            placeType: 'origin',
-            errorCategory: category,
+        if (state.serviceType != BookingServiceType.golfTransfer ||
+            state.golf?['tripType'] != 'RETURN') ...[
+          AppUi.sectionHeader(context, title: l10n.t('origin')),
+          StepOriginSelect(
+            embedded: true,
+            serviceType: state.serviceType,
+            selected: state.origin,
+            excludedRecentLocation: state.destination,
+            languageCode: widget.languageCode,
+            focusNode: widget.originFocusNode,
+            editingResetToken: _originEditingResetToken,
+            onSearchFailed: (category) => controller.reportPlaceSearchFailed(
+              placeType: 'origin',
+              errorCategory: category,
+            ),
+            onSelected: controller.setOrigin,
           ),
-          onSelected: controller.setOrigin,
-        ),
+        ],
         const SizedBox(height: WizardCompact.fieldGap),
-        Align(
-          alignment: Alignment.center,
-          child: Semantics(
-            button: true,
-            label: l10n.t('wizard_swap_route'),
-            child: ExcludeSemantics(
-              child: SizedBox(
-                height: 48,
-                child: OutlinedButton.icon(
-                  onPressed: _canSwap ? controller.swapOriginDestination : null,
-                  icon: const Icon(Icons.swap_vert, size: 18),
-                  label: Text(l10n.t('wizard_swap_route')),
+        if (state.serviceType != BookingServiceType.golfTransfer)
+          Align(
+            alignment: Alignment.center,
+            child: Semantics(
+              button: true,
+              label: l10n.t('wizard_swap_route'),
+              child: ExcludeSemantics(
+                child: SizedBox(
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    onPressed: _canSwap
+                        ? controller.swapOriginDestination
+                        : null,
+                    icon: const Icon(Icons.swap_vert, size: 18),
+                    label: Text(l10n.t('wizard_swap_route')),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
         const SizedBox(height: WizardCompact.fieldGap),
-        AppUi.sectionHeader(context, title: l10n.t('destination')),
-        StepDestinationSelect(
-          embedded: true,
-          serviceType: state.serviceType,
-          selected: state.destination,
-          excludedRecentLocation: state.origin,
-          languageCode: widget.languageCode,
-          focusNode: widget.destinationFocusNode,
-          onSearchFailed: (category) => controller.reportPlaceSearchFailed(
-            placeType: 'destination',
-            errorCategory: category,
+        if (state.serviceType != BookingServiceType.golfTransfer ||
+            state.golf?['tripType'] == 'RETURN') ...[
+          AppUi.sectionHeader(context, title: l10n.t('destination')),
+          StepDestinationSelect(
+            embedded: true,
+            serviceType: state.serviceType,
+            selected: state.destination,
+            excludedRecentLocation: state.origin,
+            languageCode: widget.languageCode,
+            focusNode: widget.destinationFocusNode,
+            onSearchFailed: (category) => controller.reportPlaceSearchFailed(
+              placeType: 'destination',
+              errorCategory: category,
+            ),
+            onSelected: controller.setDestination,
           ),
-          onSelected: controller.setDestination,
-        ),
+        ],
         if (samePlaceError != null) ...[
           const SizedBox(height: 8),
           Semantics(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'admin_golf_prices_panel.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/user_facing_error.dart';
@@ -46,7 +47,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
     _loadAll();
   }
 
@@ -1284,6 +1285,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
               Tab(text: l10n.t('admin_pricing_tab_policies')),
               Tab(text: l10n.t('admin_pricing_tab_simulator')),
               Tab(text: l10n.t('admin_region_fares')),
+              Tab(text: l10n.t('admin_golf_prices')),
             ],
           ),
         ),
@@ -1296,6 +1298,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
               _policiesTab(),
               _simulatorTab(),
               AdminRegionFaresPanel(api: _api),
+              AdminGolfPricesPanel(api: _api),
             ],
           ),
         ),
