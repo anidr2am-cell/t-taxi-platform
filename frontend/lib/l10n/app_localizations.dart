@@ -17,6 +17,20 @@ class AppLocalizations {
 
   static final Map<String, Map<String, String>> _translations = {
     'en': {
+      'golf_trip_type': 'Transfer type (required)',
+      'golf_trip_ROUND_TRIP': 'Round trip · driver waits during your round',
+      'golf_trip_OUTBOUND': 'One way · hotel → golf course',
+      'golf_trip_RETURN': 'One way · golf course → hotel',
+      'golf_holes': 'Holes (required)',
+      'golf_course_search': 'Search golf courses',
+      'golf_package_included':
+          'Round trips include transport and driver waiting during your round. One-way fares are 50% of the 18-hole round-trip fare for the vehicle.',
+      'admin_golf_prices': 'Golf courses & group fares',
+      'golf_one_way_price': 'One way (50% of 18-hole round trip)',
+      'golf_round_trip_price': 'Round-trip fare (THB)',
+      'golf_price_saved': 'Fare saved',
+      'golf_hotel': 'Hotel',
+      'golf_required': 'Select a course, transfer type and round-trip holes',
       'app_title': 'T-Rider',
       'app_subtitle': 'Thailand Airport Transfer',
       'landing_hero_eyebrow':
@@ -191,10 +205,14 @@ class AppLocalizations {
           'Customer payment amount (THB)',
       'admin_manual_booking_customer_charge_hint':
           'The driver payout is the final amount after picket cost. Company settlement = customer payment - driver payout.',
-      'admin_manual_booking_standard_price_loading': 'Calculating the standard price…',
-      'admin_manual_booking_standard_price_error': 'No standard fare is registered for this route. Enter the amount manually.',
-      'admin_manual_booking_standard_price_refill': 'Fill with standard price again',
-      'admin_manual_booking_standard_price_applied': 'Filled from the same standard fare used for customer bookings.',
+      'admin_manual_booking_standard_price_loading':
+          'Calculating the standard price…',
+      'admin_manual_booking_standard_price_error':
+          'No standard fare is registered for this route. Enter the amount manually.',
+      'admin_manual_booking_standard_price_refill':
+          'Fill with standard price again',
+      'admin_manual_booking_standard_price_applied':
+          'Filled from the same standard fare used for customer bookings.',
       'admin_manual_booking_payment_method': 'Payment collection',
       'admin_manual_booking_payment_admin_collected':
           'Admin already collected payment',
@@ -2002,6 +2020,20 @@ class AppLocalizations {
       'guest_lookup_booking_number_hint': 'TX202607010001',
     },
     'ko': {
+      'golf_trip_type': '이동 방식 (필수)',
+      'golf_trip_ROUND_TRIP': '왕복 · 라운드 중 기사 대기 포함',
+      'golf_trip_OUTBOUND': '편도 · 숙소 → 골프장',
+      'golf_trip_RETURN': '편도 · 골프장 → 숙소',
+      'golf_holes': '홀 수 (필수)',
+      'golf_course_search': '골프장 검색',
+      'golf_package_included':
+          '왕복 요금은 이동과 라운드 동안 기사 대기를 포함합니다. 편도는 해당 차량 18홀 왕복 요금의 50%입니다.',
+      'admin_golf_prices': '골프장·그룹 요금',
+      'golf_one_way_price': '편도 (18홀 왕복의 50%)',
+      'golf_round_trip_price': '왕복 요금 (바트)',
+      'golf_price_saved': '요금을 저장했습니다',
+      'golf_hotel': '숙소',
+      'golf_required': '골프장과 이동 방식, 왕복 홀 수를 선택해 주세요',
       'app_title': 'T-Rider',
       'app_subtitle': '태국 공항 이동 서비스',
       'airport_pickup': '공항 픽업',
@@ -2272,9 +2304,11 @@ class AppLocalizations {
       'admin_manual_booking_customer_charge_hint':
           '기사 지급 금액은 피켓 비용을 반영한 최종 금액입니다. 회사 정산액 = 고객 결제액 - 기사 지급액입니다.',
       'admin_manual_booking_standard_price_loading': '표준가를 계산하고 있습니다…',
-      'admin_manual_booking_standard_price_error': '이 구간에 등록된 표준가가 없습니다. 금액을 직접 입력해주세요.',
+      'admin_manual_booking_standard_price_error':
+          '이 구간에 등록된 표준가가 없습니다. 금액을 직접 입력해주세요.',
       'admin_manual_booking_standard_price_refill': '표준가로 다시 채우기',
-      'admin_manual_booking_standard_price_applied': '고객 예약과 같은 표준 요금으로 자동 입력했습니다.',
+      'admin_manual_booking_standard_price_applied':
+          '고객 예약과 같은 표준 요금으로 자동 입력했습니다.',
       'admin_manual_booking_payment_method': '결제 방식',
       'admin_manual_booking_payment_admin_collected': '관리자가 이미 결제 받음',
       'admin_manual_booking_payment_driver_collects': '현장에서 기사가 직접 수금',
@@ -3047,7 +3081,8 @@ class AppLocalizations {
       'my_bookings_load_error': '예약 목록을 불러오지 못했습니다. 다시 시도해 주세요.',
       'booking_cancel_section': '예약 취소',
       'booking_cancel_action': '예약 취소',
-      'booking_cancel_policy_hint': '운행 시작 전이고 픽업 예정 시각까지 2시간보다 많이 남았다면 예약 조회에서 무료 취소하고 전액 환불받을 수 있습니다.',
+      'booking_cancel_policy_hint':
+          '운행 시작 전이고 픽업 예정 시각까지 2시간보다 많이 남았다면 예약 조회에서 무료 취소하고 전액 환불받을 수 있습니다.',
       'booking_cancel_confirm_title': '예약을 취소할까요?',
       'booking_cancel_keep_action': '돌아가기',
       'booking_cancel_confirm_action': '예약 취소하기',
@@ -3425,6 +3460,19 @@ class AppLocalizations {
       'customer_driver_location_retry': '다시 시도',
     },
     'zh': {
+      'golf_trip_type': '行程类型（必选）',
+      'golf_trip_ROUND_TRIP': '往返 · 含打球期间司机等候',
+      'golf_trip_OUTBOUND': '单程 · 住宿 → 球场',
+      'golf_trip_RETURN': '单程 · 球场 → 住宿',
+      'golf_holes': '洞数（必选）',
+      'golf_course_search': '搜索高尔夫球场',
+      'golf_package_included': '往返价格包含接送及打球期间司机等候。单程价格为该车型18洞往返价格的50%。',
+      'admin_golf_prices': '球场及分组价格',
+      'golf_one_way_price': '单程（18洞往返价格的50%）',
+      'golf_round_trip_price': '往返价格（泰铢）',
+      'golf_price_saved': '价格已保存',
+      'golf_hotel': '住宿',
+      'golf_required': '请选择球场、行程类型，以及往返行程的洞数',
       'app_title': 'T-Rider',
       'app_subtitle': '泰国机场接送服务',
       'airport_pickup': '机场接机',
@@ -3539,8 +3587,7 @@ class AppLocalizations {
       'landing_trust_comfort_title': '舒适旅程',
       'landing_trust_comfort_desc': '无需为交通操心，专注享受旅行。',
       'landing_trust_refund_title': '安心取消·退款',
-      'landing_trust_refund_desc':
-          '行程尚未开始且距预计接车时间超过2小时时，可通过预订查询免费取消并获得全额退款。',
+      'landing_trust_refund_desc': '行程尚未开始且距预计接车时间超过2小时时，可通过预订查询免费取消并获得全额退款。',
       'landing_trust_driver_policy_title': '司机服务质量管理',
       'landing_trust_driver_policy_desc':
           '如对司机有任何不满，可通过预约详情页面或KakaoTalk/电话进行投诉。收到投诉后我们将在24小时内与您联系确认。对于安全威胁等严重情况，我们将立即暂停该司机的派单。',
@@ -4350,6 +4397,20 @@ class AppLocalizations {
       'thb': 'THB',
     },
     'ja': {
+      'golf_trip_type': '移動方法（必須）',
+      'golf_trip_ROUND_TRIP': '往復・ラウンド中のドライバー待機込み',
+      'golf_trip_OUTBOUND': '片道・宿泊先 → ゴルフ場',
+      'golf_trip_RETURN': '片道・ゴルフ場 → 宿泊先',
+      'golf_holes': 'ホール数（必須）',
+      'golf_course_search': 'ゴルフ場を検索',
+      'golf_package_included':
+          '往復料金には移動とラウンド中のドライバー待機が含まれます。片道料金は車種ごとの18ホール往復料金の50%です。',
+      'admin_golf_prices': 'ゴルフ場・グループ料金',
+      'golf_one_way_price': '片道（18ホール往復料金の50%）',
+      'golf_round_trip_price': '往復料金（バーツ）',
+      'golf_price_saved': '料金を保存しました',
+      'golf_hotel': '宿泊先',
+      'golf_required': 'ゴルフ場、移動方法、往復の場合はホール数を選択してください',
       'app_title': 'T-Rider',
       'app_subtitle': 'タイ空港送迎サービス',
       'airport_pickup': '空港ピックアップ',
@@ -4591,7 +4652,8 @@ class AppLocalizations {
       'admin_manual_booking_customer_charge_hint':
           'ドライバー受取額はピケット費用反映後の最終額です。会社精算額＝顧客支払額－ドライバー受取額です。',
       'admin_manual_booking_standard_price_loading': '標準料金を計算しています…',
-      'admin_manual_booking_standard_price_error': 'この区間には標準料金が登録されていません。金額を手動で入力してください。',
+      'admin_manual_booking_standard_price_error':
+          'この区間には標準料金が登録されていません。金額を手動で入力してください。',
       'admin_manual_booking_standard_price_refill': '標準料金を再入力',
       'admin_manual_booking_standard_price_applied': '顧客予約と同じ標準料金を自動入力しました。',
       'admin_manual_booking_payment_method': '支払い回収方法',
@@ -4985,7 +5047,8 @@ class AppLocalizations {
       'my_bookings_load_error': '予約一覧を読み込めませんでした。もう一度お試しください。',
       'booking_cancel_section': '予約キャンセル',
       'booking_cancel_action': '予約をキャンセル',
-      'booking_cancel_policy_hint': '運行開始前で、お迎え予定時刻の2時間前より前であれば、予約照会から無料でキャンセルでき、全額返金されます。',
+      'booking_cancel_policy_hint':
+          '運行開始前で、お迎え予定時刻の2時間前より前であれば、予約照会から無料でキャンセルでき、全額返金されます。',
       'booking_cancel_confirm_title': 'この予約をキャンセルしますか？',
       'booking_cancel_keep_action': '予約を維持',
       'booking_cancel_confirm_action': '予約をキャンセル',
@@ -5315,6 +5378,21 @@ class AppLocalizations {
       'thb': 'THB',
     },
     'th': {
+      'golf_trip_type': 'รูปแบบการเดินทาง (จำเป็น)',
+      'golf_trip_ROUND_TRIP': 'ไป-กลับ · คนขับรอระหว่างออกรอบ',
+      'golf_trip_OUTBOUND': 'เที่ยวเดียว · ที่พัก → สนามกอล์ฟ',
+      'golf_trip_RETURN': 'เที่ยวเดียว · สนามกอล์ฟ → ที่พัก',
+      'golf_holes': 'จำนวนหลุม (จำเป็น)',
+      'golf_course_search': 'ค้นหาสนามกอล์ฟ',
+      'golf_package_included':
+          'ราคาไป-กลับรวมการเดินทางและคนขับรอระหว่างออกรอบ ราคาเที่ยวเดียวเท่ากับ 50% ของราคาไป-กลับ 18 หลุมสำหรับรถประเภทนั้น',
+      'admin_golf_prices': 'สนามกอล์ฟและราคาตามกลุ่ม',
+      'golf_one_way_price': 'เที่ยวเดียว (50% ของราคาไป-กลับ 18 หลุม)',
+      'golf_round_trip_price': 'ราคาไป-กลับ (บาท)',
+      'golf_price_saved': 'บันทึกราคาแล้ว',
+      'golf_hotel': 'ที่พัก',
+      'golf_required':
+          'กรุณาเลือกสนาม รูปแบบการเดินทาง และจำนวนหลุมสำหรับไป-กลับ',
       'app_title': 'T-Rider',
       'app_subtitle': 'บริการรับส่งสนามบินไทย',
       'airport_pickup': 'รับที่สนามบิน',
@@ -5602,9 +5680,11 @@ class AppLocalizations {
       'admin_manual_booking_customer_charge_hint':
           'ยอดคนขับเป็นยอดสุทธิหลังรวมค่าป้ายแล้ว ยอดชำระบริษัท = ยอดลูกค้า - ยอดคนขับ',
       'admin_manual_booking_standard_price_loading': 'กำลังคำนวณราคามาตรฐาน…',
-      'admin_manual_booking_standard_price_error': 'ไม่มีราคามาตรฐานสำหรับเส้นทางนี้ กรุณากรอกยอดด้วยตนเอง',
+      'admin_manual_booking_standard_price_error':
+          'ไม่มีราคามาตรฐานสำหรับเส้นทางนี้ กรุณากรอกยอดด้วยตนเอง',
       'admin_manual_booking_standard_price_refill': 'กรอกราคามาตรฐานอีกครั้ง',
-      'admin_manual_booking_standard_price_applied': 'กรอกอัตโนมัติด้วยราคามาตรฐานเดียวกับการจองของลูกค้า',
+      'admin_manual_booking_standard_price_applied':
+          'กรอกอัตโนมัติด้วยราคามาตรฐานเดียวกับการจองของลูกค้า',
       'admin_manual_booking_payment_method': 'วิธีรับเงิน',
       'admin_manual_booking_payment_admin_collected': 'แอดมินรับเงินแล้ว',
       'admin_manual_booking_payment_driver_collects': 'คนขับเก็บเงินหน้างาน',
@@ -7297,10 +7377,14 @@ class AppLocalizations {
   };
 
   static const Map<String, String> _driverUiTranslations = {
-    'driver_login_error_credentials': '전화번호 또는 비밀번호를 확인해 주세요.\nกรุณาตรวจสอบหมายเลขโทรศัพท์หรือรหัสผ่าน',
-    'driver_login_error_network': '연결이 원활하지 않습니다. 잠시 후 다시 시도해 주세요.\nการเชื่อมต่อขัดข้อง กรุณาลองอีกครั้งในภายหลัง',
-    'driver_login_error_server': '서버에 일시적인 문제가 있습니다. 잠시 후 다시 시도해 주세요.\nเซิร์ฟเวอร์ขัดข้องชั่วคราว กรุณาลองอีกครั้งในภายหลัง',
-    'driver_login_error_unknown': '로그인하지 못했습니다. 다시 시도하거나 관리자에게 문의하세요.\nเข้าสู่ระบบไม่สำเร็จ กรุณาลองอีกครั้งหรือติดต่อผู้ดูแล',
+    'driver_login_error_credentials':
+        '전화번호 또는 비밀번호를 확인해 주세요.\nกรุณาตรวจสอบหมายเลขโทรศัพท์หรือรหัสผ่าน',
+    'driver_login_error_network':
+        '연결이 원활하지 않습니다. 잠시 후 다시 시도해 주세요.\nการเชื่อมต่อขัดข้อง กรุณาลองอีกครั้งในภายหลัง',
+    'driver_login_error_server':
+        '서버에 일시적인 문제가 있습니다. 잠시 후 다시 시도해 주세요.\nเซิร์ฟเวอร์ขัดข้องชั่วคราว กรุณาลองอีกครั้งในภายหลัง',
+    'driver_login_error_unknown':
+        '로그인하지 못했습니다. 다시 시도하거나 관리자에게 문의하세요.\nเข้าสู่ระบบไม่สำเร็จ กรุณาลองอีกครั้งหรือติดต่อผู้ดูแล',
 
     'driver_suspended_banner':
         '이용이 제한되었습니다. 관리자에게 문의하세요.\n(การใช้งานถูกจำกัด กรุณาติดต่อผู้ดูแล)',
@@ -7993,10 +8077,12 @@ class AppLocalizations {
       'admin_ui_done': 'Done',
       'admin_ui_reissue': 'Reissue',
       'admin_ui_excluded': 'Excluded',
-      'admin_ui_could_not_load_recommendations': 'Could not load recommendations',
+      'admin_ui_could_not_load_recommendations':
+          'Could not load recommendations',
       'admin_ui_recommend_drivers': 'Recommend drivers',
       'admin_ui_loading_candidates': 'Loading candidates...',
-      'admin_ui_no_eligible_drivers_found_for_this_booking': 'No eligible drivers found for this booking.',
+      'admin_ui_no_eligible_drivers_found_for_this_booking':
+          'No eligible drivers found for this booking.',
       'admin_ui_assign_recommended': 'Assign recommended',
       'admin_ui_assign_selected': 'Assign selected',
       'admin_ui_tap_to_select': 'Tap to select',
@@ -8004,10 +8090,14 @@ class AppLocalizations {
       'admin_ui_open_booking': 'Open booking',
       'admin_ui_sync_flight': 'Sync flight',
       'admin_ui_notifications_enabled': 'Notifications enabled',
-      'admin_ui_notification_permission_was_denied': 'Notification permission was denied',
-      'admin_ui_push_notifications_are_not_supported_in_this_browser': 'Push notifications are not supported in this browser',
-      'admin_ui_push_notifications_are_not_configured_for_this_environment': 'Push notifications are not configured for this environment',
-      'admin_ui_notification_registration_failed': 'Notification registration failed',
+      'admin_ui_notification_permission_was_denied':
+          'Notification permission was denied',
+      'admin_ui_push_notifications_are_not_supported_in_this_browser':
+          'Push notifications are not supported in this browser',
+      'admin_ui_push_notifications_are_not_configured_for_this_environment':
+          'Push notifications are not configured for this environment',
+      'admin_ui_notification_registration_failed':
+          'Notification registration failed',
       'admin_ui_unread_only': 'Unread only',
       'admin_ui_all_types': 'All types',
       'admin_ui_booking_created': 'Booking created',
@@ -8031,23 +8121,29 @@ class AppLocalizations {
       'admin_ui_effective_to': 'Effective to',
       'admin_ui_charge_type': 'Charge type',
       'admin_ui_calculation_type': 'Calculation type',
-      'admin_ui_amount_must_be_zero_or_greater': 'Amount must be zero or greater',
+      'admin_ui_amount_must_be_zero_or_greater':
+          'Amount must be zero or greater',
       'admin_ui_actions': 'Actions',
       'admin_ui_view_prices': 'View prices',
       'admin_ui_deactivate_route': 'Deactivate route',
-      'admin_ui_this_route_will_be_excluded_from_customer_pricing': 'This route will be excluded from customer pricing.',
+      'admin_ui_this_route_will_be_excluded_from_customer_pricing':
+          'This route will be excluded from customer pricing.',
       'admin_ui_deactivate_price': 'Deactivate price',
-      'admin_ui_this_price_will_no_longer_apply_to_customer_pricing': 'This price will no longer apply to customer pricing.',
+      'admin_ui_this_price_will_no_longer_apply_to_customer_pricing':
+          'This price will no longer apply to customer pricing.',
       'admin_ui_status': 'Status',
       'admin_ui_deactivate_policy': 'Deactivate policy',
-      'admin_ui_this_policy_will_be_excluded_from_pricing_calculations': 'This policy will be excluded from pricing calculations.',
-      'admin_ui_select_a_route_and_vehicle_type': 'Select a route and vehicle type',
+      'admin_ui_this_policy_will_be_excluded_from_pricing_calculations':
+          'This policy will be excluded from pricing calculations.',
+      'admin_ui_select_a_route_and_vehicle_type':
+          'Select a route and vehicle type',
       'admin_ui_charge_items': 'Charge items',
       'admin_ui_all': 'All',
       'admin_ui_all_ratings': 'All ratings',
       'admin_ui_no_reviews': 'No reviews',
       'admin_ui_hide_review': 'Hide review',
-      'admin_ui_this_review_will_be_excluded_from_driver_ratings': 'This review will be excluded from driver ratings.',
+      'admin_ui_this_review_will_be_excluded_from_driver_ratings':
+          'This review will be excluded from driver ratings.',
       'admin_ui_restore_review': 'Restore review',
       'admin_ui_retry': 'Retry',
       'admin_ui_hidden_reason': 'Hidden reason',
@@ -8074,14 +8170,18 @@ class AppLocalizations {
       'admin_ui_could_not_load_more_bookings': 'Could not load more bookings',
       'admin_ui_loading_drivers': 'Loading drivers...',
       'admin_ui_could_not_load_drivers': 'Could not load drivers',
-      'admin_ui_assign_a_driver_to_this_booking': 'Assign a driver to this booking.',
-      'admin_ui_no_dispatch_actions_available_for_the_current_status': 'No dispatch actions available for the current status.',
+      'admin_ui_assign_a_driver_to_this_booking':
+          'Assign a driver to this booking.',
+      'admin_ui_no_dispatch_actions_available_for_the_current_status':
+          'No dispatch actions available for the current status.',
       'admin_ui_no_drivers_available': 'No drivers available',
       'admin_ui_reassignment_reason': 'Reassignment reason',
       'admin_ui_refresh': 'Refresh',
-      'admin_ui_no_written_review_was_provided': 'No written review was provided.',
+      'admin_ui_no_written_review_was_provided':
+          'No written review was provided.',
       'admin_ui_submitted_at': 'Submitted at',
-      'admin_ui_copy_this_token_now_it_is_shown_once_and_cannot_be_recovered_later': 'Copy this token now. It is shown once and cannot be recovered later.',
+      'admin_ui_copy_this_token_now_it_is_shown_once_and_cannot_be_recovered_later':
+          'Copy this token now. It is shown once and cannot be recovered later.',
       'admin_ui_token_copied': 'Token copied',
       'admin_ui_recommended': 'Recommended',
       'admin_ui_selected': 'Selected',
@@ -8101,11 +8201,14 @@ class AppLocalizations {
       'admin_ui_pending': 'Pending',
       'admin_ui_type_qr_token': '{type} QR token',
       'admin_ui_reissue_type_qr': 'Reissue {type} QR',
-      'admin_ui_this_invalidates_the_previous_type_qr_token_and_issues_a_new_one_time_token_for_testing': 'This invalidates the previous {type} QR token and issues a new one-time token for testing.',
+      'admin_ui_this_invalidates_the_previous_type_qr_token_and_issues_a_new_one_time_token_for_testing':
+          'This invalidates the previous {type} QR token and issues a new one-time token for testing.',
       'admin_ui_score_score': 'Score {score}',
       'admin_ui_jobs_count': 'Jobs {count}',
-      'admin_ui_selected_selected_success_success_failed_failed_skipped_skipped': 'Selected {selected} · success {success} · failed {failed} · skipped {skipped}',
-      'admin_ui_subtotal_subtotal_discount_discount': 'Subtotal: {subtotal}  Discount: {discount}',
+      'admin_ui_selected_selected_success_success_failed_failed_skipped_skipped':
+          'Selected {selected} · success {success} · failed {failed} · skipped {skipped}',
+      'admin_ui_subtotal_subtotal_discount_discount':
+          'Subtotal: {subtotal}  Discount: {discount}',
       'admin_ui_matched_route_id': 'Matched route: {id}',
       'admin_coupon_cancel': 'Cancel',
       'admin_coupon_template_active': 'Active',
@@ -8137,7 +8240,8 @@ class AppLocalizations {
       'admin_dispatch_loading_drivers_failed': 'Could not load drivers',
       'admin_dispatch_load_more_failed': 'Could not load more bookings',
       'admin_dispatch_next_action_assign': 'Assign a driver to this booking.',
-      'admin_dispatch_next_action_none': 'No dispatch actions available for the current status.',
+      'admin_dispatch_next_action_none':
+          'No dispatch actions available for the current status.',
       'admin_ops_view_all': 'All',
       'admin_ops_summary_unassigned': 'Unassigned',
       'admin_ops_settlement_submitted': 'Receipt submitted',
@@ -8189,8 +8293,10 @@ class AppLocalizations {
       'admin_ui_sync_flight': '항공편 동기화',
       'admin_ui_notifications_enabled': '알림을 활성화했습니다',
       'admin_ui_notification_permission_was_denied': '알림 권한이 거부됐습니다',
-      'admin_ui_push_notifications_are_not_supported_in_this_browser': '이 브라우저는 푸시 알림을 지원하지 않습니다',
-      'admin_ui_push_notifications_are_not_configured_for_this_environment': '이 환경에 푸시 알림이 설정되지 않았습니다',
+      'admin_ui_push_notifications_are_not_supported_in_this_browser':
+          '이 브라우저는 푸시 알림을 지원하지 않습니다',
+      'admin_ui_push_notifications_are_not_configured_for_this_environment':
+          '이 환경에 푸시 알림이 설정되지 않았습니다',
       'admin_ui_notification_registration_failed': '알림 등록에 실패했습니다',
       'admin_ui_unread_only': '읽지 않은 알림만',
       'admin_ui_all_types': '모든 유형',
@@ -8219,19 +8325,23 @@ class AppLocalizations {
       'admin_ui_actions': '관리 작업',
       'admin_ui_view_prices': '요금 보기',
       'admin_ui_deactivate_route': '노선 비활성화',
-      'admin_ui_this_route_will_be_excluded_from_customer_pricing': '이 노선은 고객 요금 계산에서 제외됩니다',
+      'admin_ui_this_route_will_be_excluded_from_customer_pricing':
+          '이 노선은 고객 요금 계산에서 제외됩니다',
       'admin_ui_deactivate_price': '요금 비활성화',
-      'admin_ui_this_price_will_no_longer_apply_to_customer_pricing': '이 요금은 고객 요금 계산에 적용되지 않습니다',
+      'admin_ui_this_price_will_no_longer_apply_to_customer_pricing':
+          '이 요금은 고객 요금 계산에 적용되지 않습니다',
       'admin_ui_status': '상태',
       'admin_ui_deactivate_policy': '요금 정책 비활성화',
-      'admin_ui_this_policy_will_be_excluded_from_pricing_calculations': '이 정책은 요금 계산에서 제외됩니다',
+      'admin_ui_this_policy_will_be_excluded_from_pricing_calculations':
+          '이 정책은 요금 계산에서 제외됩니다',
       'admin_ui_select_a_route_and_vehicle_type': '노선과 차량 등급을 선택해 주세요',
       'admin_ui_charge_items': '요금 내역',
       'admin_ui_all': '전체',
       'admin_ui_all_ratings': '모든 평점',
       'admin_ui_no_reviews': '리뷰가 없습니다',
       'admin_ui_hide_review': '리뷰 숨기기',
-      'admin_ui_this_review_will_be_excluded_from_driver_ratings': '이 리뷰는 기사 평점에서 제외됩니다',
+      'admin_ui_this_review_will_be_excluded_from_driver_ratings':
+          '이 리뷰는 기사 평점에서 제외됩니다',
       'admin_ui_restore_review': '리뷰 복원',
       'admin_ui_retry': '다시 시도',
       'admin_ui_hidden_reason': '숨김 사유',
@@ -8259,13 +8369,15 @@ class AppLocalizations {
       'admin_ui_loading_drivers': '기사 목록을 불러오는 중입니다',
       'admin_ui_could_not_load_drivers': '기사 목록을 불러오지 못했습니다',
       'admin_ui_assign_a_driver_to_this_booking': '이 예약에 기사를 배정해 주세요',
-      'admin_ui_no_dispatch_actions_available_for_the_current_status': '현재 상태에서는 배차 작업을 할 수 없습니다',
+      'admin_ui_no_dispatch_actions_available_for_the_current_status':
+          '현재 상태에서는 배차 작업을 할 수 없습니다',
       'admin_ui_no_drivers_available': '배정 가능한 기사가 없습니다',
       'admin_ui_reassignment_reason': '재배정 사유',
       'admin_ui_refresh': '새로고침',
       'admin_ui_no_written_review_was_provided': '작성된 리뷰 내용이 없습니다',
       'admin_ui_submitted_at': '등록 시각',
-      'admin_ui_copy_this_token_now_it_is_shown_once_and_cannot_be_recovered_later': '지금 토큰을 복사해 주세요. 한 번만 표시되며 다시 확인할 수 없습니다.',
+      'admin_ui_copy_this_token_now_it_is_shown_once_and_cannot_be_recovered_later':
+          '지금 토큰을 복사해 주세요. 한 번만 표시되며 다시 확인할 수 없습니다.',
       'admin_ui_token_copied': '토큰을 복사했습니다',
       'admin_ui_recommended': '추천',
       'admin_ui_selected': '선택됨',
@@ -8285,11 +8397,14 @@ class AppLocalizations {
       'admin_ui_pending': '대기',
       'admin_ui_type_qr_token': '{type} QR 토큰',
       'admin_ui_reissue_type_qr': '{type} QR 재발급',
-      'admin_ui_this_invalidates_the_previous_type_qr_token_and_issues_a_new_one_time_token_for_testing': '기존 {type} QR 토큰을 무효화하고 테스트용 일회성 토큰을 새로 발급합니다.',
+      'admin_ui_this_invalidates_the_previous_type_qr_token_and_issues_a_new_one_time_token_for_testing':
+          '기존 {type} QR 토큰을 무효화하고 테스트용 일회성 토큰을 새로 발급합니다.',
       'admin_ui_score_score': '점수 {score}',
       'admin_ui_jobs_count': '진행 중 운행 {count}',
-      'admin_ui_selected_selected_success_success_failed_failed_skipped_skipped': '대상 {selected} · 성공 {success} · 실패 {failed} · 건너뜀 {skipped}',
-      'admin_ui_subtotal_subtotal_discount_discount': '소계: {subtotal}  할인: {discount}',
+      'admin_ui_selected_selected_success_success_failed_failed_skipped_skipped':
+          '대상 {selected} · 성공 {success} · 실패 {failed} · 건너뜀 {skipped}',
+      'admin_ui_subtotal_subtotal_discount_discount':
+          '소계: {subtotal}  할인: {discount}',
       'admin_ui_matched_route_id': '적용 노선: {id}',
       'admin_coupon_cancel': '취소',
       'admin_coupon_template_active': '활성',
@@ -8373,8 +8488,10 @@ class AppLocalizations {
       'admin_ui_sync_flight': '同步航班',
       'admin_ui_notifications_enabled': '已启用通知',
       'admin_ui_notification_permission_was_denied': '通知权限被拒绝',
-      'admin_ui_push_notifications_are_not_supported_in_this_browser': '此浏览器不支持推送通知',
-      'admin_ui_push_notifications_are_not_configured_for_this_environment': '此环境尚未配置推送通知',
+      'admin_ui_push_notifications_are_not_supported_in_this_browser':
+          '此浏览器不支持推送通知',
+      'admin_ui_push_notifications_are_not_configured_for_this_environment':
+          '此环境尚未配置推送通知',
       'admin_ui_notification_registration_failed': '通知注册失败',
       'admin_ui_unread_only': '仅未读',
       'admin_ui_all_types': '全部类型',
@@ -8403,19 +8520,23 @@ class AppLocalizations {
       'admin_ui_actions': '操作',
       'admin_ui_view_prices': '查看价格',
       'admin_ui_deactivate_route': '停用路线',
-      'admin_ui_this_route_will_be_excluded_from_customer_pricing': '此路线将不再用于客户报价',
+      'admin_ui_this_route_will_be_excluded_from_customer_pricing':
+          '此路线将不再用于客户报价',
       'admin_ui_deactivate_price': '停用价格',
-      'admin_ui_this_price_will_no_longer_apply_to_customer_pricing': '此价格将不再用于客户报价',
+      'admin_ui_this_price_will_no_longer_apply_to_customer_pricing':
+          '此价格将不再用于客户报价',
       'admin_ui_status': '状态',
       'admin_ui_deactivate_policy': '停用收费政策',
-      'admin_ui_this_policy_will_be_excluded_from_pricing_calculations': '此政策将不再用于价格计算',
+      'admin_ui_this_policy_will_be_excluded_from_pricing_calculations':
+          '此政策将不再用于价格计算',
       'admin_ui_select_a_route_and_vehicle_type': '请选择路线和车型',
       'admin_ui_charge_items': '费用明细',
       'admin_ui_all': '全部',
       'admin_ui_all_ratings': '全部评分',
       'admin_ui_no_reviews': '暂无评价',
       'admin_ui_hide_review': '隐藏评价',
-      'admin_ui_this_review_will_be_excluded_from_driver_ratings': '此评价将不计入司机评分',
+      'admin_ui_this_review_will_be_excluded_from_driver_ratings':
+          '此评价将不计入司机评分',
       'admin_ui_restore_review': '恢复评价',
       'admin_ui_retry': '重试',
       'admin_ui_hidden_reason': '隐藏原因',
@@ -8443,13 +8564,15 @@ class AppLocalizations {
       'admin_ui_loading_drivers': '正在加载司机…',
       'admin_ui_could_not_load_drivers': '无法加载司机',
       'admin_ui_assign_a_driver_to_this_booking': '请为此预订分配司机',
-      'admin_ui_no_dispatch_actions_available_for_the_current_status': '当前状态下无可用派单操作',
+      'admin_ui_no_dispatch_actions_available_for_the_current_status':
+          '当前状态下无可用派单操作',
       'admin_ui_no_drivers_available': '暂无可用司机',
       'admin_ui_reassignment_reason': '重新派单原因',
       'admin_ui_refresh': '刷新',
       'admin_ui_no_written_review_was_provided': '未填写文字评价',
       'admin_ui_submitted_at': '提交时间',
-      'admin_ui_copy_this_token_now_it_is_shown_once_and_cannot_be_recovered_later': '请立即复制令牌。此令牌仅显示一次，之后无法再次查看。',
+      'admin_ui_copy_this_token_now_it_is_shown_once_and_cannot_be_recovered_later':
+          '请立即复制令牌。此令牌仅显示一次，之后无法再次查看。',
       'admin_ui_token_copied': '已复制令牌',
       'admin_ui_recommended': '推荐',
       'admin_ui_selected': '已选择',
@@ -8469,11 +8592,14 @@ class AppLocalizations {
       'admin_ui_pending': '待处理',
       'admin_ui_type_qr_token': '{type} QR令牌',
       'admin_ui_reissue_type_qr': '重新签发{type} QR',
-      'admin_ui_this_invalidates_the_previous_type_qr_token_and_issues_a_new_one_time_token_for_testing': '这将使原{type} QR令牌失效，并签发新的测试用一次性令牌。',
+      'admin_ui_this_invalidates_the_previous_type_qr_token_and_issues_a_new_one_time_token_for_testing':
+          '这将使原{type} QR令牌失效，并签发新的测试用一次性令牌。',
       'admin_ui_score_score': '得分 {score}',
       'admin_ui_jobs_count': '进行中行程 {count}',
-      'admin_ui_selected_selected_success_success_failed_failed_skipped_skipped': '选定 {selected} · 成功 {success} · 失败 {failed} · 跳过 {skipped}',
-      'admin_ui_subtotal_subtotal_discount_discount': '小计：{subtotal}  优惠：{discount}',
+      'admin_ui_selected_selected_success_success_failed_failed_skipped_skipped':
+          '选定 {selected} · 成功 {success} · 失败 {failed} · 跳过 {skipped}',
+      'admin_ui_subtotal_subtotal_discount_discount':
+          '小计：{subtotal}  优惠：{discount}',
       'admin_ui_matched_route_id': '匹配路线：{id}',
       'admin_coupon_cancel': '取消',
       'admin_coupon_template_active': '启用',
@@ -8548,7 +8674,8 @@ class AppLocalizations {
       'admin_ui_could_not_load_recommendations': 'おすすめのドライバーを読み込めませんでした',
       'admin_ui_recommend_drivers': 'ドライバーのおすすめ',
       'admin_ui_loading_candidates': '候補を読み込んでいます…',
-      'admin_ui_no_eligible_drivers_found_for_this_booking': 'この予約に配車できるドライバーがいません',
+      'admin_ui_no_eligible_drivers_found_for_this_booking':
+          'この予約に配車できるドライバーがいません',
       'admin_ui_assign_recommended': 'おすすめを配車',
       'admin_ui_assign_selected': '選択したドライバーを配車',
       'admin_ui_tap_to_select': 'タップして選択',
@@ -8557,8 +8684,10 @@ class AppLocalizations {
       'admin_ui_sync_flight': 'フライトを同期',
       'admin_ui_notifications_enabled': '通知を有効にしました',
       'admin_ui_notification_permission_was_denied': '通知の許可が拒否されました',
-      'admin_ui_push_notifications_are_not_supported_in_this_browser': 'このブラウザーはプッシュ通知に対応していません',
-      'admin_ui_push_notifications_are_not_configured_for_this_environment': 'この環境ではプッシュ通知が設定されていません',
+      'admin_ui_push_notifications_are_not_supported_in_this_browser':
+          'このブラウザーはプッシュ通知に対応していません',
+      'admin_ui_push_notifications_are_not_configured_for_this_environment':
+          'この環境ではプッシュ通知が設定されていません',
       'admin_ui_notification_registration_failed': '通知の登録に失敗しました',
       'admin_ui_unread_only': '未読のみ',
       'admin_ui_all_types': 'すべての種類',
@@ -8587,19 +8716,23 @@ class AppLocalizations {
       'admin_ui_actions': '操作',
       'admin_ui_view_prices': '料金を表示',
       'admin_ui_deactivate_route': 'ルートを無効にする',
-      'admin_ui_this_route_will_be_excluded_from_customer_pricing': 'このルートはお客様の料金計算から除外されます',
+      'admin_ui_this_route_will_be_excluded_from_customer_pricing':
+          'このルートはお客様の料金計算から除外されます',
       'admin_ui_deactivate_price': '料金を無効にする',
-      'admin_ui_this_price_will_no_longer_apply_to_customer_pricing': 'この料金はお客様の料金計算に適用されなくなります',
+      'admin_ui_this_price_will_no_longer_apply_to_customer_pricing':
+          'この料金はお客様の料金計算に適用されなくなります',
       'admin_ui_status': '状態',
       'admin_ui_deactivate_policy': '料金ポリシーを無効にする',
-      'admin_ui_this_policy_will_be_excluded_from_pricing_calculations': 'このポリシーは料金計算から除外されます',
+      'admin_ui_this_policy_will_be_excluded_from_pricing_calculations':
+          'このポリシーは料金計算から除外されます',
       'admin_ui_select_a_route_and_vehicle_type': 'ルートと車種を選択してください',
       'admin_ui_charge_items': '料金内訳',
       'admin_ui_all': 'すべて',
       'admin_ui_all_ratings': 'すべての評価',
       'admin_ui_no_reviews': 'レビューはありません',
       'admin_ui_hide_review': 'レビューを非表示',
-      'admin_ui_this_review_will_be_excluded_from_driver_ratings': 'このレビューはドライバー評価から除外されます',
+      'admin_ui_this_review_will_be_excluded_from_driver_ratings':
+          'このレビューはドライバー評価から除外されます',
       'admin_ui_restore_review': 'レビューを再表示',
       'admin_ui_retry': '再試行',
       'admin_ui_hidden_reason': '非表示の理由',
@@ -8627,13 +8760,15 @@ class AppLocalizations {
       'admin_ui_loading_drivers': 'ドライバーを読み込んでいます…',
       'admin_ui_could_not_load_drivers': 'ドライバーを読み込めませんでした',
       'admin_ui_assign_a_driver_to_this_booking': 'この予約にドライバーを配車してください',
-      'admin_ui_no_dispatch_actions_available_for_the_current_status': '現在の状態では配車操作はできません',
+      'admin_ui_no_dispatch_actions_available_for_the_current_status':
+          '現在の状態では配車操作はできません',
       'admin_ui_no_drivers_available': '配車可能なドライバーがいません',
       'admin_ui_reassignment_reason': '再配車の理由',
       'admin_ui_refresh': '更新',
       'admin_ui_no_written_review_was_provided': 'コメントはありません',
       'admin_ui_submitted_at': '投稿日時',
-      'admin_ui_copy_this_token_now_it_is_shown_once_and_cannot_be_recovered_later': '今すぐトークンをコピーしてください。一度しか表示されず、再確認できません。',
+      'admin_ui_copy_this_token_now_it_is_shown_once_and_cannot_be_recovered_later':
+          '今すぐトークンをコピーしてください。一度しか表示されず、再確認できません。',
       'admin_ui_token_copied': 'トークンをコピーしました',
       'admin_ui_recommended': 'おすすめ',
       'admin_ui_selected': '選択済み',
@@ -8653,11 +8788,14 @@ class AppLocalizations {
       'admin_ui_pending': '保留',
       'admin_ui_type_qr_token': '{type} QRトークン',
       'admin_ui_reissue_type_qr': '{type} QRを再発行',
-      'admin_ui_this_invalidates_the_previous_type_qr_token_and_issues_a_new_one_time_token_for_testing': '既存の{type} QRトークンを無効にし、テスト用のワンタイムトークンを再発行します。',
+      'admin_ui_this_invalidates_the_previous_type_qr_token_and_issues_a_new_one_time_token_for_testing':
+          '既存の{type} QRトークンを無効にし、テスト用のワンタイムトークンを再発行します。',
       'admin_ui_score_score': 'スコア {score}',
       'admin_ui_jobs_count': '運行中 {count}',
-      'admin_ui_selected_selected_success_success_failed_failed_skipped_skipped': '対象 {selected} · 成功 {success} · 失敗 {failed} · スキップ {skipped}',
-      'admin_ui_subtotal_subtotal_discount_discount': '小計：{subtotal}  割引：{discount}',
+      'admin_ui_selected_selected_success_success_failed_failed_skipped_skipped':
+          '対象 {selected} · 成功 {success} · 失敗 {failed} · スキップ {skipped}',
+      'admin_ui_subtotal_subtotal_discount_discount':
+          '小計：{subtotal}  割引：{discount}',
       'admin_ui_matched_route_id': '適用ルート：{id}',
       'admin_coupon_cancel': 'キャンセル',
       'admin_coupon_template_active': '有効',
@@ -8729,10 +8867,12 @@ class AppLocalizations {
       'admin_ui_done': 'เสร็จสิ้น',
       'admin_ui_reissue': 'ออกใหม่',
       'admin_ui_excluded': 'คนขับที่ไม่เข้าเกณฑ์',
-      'admin_ui_could_not_load_recommendations': 'โหลดรายชื่อคนขับแนะนำไม่สำเร็จ',
+      'admin_ui_could_not_load_recommendations':
+          'โหลดรายชื่อคนขับแนะนำไม่สำเร็จ',
       'admin_ui_recommend_drivers': 'แนะนำคนขับ',
       'admin_ui_loading_candidates': 'กำลังโหลดคนขับที่เข้าเกณฑ์…',
-      'admin_ui_no_eligible_drivers_found_for_this_booking': 'ไม่มีคนขับที่เข้าเกณฑ์สำหรับการจองนี้',
+      'admin_ui_no_eligible_drivers_found_for_this_booking':
+          'ไม่มีคนขับที่เข้าเกณฑ์สำหรับการจองนี้',
       'admin_ui_assign_recommended': 'มอบหมายให้คนขับที่แนะนำ',
       'admin_ui_assign_selected': 'มอบหมายให้คนขับที่เลือก',
       'admin_ui_tap_to_select': 'แตะเพื่อเลือก',
@@ -8740,10 +8880,14 @@ class AppLocalizations {
       'admin_ui_open_booking': 'ดูรายละเอียดการจอง',
       'admin_ui_sync_flight': 'ซิงค์เที่ยวบิน',
       'admin_ui_notifications_enabled': 'เปิดการแจ้งเตือนแล้ว',
-      'admin_ui_notification_permission_was_denied': 'ไม่ได้รับอนุญาตให้แจ้งเตือน',
-      'admin_ui_push_notifications_are_not_supported_in_this_browser': 'เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือนแบบพุช',
-      'admin_ui_push_notifications_are_not_configured_for_this_environment': 'ยังไม่ได้ตั้งค่าการแจ้งเตือนแบบพุชในสภาพแวดล้อมนี้',
-      'admin_ui_notification_registration_failed': 'ลงทะเบียนการแจ้งเตือนไม่สำเร็จ',
+      'admin_ui_notification_permission_was_denied':
+          'ไม่ได้รับอนุญาตให้แจ้งเตือน',
+      'admin_ui_push_notifications_are_not_supported_in_this_browser':
+          'เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือนแบบพุช',
+      'admin_ui_push_notifications_are_not_configured_for_this_environment':
+          'ยังไม่ได้ตั้งค่าการแจ้งเตือนแบบพุชในสภาพแวดล้อมนี้',
+      'admin_ui_notification_registration_failed':
+          'ลงทะเบียนการแจ้งเตือนไม่สำเร็จ',
       'admin_ui_unread_only': 'เฉพาะที่ยังไม่อ่าน',
       'admin_ui_all_types': 'ทุกประเภท',
       'admin_ui_booking_created': 'สร้างการจองแล้ว',
@@ -8771,19 +8915,24 @@ class AppLocalizations {
       'admin_ui_actions': 'การดำเนินการ',
       'admin_ui_view_prices': 'ดูราคา',
       'admin_ui_deactivate_route': 'ปิดใช้งานเส้นทาง',
-      'admin_ui_this_route_will_be_excluded_from_customer_pricing': 'เส้นทางนี้จะไม่ใช้คำนวณราคาลูกค้า',
+      'admin_ui_this_route_will_be_excluded_from_customer_pricing':
+          'เส้นทางนี้จะไม่ใช้คำนวณราคาลูกค้า',
       'admin_ui_deactivate_price': 'ปิดใช้งานราคา',
-      'admin_ui_this_price_will_no_longer_apply_to_customer_pricing': 'ราคานี้จะไม่ใช้คำนวณราคาลูกค้าอีก',
+      'admin_ui_this_price_will_no_longer_apply_to_customer_pricing':
+          'ราคานี้จะไม่ใช้คำนวณราคาลูกค้าอีก',
       'admin_ui_status': 'สถานะ',
       'admin_ui_deactivate_policy': 'ปิดใช้งานนโยบายราคา',
-      'admin_ui_this_policy_will_be_excluded_from_pricing_calculations': 'นโยบายนี้จะไม่ใช้คำนวณราคา',
-      'admin_ui_select_a_route_and_vehicle_type': 'กรุณาเลือกเส้นทางและประเภทรถ',
+      'admin_ui_this_policy_will_be_excluded_from_pricing_calculations':
+          'นโยบายนี้จะไม่ใช้คำนวณราคา',
+      'admin_ui_select_a_route_and_vehicle_type':
+          'กรุณาเลือกเส้นทางและประเภทรถ',
       'admin_ui_charge_items': 'รายการค่าบริการ',
       'admin_ui_all': 'ทั้งหมด',
       'admin_ui_all_ratings': 'ทุกคะแนน',
       'admin_ui_no_reviews': 'ไม่มีรีวิว',
       'admin_ui_hide_review': 'ซ่อนรีวิว',
-      'admin_ui_this_review_will_be_excluded_from_driver_ratings': 'รีวิวนี้จะไม่รวมในการคำนวณคะแนนคนขับ',
+      'admin_ui_this_review_will_be_excluded_from_driver_ratings':
+          'รีวิวนี้จะไม่รวมในการคำนวณคะแนนคนขับ',
       'admin_ui_restore_review': 'คืนค่ารีวิว',
       'admin_ui_retry': 'ลองอีกครั้ง',
       'admin_ui_hidden_reason': 'เหตุผลที่ซ่อน',
@@ -8810,14 +8959,17 @@ class AppLocalizations {
       'admin_ui_could_not_load_more_bookings': 'โหลดการจองเพิ่มเติมไม่สำเร็จ',
       'admin_ui_loading_drivers': 'กำลังโหลดรายชื่อคนขับ…',
       'admin_ui_could_not_load_drivers': 'โหลดรายชื่อคนขับไม่สำเร็จ',
-      'admin_ui_assign_a_driver_to_this_booking': 'กรุณามอบหมายคนขับให้การจองนี้',
-      'admin_ui_no_dispatch_actions_available_for_the_current_status': 'สถานะปัจจุบันไม่สามารถดำเนินการมอบหมายงานได้',
+      'admin_ui_assign_a_driver_to_this_booking':
+          'กรุณามอบหมายคนขับให้การจองนี้',
+      'admin_ui_no_dispatch_actions_available_for_the_current_status':
+          'สถานะปัจจุบันไม่สามารถดำเนินการมอบหมายงานได้',
       'admin_ui_no_drivers_available': 'ไม่มีคนขับที่พร้อมรับงาน',
       'admin_ui_reassignment_reason': 'เหตุผลที่เปลี่ยนคนขับ',
       'admin_ui_refresh': 'รีเฟรช',
       'admin_ui_no_written_review_was_provided': 'ไม่มีข้อความรีวิว',
       'admin_ui_submitted_at': 'เวลาที่ส่ง',
-      'admin_ui_copy_this_token_now_it_is_shown_once_and_cannot_be_recovered_later': 'กรุณาคัดลอกโทเคนตอนนี้ จะแสดงเพียงครั้งเดียวและไม่สามารถเรียกดูภายหลัง',
+      'admin_ui_copy_this_token_now_it_is_shown_once_and_cannot_be_recovered_later':
+          'กรุณาคัดลอกโทเคนตอนนี้ จะแสดงเพียงครั้งเดียวและไม่สามารถเรียกดูภายหลัง',
       'admin_ui_token_copied': 'คัดลอกโทเคนแล้ว',
       'admin_ui_recommended': 'แนะนำ',
       'admin_ui_selected': 'เลือกแล้ว',
@@ -8837,11 +8989,14 @@ class AppLocalizations {
       'admin_ui_pending': 'รอดำเนินการ',
       'admin_ui_type_qr_token': 'โทเคน QR {type}',
       'admin_ui_reissue_type_qr': 'ออก QR {type} ใหม่',
-      'admin_ui_this_invalidates_the_previous_type_qr_token_and_issues_a_new_one_time_token_for_testing': 'ยกเลิกโทเคน QR {type} เดิม และออกโทเคนใช้ครั้งเดียวใหม่สำหรับทดสอบ',
+      'admin_ui_this_invalidates_the_previous_type_qr_token_and_issues_a_new_one_time_token_for_testing':
+          'ยกเลิกโทเคน QR {type} เดิม และออกโทเคนใช้ครั้งเดียวใหม่สำหรับทดสอบ',
       'admin_ui_score_score': 'คะแนน {score}',
       'admin_ui_jobs_count': 'งานที่กำลังดำเนินการ {count}',
-      'admin_ui_selected_selected_success_success_failed_failed_skipped_skipped': 'รายการ {selected} · สำเร็จ {success} · ล้มเหลว {failed} · ข้าม {skipped}',
-      'admin_ui_subtotal_subtotal_discount_discount': 'ยอดรวมย่อย: {subtotal}  ส่วนลด: {discount}',
+      'admin_ui_selected_selected_success_success_failed_failed_skipped_skipped':
+          'รายการ {selected} · สำเร็จ {success} · ล้มเหลว {failed} · ข้าม {skipped}',
+      'admin_ui_subtotal_subtotal_discount_discount':
+          'ยอดรวมย่อย: {subtotal}  ส่วนลด: {discount}',
       'admin_ui_matched_route_id': 'เส้นทางที่ใช้: {id}',
       'admin_coupon_cancel': 'ยกเลิก',
       'admin_coupon_template_active': 'ใช้งาน',
@@ -8873,7 +9028,8 @@ class AppLocalizations {
       'admin_dispatch_loading_drivers_failed': 'โหลดรายชื่อคนขับไม่สำเร็จ',
       'admin_dispatch_load_more_failed': 'โหลดการจองเพิ่มเติมไม่สำเร็จ',
       'admin_dispatch_next_action_assign': 'กรุณามอบหมายคนขับให้การจองนี้',
-      'admin_dispatch_next_action_none': 'สถานะปัจจุบันไม่สามารถดำเนินการมอบหมายงานได้',
+      'admin_dispatch_next_action_none':
+          'สถานะปัจจุบันไม่สามารถดำเนินการมอบหมายงานได้',
       'admin_ops_view_all': 'ทั้งหมด',
       'admin_ops_summary_unassigned': 'ยังไม่มอบหมาย',
       'admin_ops_settlement_submitted': 'ส่งหลักฐานการโอนแล้ว',
@@ -9361,47 +9517,49 @@ class AppLocalizations {
   };
 
   static const Map<String, Map<String, String>> _regionUiExtra = {
-  "ko": {
-    "admin_region_latitude": "중심 위도",
-    "admin_region_longitude": "중심 경도",
-    "admin_region_radius": "반경",
-    "admin_region_points": "공항 외곽 다각형 · 꼭짓점 {count}개",
-    "admin_region_pending": "승인 대기 신규 요금 후보",
-    "admin_region_shared": "공유 가격을 수정하면 연결된 모든 지역 요금에 반영됩니다."
-  },
-  "en": {
-    "admin_region_latitude": "Center latitude",
-    "admin_region_longitude": "Center longitude",
-    "admin_region_radius": "Radius",
-    "admin_region_points": "Airport perimeter polygon · {count} vertices",
-    "admin_region_pending": "New fare proposals awaiting approval",
-    "admin_region_shared": "Changing a shared price affects every region linked to it."
-  },
-  "zh": {
-    "admin_region_latitude": "中心纬度",
-    "admin_region_longitude": "中心经度",
-    "admin_region_radius": "半径",
-    "admin_region_points": "机场外围多边形 · {count}个顶点",
-    "admin_region_pending": "待批准的新车费方案",
-    "admin_region_shared": "修改共享价格将影响关联的所有区域。"
-  },
-  "ja": {
-    "admin_region_latitude": "中心緯度",
-    "admin_region_longitude": "中心経度",
-    "admin_region_radius": "半径",
-    "admin_region_points": "空港外周の多角形 · 頂点{count}個",
-    "admin_region_pending": "承認待ちの新規料金案",
-    "admin_region_shared": "共有料金の変更は関連するすべてのエリアに反映されます。"
-  },
-  "th": {
-    "admin_region_latitude": "ละติจูดจุดศูนย์กลาง",
-    "admin_region_longitude": "ลองจิจูดจุดศูนย์กลาง",
-    "admin_region_radius": "รัศมี",
-    "admin_region_points": "รูปหลายเหลี่ยมรอบสนามบิน · {count} จุด",
-    "admin_region_pending": "ข้อเสนอราคาใหม่ที่รออนุมัติ",
-    "admin_region_shared": "การแก้ไขราคาที่ใช้ร่วมกันจะมีผลกับทุกพื้นที่ที่เชื่อมโยงกัน"
-  }
-};
+    "ko": {
+      "admin_region_latitude": "중심 위도",
+      "admin_region_longitude": "중심 경도",
+      "admin_region_radius": "반경",
+      "admin_region_points": "공항 외곽 다각형 · 꼭짓점 {count}개",
+      "admin_region_pending": "승인 대기 신규 요금 후보",
+      "admin_region_shared": "공유 가격을 수정하면 연결된 모든 지역 요금에 반영됩니다.",
+    },
+    "en": {
+      "admin_region_latitude": "Center latitude",
+      "admin_region_longitude": "Center longitude",
+      "admin_region_radius": "Radius",
+      "admin_region_points": "Airport perimeter polygon · {count} vertices",
+      "admin_region_pending": "New fare proposals awaiting approval",
+      "admin_region_shared":
+          "Changing a shared price affects every region linked to it.",
+    },
+    "zh": {
+      "admin_region_latitude": "中心纬度",
+      "admin_region_longitude": "中心经度",
+      "admin_region_radius": "半径",
+      "admin_region_points": "机场外围多边形 · {count}个顶点",
+      "admin_region_pending": "待批准的新车费方案",
+      "admin_region_shared": "修改共享价格将影响关联的所有区域。",
+    },
+    "ja": {
+      "admin_region_latitude": "中心緯度",
+      "admin_region_longitude": "中心経度",
+      "admin_region_radius": "半径",
+      "admin_region_points": "空港外周の多角形 · 頂点{count}個",
+      "admin_region_pending": "承認待ちの新規料金案",
+      "admin_region_shared": "共有料金の変更は関連するすべてのエリアに反映されます。",
+    },
+    "th": {
+      "admin_region_latitude": "ละติจูดจุดศูนย์กลาง",
+      "admin_region_longitude": "ลองจิจูดจุดศูนย์กลาง",
+      "admin_region_radius": "รัศมี",
+      "admin_region_points": "รูปหลายเหลี่ยมรอบสนามบิน · {count} จุด",
+      "admin_region_pending": "ข้อเสนอราคาใหม่ที่รออนุมัติ",
+      "admin_region_shared":
+          "การแก้ไขราคาที่ใช้ร่วมกันจะมีผลกับทุกพื้นที่ที่เชื่อมโยงกัน",
+    },
+  };
   String t(String key) {
     final regionExtra = _regionUiExtra[languageCode]?[key];
     if (regionExtra != null) return regionExtra;

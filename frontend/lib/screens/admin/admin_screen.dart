@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../features/admin_pricing/pages/admin_golf_prices_panel.dart';
 
 import '../../features/admin/widgets/admin_auth_gate.dart';
 import '../../features/admin_dashboard/pages/admin_dashboard_page.dart';
@@ -303,7 +304,7 @@ class _AdminScreenState extends State<AdminScreen> {
       case 5:
         return const AdminAuthGate(child: AdminPricingManagerPage());
       case 6:
-        return _buildLegacyNotice(l10n.t('admin_golf'));
+        return const AdminAuthGate(child: AdminGolfPricesPanel());
       case 7:
         return _buildLegacyNotice(l10n.t('admin_airports'));
       case 8:

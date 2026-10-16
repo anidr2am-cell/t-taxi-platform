@@ -75,10 +75,7 @@ class BookingApiService {
     } else {
       response = await _client.post(
         uri,
-        headers: {
-          ...requestHeaders,
-          'Content-Type': 'application/json',
-        },
+        headers: {...requestHeaders, 'Content-Type': 'application/json'},
         body: jsonEncode(body ?? {}),
       );
     }
@@ -137,6 +134,7 @@ class BookingApiService {
 
   Future<PricingResult> calculatePricing({
     required String serviceTypeCode,
+    Map<String, dynamic>? golf,
     required String vehicleTypeCode,
     int vehicleCount = 1,
     String? originAirportIata,
@@ -158,6 +156,7 @@ class BookingApiService {
     double? destinationLng,
   }) async {
     final body = <String, dynamic>{
+      if (golf != null) 'golf': golf,
       'serviceTypeCode': serviceTypeCode,
       'vehicleTypeCode': vehicleTypeCode,
       'vehicleCount': vehicleCount,

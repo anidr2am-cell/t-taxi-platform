@@ -26,6 +26,7 @@ const bookingOptionsDto = Joi.object({
 });
 
 const pricingCalculateSchema = Joi.object({
+  golf: require('./golf.validator').optional(),
   serviceTypeCode: Joi.string().valid(...Object.values(SERVICE_TYPES)).required(),
   vehicleTypeCode: Joi.string().valid(...Object.values(VEHICLE_TYPES)).required(),
   vehicleCount: Joi.number().integer().min(1).default(1),

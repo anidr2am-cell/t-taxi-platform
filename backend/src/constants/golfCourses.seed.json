@@ -1,0 +1,290 @@
+[
+  {
+    "code": "EASTERN_STAR",
+    "names": {
+      "en": "Eastern Star",
+      "ko": "이스턴스타",
+      "th": "อีสเทิร์น สตาร์"
+    },
+    "lat": 12.702688,
+    "lng": 101.040766,
+    "fareGroup": "A",
+    "coordinateSource": "https://www.where2golf.com/thailand/eastern-star-country-club-resort/"
+  },
+  {
+    "code": "PHOENIX_GOLD",
+    "names": {
+      "en": "Phoenix Gold",
+      "ko": "피닉스",
+      "th": "ฟีนิกซ์ โกลด์"
+    },
+    "lat": 12.819615,
+    "lng": 100.952397,
+    "fareGroup": "A",
+    "coordinateSource": "https://www.phoenixgoldgolf.com/contact"
+  },
+  {
+    "code": "PATTAYA_COUNTRY_CLUB",
+    "names": {
+      "en": "Pattaya Country Club",
+      "ko": "파타야CC",
+      "th": "พัทยา คันทรี คลับ"
+    },
+    "lat": 12.9205451,
+    "lng": 101.0464771,
+    "fareGroup": "A",
+    "coordinateSource": "https://elevation.maplogs.com/poi/pattaya_country_club_kao_mai_kaew_bang_lamung_chonburi_chon_buri_thailand.380223.html"
+  },
+  {
+    "code": "HERMES_PARICHAT",
+    "names": {
+      "en": "Hermes (Parichat)",
+      "ko": "에르메스",
+      "th": "เฮอร์มีส"
+    },
+    "lat": 12.939732,
+    "lng": 101.041052,
+    "fareGroup": "A",
+    "coordinateSource": "https://www.pattayagolf.net/golf.php?golf_id=37"
+  },
+  {
+    "code": "SIAM_CC_OLD_COURSE",
+    "names": {
+      "en": "Siam CC Old Course",
+      "ko": "시암 올드",
+      "th": "สยาม คันทรี คลับ โอลด์ คอร์ส"
+    },
+    "lat": 12.91061,
+    "lng": 100.98388,
+    "fareGroup": "A",
+    "coordinateSource": "https://mapcarta.com/W132473847"
+  },
+  {
+    "code": "SIAM_CC_PLANTATION",
+    "names": {
+      "en": "Siam CC Plantation",
+      "ko": "시암 플랜",
+      "th": "สยาม คันทรี คลับ แพลนเทชั่น"
+    },
+    "lat": 12.90964,
+    "lng": 101.01,
+    "fareGroup": "A",
+    "coordinateSource": "https://mapcarta.com/W162064282"
+  },
+  {
+    "code": "SIAM_CC_ROLLING_HILLS",
+    "names": {
+      "en": "Siam CC Rolling Hills",
+      "ko": "시암 롤링",
+      "th": "สยาม คันทรี คลับ โรลลิ่ง ฮิลส์"
+    },
+    "lat": 12.89397,
+    "lng": 100.98078,
+    "fareGroup": "A",
+    "coordinateSource": "https://mapcarta.com/W1341209098"
+  },
+  {
+    "code": "SIAM_CC_WATERSIDE",
+    "names": {
+      "en": "Siam CC Waterside",
+      "ko": "시암 워터",
+      "th": "สยาม คันทรี คลับ วอเตอร์ไซด์"
+    },
+    "lat": 12.914199,
+    "lng": 100.996769,
+    "fareGroup": "A",
+    "coordinateSource": "https://www.where2golf.com/thailand/siam-country-club-pattaya-waterside-course/"
+  },
+  {
+    "code": "CHEE_CHAN",
+    "names": {
+      "en": "Chee Chan",
+      "ko": "치찬",
+      "th": "ชีจรรย์"
+    },
+    "lat": 12.77464,
+    "lng": 100.96196,
+    "fareGroup": "A",
+    "coordinateSource": "https://mapcarta.com/W1281155223"
+  },
+  {
+    "code": "KHAO_KHEOW",
+    "names": {
+      "en": "Khao Kheow",
+      "ko": "카오키여우",
+      "th": "เขาเขียว"
+    },
+    "lat": 13.20728,
+    "lng": 101.0389,
+    "fareGroup": "B",
+    "coordinateSource": "https://mapcarta.com/W164890112"
+  },
+  {
+    "code": "RAYONG_GREEN_VALLEY",
+    "names": {
+      "en": "Rayong Green Valley",
+      "ko": "그린밸리",
+      "th": "ระยอง กรีน วัลเลย์"
+    },
+    "lat": 12.80764,
+    "lng": 101.06492,
+    "fareGroup": "B",
+    "coordinateSource": "https://mapcarta.com/W187646304"
+  },
+  {
+    "code": "ST_ANDREWS_2000",
+    "names": {
+      "en": "St Andrews 2000",
+      "ko": "세인트앤드류",
+      "th": "เซนต์ แอนดรูว์ส 2000"
+    },
+    "lat": 12.80853,
+    "lng": 101.07831,
+    "fareGroup": "B",
+    "coordinateSource": "https://mapcarta.com/W187646650"
+  },
+  {
+    "code": "SILKY_OAK",
+    "names": {
+      "en": "Silky Oak",
+      "ko": "실키오크",
+      "th": "ซิลกี้ โอ๊ค"
+    },
+    "lat": 12.80505,
+    "lng": 101.07679,
+    "fareGroup": "B",
+    "coordinateSource": "https://mapcarta.com/W187647409"
+  },
+  {
+    "code": "LAEM_CHABANG_CC",
+    "names": {
+      "en": "Laem Chabang CC",
+      "ko": "램차방",
+      "th": "แหลมฉบัง"
+    },
+    "lat": 13.03049,
+    "lng": 101.03657,
+    "fareGroup": "B",
+    "coordinateSource": "https://mapcarta.com/W132598131"
+  },
+  {
+    "code": "PATTANA",
+    "names": {
+      "en": "Pattana",
+      "ko": "파타나",
+      "th": "พัฒนา"
+    },
+    "lat": 13.08968,
+    "lng": 101.14631,
+    "fareGroup": "B",
+    "coordinateSource": "https://mapcarta.com/W133669538"
+  },
+  {
+    "code": "TREASURE_HILL",
+    "names": {
+      "en": "Treasure Hill",
+      "ko": "트레져힐",
+      "th": "เทรเชอร์ ฮิลล์"
+    },
+    "lat": 13.14125,
+    "lng": 101.19308,
+    "fareGroup": "B",
+    "coordinateSource": "https://mapcarta.com/W189183912"
+  },
+  {
+    "code": "BANGPRA",
+    "names": {
+      "en": "Bangpra",
+      "ko": "방프라",
+      "th": "บางพระ"
+    },
+    "lat": 13.224603,
+    "lng": 100.968127,
+    "fareGroup": "B",
+    "coordinateSource": "https://www.where2golf.com/thailand/bangpra-golf-club/"
+  },
+  {
+    "code": "PATTAVIA",
+    "names": {
+      "en": "Pattavia",
+      "ko": "파타비아",
+      "th": "ปัตตาเวีย"
+    },
+    "lat": 13.1405215,
+    "lng": 101.2267464,
+    "fareGroup": "B",
+    "coordinateSource": "https://elevation.maplogs.com/poi/pattavia_century_golf_club_khlong_kiu_ban_bueng_district_chon_buri_thailand.380270.html"
+  },
+  {
+    "code": "BURAPHA_CC",
+    "names": {
+      "en": "Burapha CC",
+      "ko": "부라파",
+      "th": "บูรพา"
+    },
+    "lat": 13.04379,
+    "lng": 101.04154,
+    "fareGroup": "B",
+    "coordinateSource": "https://mapcarta.com/W132598068"
+  },
+  {
+    "code": "PLEASANT_VALLEY",
+    "names": {
+      "en": "Pleasant Valley",
+      "ko": "프리젠트밸리",
+      "th": "เพลแซนท์ วัลเลย์"
+    },
+    "lat": 13.2351707,
+    "lng": 101.0123281,
+    "fareGroup": "B",
+    "coordinateSource": "https://elevation.maplogs.com/poi/_pleasant_valley_golf_country_club_41_62_9_tambon_bang_phra_amphoe_si_racha_chang_wat_chon_buri_thailand.380083.html"
+  },
+  {
+    "code": "GREENWOOD",
+    "names": {
+      "en": "Greenwood",
+      "ko": "그린우드",
+      "th": "กรีนวูด"
+    },
+    "lat": 13.161057,
+    "lng": 101.226971,
+    "fareGroup": "B",
+    "coordinateSource": "https://www.where2golf.com/thailand/greenwood-golf-club/"
+  },
+  {
+    "code": "PLUTALUANG_NAVY",
+    "names": {
+      "en": "Plutaluang Navy",
+      "ko": "뿌딸루앙",
+      "th": "พลูตาหลวง"
+    },
+    "lat": 12.70652,
+    "lng": 100.95253,
+    "fareGroup": "B",
+    "coordinateSource": "https://mapcarta.com/W161524275"
+  },
+  {
+    "code": "ROYAL_LAKESIDE",
+    "names": {
+      "en": "Royal Lakeside",
+      "ko": "로얄레이크",
+      "th": "รอยัล เลคไซด์"
+    },
+    "lat": 13.4817,
+    "lng": 100.99231,
+    "fareGroup": "C",
+    "coordinateSource": "https://mapcarta.com/W154906654"
+  },
+  {
+    "code": "BANGPAKONG_RIVERSIDE",
+    "names": {
+      "en": "Bangpakong Riverside",
+      "ko": "방파콩 리버사이드",
+      "th": "บางปะกง ริเวอร์ไซด์"
+    },
+    "lat": 13.5678638,
+    "lng": 101.0308407,
+    "fareGroup": "C",
+    "coordinateSource": "https://elevation.maplogs.com/poi/bangpakong_riverside_country_club_49_2_tambon_saen_phu_dat_amphoe_ban_pho_chang_wat_chachoengsao_thailand.380297.html"
+  }
+]

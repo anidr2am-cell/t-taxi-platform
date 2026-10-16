@@ -505,6 +505,7 @@ class AdminDispatchApiService {
   }
 
   Future<Map<String, dynamic>> createManualBooking({
+    Map<String, dynamic>? golf,
     required Map<String, dynamic> origin,
     required Map<String, dynamic> destination,
     required String scheduledPickupAt,
@@ -525,6 +526,7 @@ class AdminDispatchApiService {
     int? driverId,
   }) async {
     final body = <String, dynamic>{
+      if (golf != null) 'golf': golf,
       'origin': origin,
       'destination': destination,
       'scheduledPickupAt': scheduledPickupAt,

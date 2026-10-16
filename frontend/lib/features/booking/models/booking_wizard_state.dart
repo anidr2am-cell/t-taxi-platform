@@ -6,6 +6,7 @@ import '../utils/booking_contact_preference.dart';
 import 'vehicle_recommendation.dart';
 
 class BookingWizardState {
+  final Map<String, dynamic>? golf;
   final int step;
   final BookingServiceType? serviceType;
   final LocationOption? origin;
@@ -41,6 +42,7 @@ class BookingWizardState {
   final String? paymentCurrency;
 
   const BookingWizardState({
+    this.golf,
     this.step = 0,
     this.serviceType,
     this.origin,
@@ -79,6 +81,8 @@ class BookingWizardState {
   static const int stepCount = 5;
 
   BookingWizardState copyWith({
+    Map<String, dynamic>? golf,
+    bool clearGolf = false,
     int? step,
     BookingServiceType? serviceType,
     LocationOption? origin,
@@ -123,6 +127,7 @@ class BookingWizardState {
     bool clearPaymentCurrency = false,
   }) {
     return BookingWizardState(
+      golf: clearGolf ? null : (golf ?? this.golf),
       step: step ?? this.step,
       serviceType: serviceType ?? this.serviceType,
       origin: clearOrigin ? null : (origin ?? this.origin),
@@ -168,6 +173,7 @@ class BookingWizardState {
   }
 
   Map<String, dynamic> toJson() => {
+    'golf': golf,
     'step': step,
     'serviceType': serviceType?.apiCode,
     'origin': origin?.toJson(),
@@ -200,6 +206,9 @@ class BookingWizardState {
 
   factory BookingWizardState.fromJson(Map<String, dynamic> json) {
     return BookingWizardState(
+      golf: json['golf'] is Map
+          ? Map<String, dynamic>.from(json['golf'] as Map)
+          : null,
       step: json['step'] as int? ?? 0,
       serviceType: BookingServiceTypeX.fromApiCode(
         json['serviceType'] as String?,

@@ -271,7 +271,8 @@ class BookingWizardController extends ChangeNotifier {
         state.serviceType != null &&
         state.origin != null &&
         state.destination != null &&
-        !_isSamePlace(state.origin, state.destination);
+        !_isSamePlace(state.origin, state.destination) &&
+        _golfComplete(state);
     if (!routeComplete) return BookingWizardSteps.route;
 
     final pickup = pickupDateTimeFrom(state.pickupDate, state.pickupTime);
@@ -376,6 +377,62 @@ class BookingWizardController extends ChangeNotifier {
     notifyListeners();
     await syncDerivedData();
   }
+
+  Future<void> setGolf(Map<String, dynamic> selection) async {
+    _invalidateSubmitIdempotencyKey();
+    _pricingGeneration++;
+    _state = _state.copyWith(
+      golf: selection,
+      clearPricing: true,
+      clearError: true,
+    );
+    await _persist();
+    notifyListeners();
+  }
+
+  Future<void> selectGolfCourse(
+    Map<String, dynamic> selection,
+    Map<String, dynamic>? course,
+  ) async {
+    final previousType = _state.golf?['tripType'];
+    if (course != null) {
+      final option = LocationOption(
+        id: 'golf:${course['id']}',
+        displayName: course['name'].toString(),
+        kind: LocationKind.golf,
+        code: 'GOLF_${course['id']}',
+        name: course['name'].toString(),
+        address: course['name'].toString(),
+        latitude: (course['lat'] as num).toDouble(),
+        longitude: (course['lng'] as num).toDouble(),
+      );
+      if (selection['tripType'] == 'RETURN') {
+        if (previousType != 'RETURN' &&
+            _state.origin?.kind != LocationKind.golf &&
+            _state.origin != null)
+          await setDestination(_state.origin!);
+        await setOrigin(option);
+      } else {
+        if (previousType == 'RETURN' &&
+            _state.destination?.kind != LocationKind.golf &&
+            _state.destination != null)
+          await setOrigin(_state.destination!);
+        await setDestination(option);
+      }
+    }
+    await setGolf(selection);
+  }
+
+  bool _golfComplete(BookingWizardState state) =>
+      state.serviceType != BookingServiceType.golfTransfer ||
+      (state.golf?['courseId'] is int &&
+          [
+            'ROUND_TRIP',
+            'OUTBOUND',
+            'RETURN',
+          ].contains(state.golf?['tripType']) &&
+          (state.golf?['tripType'] != 'ROUND_TRIP' ||
+              [18, 27, 36].contains(state.golf?['holes'])));
 
   Future<void> swapOriginDestination() async {
     final origin = _state.origin;
@@ -978,6 +1035,9 @@ class BookingWizardController extends ChangeNotifier {
 
     return {
       'bookingMode': bookingMode,
+      if (_state.serviceType == BookingServiceType.golfTransfer &&
+          _state.golf != null)
+        'golf': _state.golf,
       'serviceTypeCode': _state.serviceType!.apiCode,
       'vehicleTypeCode': _state.selectedVehicle!,
       'vehicleCount': 1,
@@ -1787,6 +1847,9 @@ class BookingWizardController extends ChangeNotifier {
     _setLoading(true);
     try {
       final pricing = await _api.calculatePricing(
+        golf: _state.serviceType == BookingServiceType.golfTransfer
+            ? _state.golf
+            : null,
         serviceTypeCode: _state.serviceType!.apiCode,
         vehicleTypeCode: requestVehicle,
         originAirportIata: locations['originAirportIata'],
@@ -1978,7 +2041,8 @@ class BookingWizardController extends ChangeNotifier {
         return _state.serviceType != null &&
             _state.origin != null &&
             _state.destination != null &&
-            !isSameOriginDestination;
+            !isSameOriginDestination &&
+            _golfComplete(_state);
       case BookingWizardSteps.schedule:
         final selected = selectedPickupDateTime();
         return selected != null && isPickupSelectable(selected);
@@ -2089,6 +2153,7 @@ class BookingWizardController extends ChangeNotifier {
     switch (step) {
       case BookingWizardSteps.route:
         if (_state.serviceType == null) return 'wizard_required_service';
+        if (!_golfComplete(_state)) return 'golf_required';
         if (_state.origin == null) return 'wizard_required_origin';
         if (_state.destination == null) return 'wizard_required_destination';
         if (isSameOriginDestination) return 'wizard_same_place_error';
@@ -2106,7 +2171,8 @@ class BookingWizardController extends ChangeNotifier {
           return 'wizard_required_name_sign_text';
         }
         if (_state.adults < 1) return 'wizard_required_passengers';
-        if (_state.errorMessage == 'pricing_inquiry_required') return 'fare_inquiry_title';
+        if (_state.errorMessage == 'pricing_inquiry_required')
+          return 'fare_inquiry_title';
         if (_state.selectedVehicle == null) {
           return canLoadRecommendation()
               ? 'wizard_required_vehicle'

@@ -97,6 +97,7 @@ const placeSchema = Joi.object({
 });
 
 const createBookingSchema = Joi.object({
+  golf: require('./golf.validator').optional(),
   locale: Joi.string().valid('ko', 'en', 'zh', 'ja', 'th').optional(),
   bookingMode: Joi.string().valid('STANDARD', 'URGENT').default('STANDARD'),
   serviceTypeCode: Joi.string().valid(...Object.values(SERVICE_TYPES)).required(),

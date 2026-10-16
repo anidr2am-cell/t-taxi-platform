@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
 
-// TODO: GET / — list regions
+router.get('/',(_req,res)=>res.json({success:true,data:['PATTAYA']}));
 
 module.exports = router;

@@ -226,8 +226,8 @@ container.register(
 );
 container.register(
   "pricingService",
-  (c) =>
-    new PricingService(
+  (c) => {
+    const pricing = new PricingService(
       c.get("serviceTypeRepository"),
       c.get("locationRepository"),
       c.get("routeRepository"),
@@ -236,7 +236,11 @@ container.register(
       c.get("vehicleRepository"),
       c.get("cityTransferDistancePricingService"),
       require('../config/env').regionFixedFaresEnabled ? new PricingRegionRepository() : null,
-    ),
+    );
+    pricing.golfPricingService = new (require('../services/golfPricing.service'))(
+      new (require('../repositories/golfPricing.repository'))(), new PricingRegionRepository(), pricing);
+    return pricing;
+  },
 );
 container.register(
   "routeAdminService",
