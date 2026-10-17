@@ -129,8 +129,7 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
         _guestToken = token;
         _channels = channels;
         _connection = connection;
-        _selectedChannelCode =
-            connection.connectionChannel ?? connection.contactChannel;
+        _selectedChannelCode = connection.connectionChannel;
         _loading = false;
       });
 
@@ -186,8 +185,7 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
       if (!mounted) return;
       setState(() {
         _connection = connection;
-        _selectedChannelCode ??=
-            connection.connectionChannel ?? connection.contactChannel;
+        _selectedChannelCode ??= connection.connectionChannel;
       });
       if (connection.isVerified) {
         _pollTimer?.cancel();
@@ -483,7 +481,8 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
           for (final channel in orderedChannels) ...[
             _ChannelButton(
               channel: channel,
-              preferred: channel.code == widget.args?.preferredChannel,
+              preferred: const {'KAKAO', 'LINE'}.contains(channel.code) &&
+                  channel.code == widget.args?.preferredChannel,
               busy: _actionBusy,
               onTap: () => _handleChannelTap(channel),
             ),
