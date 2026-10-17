@@ -1,21 +1,41 @@
-// ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
-import 'dart:html' as html;
+import 'dart:async';
+import 'dart:js_interop';
 import 'dart:typed_data';
+import 'package:web/web.dart' as web;
 
 Future<void> printVoucher(Uint8List bytes) async {
-  final url = html.Url.createObjectUrlFromBlob(html.Blob([bytes], 'image/png'));
-  final frame = html.IFrameElement()
+  final blob = web.Blob(
+    [bytes.toJS].toJS,
+    web.BlobPropertyBag(type: 'image/png'),
+  );
+  final url = web.URL.createObjectURL(blob);
+  final frame = web.HTMLIFrameElement()
     ..src = url
     ..style.position = 'fixed'
     ..style.width = '0'
     ..style.height = '0'
     ..style.border = '0';
-  void cleanup() { frame.remove(); html.Url.revokeObjectUrl(url); }
-  html.document.body?.append(frame);
+  final loaded = Completer<void>();
+  frame.addEventListener(
+    'load',
+    ((web.Event _) {
+      if (!loaded.isCompleted) loaded.complete();
+    }).toJS,
+  );
+  void cleanup() {
+    frame.remove();
+    web.URL.revokeObjectURL(url);
+  }
+
+  web.document.body?.appendChild(frame);
   try {
-    await frame.onLoad.first.timeout(const Duration(seconds: 10));
-    final window = frame.contentWindow as html.Window;
-    window.addEventListener('afterprint', (_) => cleanup());
+    await loaded.future.timeout(const Duration(seconds: 10));
+    final window = frame.contentWindow;
+    if (window == null) throw StateError('Print frame is unavailable');
+    window.addEventListener('afterprint', ((web.Event _) => cleanup()).toJS);
     window.print();
-  } catch (_) { cleanup(); rethrow; }
+  } catch (_) {
+    cleanup();
+    rethrow;
+  }
 }

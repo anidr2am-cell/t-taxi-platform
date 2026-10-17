@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/customer_notification_text.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -216,12 +217,12 @@ class _BookingNotificationSectionState extends State<BookingNotificationSection>
                 return ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(
-                    map['title'] as String? ?? l10n.t('booking_notification_default_title'),
+                    customerNotificationText(l10n,map,'title'),
                     style: TextStyle(
                       fontWeight: read ? FontWeight.normal : FontWeight.bold,
                     ),
                   ),
-                  subtitle: Text(map['body'] as String? ?? ''),
+                  subtitle: Text(customerNotificationText(l10n,map,'body')),
                 );
               }),
           ],

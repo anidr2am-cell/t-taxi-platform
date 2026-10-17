@@ -21,6 +21,7 @@ Scope: customer vehicle comparison, registered airport shortcuts, fresh landing 
 | step_vehicle_select.dart | server recommendation.message | localized recommendation badge / guidance |
 | step_passengers_luggage.dart (two sections) | server English recommendation sentence | existing five-language customer_vehicle_guidance |
 | step_confirmation.dart | KRW (원화), THB (바트) in every language | cx_currency_KRW / cx_currency_THB in five languages |
+| booking_notification_section.dart | 15 default server-generated English customer notice templates | localized in five languages; booking-number suffix preserved, custom overrides unchanged |
 | booking summary / voucher / assigned-driver card | raw SEDAN / Sedan type | five-language vehicle label |
 
 T-Rider, SUV, LINE, WhatsApp/KakaoTalk configured channel names, airport/currency codes and OpenStreetMap copyright attribution are intentional names, not untranslated prose. Backend legacy recommendation messages remain for response compatibility and are no longer rendered by the booking UI.
