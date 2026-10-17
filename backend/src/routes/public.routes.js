@@ -71,6 +71,8 @@ router.get(
   driverLocationController.getGuestDriverLocation,
 );
 
+router.get('/bookings/:bookingId/assigned-driver-photo', bookingLookupRateLimit, optionalAuthMiddleware, validate({params:bookingIdParamsSchema}), bookingController.getGuestAssignedDriverPhoto);
+
 router.get(
   '/bookings/:bookingId/assigned-driver-vehicle-photo',
   bookingLookupRateLimit,

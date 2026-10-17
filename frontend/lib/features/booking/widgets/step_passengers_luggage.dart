@@ -372,7 +372,7 @@ class _RecommendationCard extends StatelessWidget {
                   if (recommendation.message.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
-                      recommendation.message,
+                      l10n.t('customer_vehicle_guidance'),
                       style: const TextStyle(
                         color: AppTokens.textSecondary,
                         height: 1.4,
@@ -418,7 +418,7 @@ class _RecommendationCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  recommendation.recommendedVehicle ?? '-',
+                  recommendation.recommendedVehicle == null ? '-' : l10n.t('cx_vehicle_${recommendation.recommendedVehicle}'),
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 17,
@@ -428,7 +428,7 @@ class _RecommendationCard extends StatelessWidget {
                 if (recommendation.message.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Text(
-                    recommendation.message,
+                    l10n.t('customer_vehicle_guidance'),
                     style: const TextStyle(
                       color: AppTokens.textSecondary,
                       height: 1.4,

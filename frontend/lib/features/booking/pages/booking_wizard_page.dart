@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/booking_entry_session.dart';
 import 'package:provider/provider.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -29,6 +30,7 @@ import '../widgets/step_pickup_datetime.dart';
 import '../widgets/step_route_select.dart';
 import '../widgets/step_vehicle_select.dart';
 import '../widgets/fare_inquiry_card.dart';
+import '../widgets/preferred_support_button.dart';
 import '../widgets/wizard_compact.dart';
 import '../widgets/wizard_status_views.dart';
 import '../../auth/widgets/booking_social_login_section.dart';
@@ -180,9 +182,14 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
               if (mounted) _controller.syncDerivedData();
             });
       } else {
-        _controller.initialize(initialServiceType: args?.serviceType).then((_) {
-          if (mounted) _controller.syncDerivedData();
-        });
+        _controller
+            .initialize(
+              initialServiceType: args?.serviceType,
+              freshEntry: args != null && (args.freshEntry || consumeFreshBookingEntry(Uri.base)),
+            )
+            .then((_) {
+              if (mounted) _controller.syncDerivedData();
+            });
       }
     }
   }
@@ -216,7 +223,8 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
       case BookingWizardSteps.schedule:
         return l10n.t('wizard_cta_schedule');
       case BookingWizardSteps.vehicle:
-        if (state.errorMessage == 'pricing_inquiry_required') return l10n.t('fare_inquiry_title');
+        if (state.errorMessage == 'pricing_inquiry_required')
+          return l10n.t('fare_inquiry_title');
         if (state.selectedVehicle == null || price == null) {
           return l10n.t('wizard_cta_vehicle_unselected');
         }
@@ -656,6 +664,7 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
                                 ),
                               ),
                             _buildStepContent(state.step, state, locale, l10n),
+                            const PreferredSupportButton(),
                           ],
                         ),
                       ),

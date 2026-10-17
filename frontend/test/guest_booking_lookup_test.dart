@@ -912,7 +912,7 @@ void main() {
         find.text(
           'Before the trip starts, you can cancel through booking lookup free of charge for a full refund if pickup is more than 2 hours away.',
         ),
-        findsOneWidget,
+        findsNWidgets(2),
       );
     },
   );

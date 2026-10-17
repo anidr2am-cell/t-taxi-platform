@@ -1,3 +1,4 @@
+import 'package:frontend/features/booking/services/registered_airport_service.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -29,6 +30,8 @@ class _NoopStorage extends BookingStateStorage {
 }
 
 void main() {
+  setUp(() { airportCatalogLoader = () async => {'BKK','DMK','UTP'}; });
+  tearDown(() { airportCatalogLoader = null; });
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('PickupTimeFormat', () {

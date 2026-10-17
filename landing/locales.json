@@ -169,7 +169,8 @@
       "LINE": "LINE",
       "WHATSAPP": "WhatsApp",
       "WECHAT": "WeChat"
-    }
+    },
+    "heroContact": "{channel}으로 바로 상담"
   },
   "en": {
     "name": "English",
@@ -341,7 +342,8 @@
       "LINE": "LINE",
       "WHATSAPP": "WhatsApp",
       "WECHAT": "WeChat"
-    }
+    },
+    "heroContact": "Chat with us on {channel}"
   },
   "ja": {
     "name": "日本語",
@@ -513,7 +515,8 @@
       "LINE": "LINE",
       "WHATSAPP": "WhatsApp",
       "WECHAT": "WeChat"
-    }
+    },
+    "heroContact": "{channel}で相談する"
   },
   "zh": {
     "name": "简体中文",
@@ -685,7 +688,8 @@
       "LINE": "LINE",
       "WHATSAPP": "WhatsApp",
       "WECHAT": "WeChat"
-    }
+    },
+    "heroContact": "通过{channel}咨询"
   },
   "th": {
     "name": "ไทย",
@@ -857,6 +861,7 @@
       "LINE": "LINE",
       "WHATSAPP": "WhatsApp",
       "WECHAT": "WeChat"
-    }
+    },
+    "heroContact": "ติดต่อเราผ่าน {channel}"
   }
 }

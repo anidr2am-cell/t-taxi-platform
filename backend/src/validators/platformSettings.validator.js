@@ -7,6 +7,7 @@ const booleanSetting = Joi.alternatives().try(
 );
 
 const adminSettingsUpdateSchema = Joi.object({
+  ...Object.fromEntries(['BKK','DMK','UTP'].flatMap(a => ['ko','en','th','ja','zh'].map(l => [`meeting${a}_${l}`, unicodeText({ max: 2000, allowEmpty: true }).optional()]))),
   googleReviewUrl: Joi.string().trim().max(2048).uri({ scheme: ['https'] }).allow('', null).optional(),
   lineQrDescription: unicodeText({ max: 500, allowEmpty: true }).default(''),
   bankName: unicodeText({ max: 100, allowEmpty: true }).default(''),

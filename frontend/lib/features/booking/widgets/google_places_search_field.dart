@@ -6,6 +6,7 @@ import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../../../utils/user_facing_error.dart';
 import '../models/airport_shortcuts.dart';
+import '../services/registered_airport_service.dart';
 import '../models/location_option.dart';
 import '../models/place_prediction.dart';
 import '../services/booking_analytics.dart';
@@ -80,6 +81,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
   bool _loadingRecents = false;
   String? _error;
   bool _editing = false;
+  Set<String> _registeredAirportCodes = {};
   int _highlightedIndex = 0;
 
   @override
@@ -95,6 +97,13 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
       _controller.text = widget.selected!.name ?? widget.selected!.displayName;
     }
     _loadRecents();
+    {
+      registeredAirportCodes()
+          .then((codes) {
+            if (mounted) setState(() => _registeredAirportCodes = codes);
+          })
+          .catchError((_) {});
+    }
   }
 
   @override
@@ -388,14 +397,17 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: AirportShortcuts.thailandAirports.map((airport) {
-            return OutlinedButton(
-              onPressed: _loadingDetails
-                  ? null
-                  : () => _selectShortcut(airport),
-              child: Text(airport.code ?? airport.displayName),
-            );
-          }).toList(),
+          children: AirportShortcuts.thailandAirports
+              .where((a) => _registeredAirportCodes.contains(a.code))
+              .map((airport) {
+                return OutlinedButton(
+                  onPressed: _loadingDetails
+                      ? null
+                      : () => _selectShortcut(airport),
+                  child: Text(airport.code ?? airport.displayName),
+                );
+              })
+              .toList(),
         ),
         const SizedBox(height: 16),
       ],

@@ -10,6 +10,7 @@ import 'wizard_compact.dart';
 import 'wizard_status_views.dart';
 import 'wizard_ui.dart';
 import 'fare_inquiry_card.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class StepVehicleSelect extends StatelessWidget {
   final BookingWizardState state;
@@ -22,16 +23,6 @@ class StepVehicleSelect extends StatelessWidget {
     required this.controller,
     this.embedded = false,
   });
-
-  IconData _iconForVehicle(String vehicle) {
-    if (vehicle.contains('Van') || vehicle.contains('VAN')) {
-      return Icons.airport_shuttle_outlined;
-    }
-    if (vehicle.contains('SUV')) {
-      return Icons.directions_car_filled_outlined;
-    }
-    return Icons.directions_car_outlined;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,13 +61,13 @@ class StepVehicleSelect extends StatelessWidget {
             context,
             title: l10n.t('select_vehicle'),
             subtitle:
-                '${l10n.t('recommended')}: ${recommendation.recommendedVehicle}',
+                '${l10n.t('recommended')}: ${l10n.t('cx_vehicle_${recommendation.recommendedVehicle}')}',
           ),
         if (embedded && !recommendation.multipleVehicles)
           Padding(
             padding: const EdgeInsets.only(bottom: WizardCompact.fieldGap),
             child: Text(
-              '${l10n.t('recommended')}: ${recommendation.recommendedVehicle}',
+              '${l10n.t('recommended')}: ${l10n.t('cx_vehicle_${recommendation.recommendedVehicle}')}',
               style: WizardCompact.hintTextStyle,
             ),
           ),
@@ -95,49 +86,104 @@ class StepVehicleSelect extends StatelessWidget {
         ...BookingWizardController.customerVehicleTierOrder.map((vehicle) {
           final enabled = controller.isVehicleEnabled(vehicle);
           final selected = state.selectedVehicle == vehicle;
-          final isRecommended = recommendation.recommendedVehicle == vehicle;
+          final price = controller.vehiclePrices[vehicle];
+          final error = controller.vehiclePriceErrors[vehicle];
+          final rules = recommendation.capacityRules.where(
+            (r) => r['vehicleCode'] == vehicle,
+          );
           return Padding(
-            padding: EdgeInsets.only(
-              bottom: embedded ? WizardCompact.fieldGap : 10,
-            ),
-            child: Semantics(
-              button: true,
-              selected: selected,
-              label: vehicle,
-              child: embedded
-                  ? WizardUi.selectionTile(
-                      title: vehicle,
-                      subtitle: enabled
-                          ? (isRecommended ? recommendation.message : null)
-                          : l10n.t('customer_vehicle_not_suitable'),
-                      icon: _iconForVehicle(vehicle),
-                      selected: selected,
-                      onTap: () {
-                        if (enabled) {
-                          controller.selectVehicle(vehicle);
-                        } else {
-                          controller.reportVehicleCapacityWarning(vehicle);
-                        }
-                      },
-                    )
-                  : AppUi.selectionTile(
-                      title: vehicle,
-                      subtitle: enabled
-                          ? (isRecommended ? recommendation.message : null)
-                          : l10n.t('customer_vehicle_not_suitable'),
-                      icon: _iconForVehicle(vehicle),
-                      selected: selected,
-                      onTap: () {
-                        if (enabled) {
-                          controller.selectVehicle(vehicle);
-                        } else {
-                          controller.reportVehicleCapacityWarning(vehicle);
-                        }
-                      },
-                    ),
+            padding: const EdgeInsets.only(bottom: AppTokens.spaceSm),
+            child: Material(
+              color: enabled
+                  ? (selected ? AppTokens.primaryLight : AppTokens.surface)
+                  : AppTokens.surfaceMuted,
+              shape: RoundedRectangleBorder(
+                borderRadius: AppTokens.borderRadiusMd,
+                side: BorderSide(
+                  color: selected ? AppTokens.primary : AppTokens.border,
+                ),
+              ),
+              child: InkWell(
+                borderRadius: AppTokens.borderRadiusMd,
+                onTap: enabled ? () => controller.selectVehicle(vehicle) : null,
+                child: Padding(
+                  padding: const EdgeInsets.all(AppTokens.spaceMd),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          CustomerVehicleArtwork(vehicle: vehicle),
+                          const SizedBox(width: AppTokens.spaceSm),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  l10n.t('cx_vehicle_$vehicle'),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                if (recommendation.recommendedVehicle ==
+                                    vehicle)
+                                  Text(
+                                    l10n.t('recommended'),
+                                    style: const TextStyle(
+                                      color: AppTokens.primary,
+                                    ),
+                                  ),
+                                Text(
+                                  price != null
+                                      ? '${price.totalAmount} ${price.currency}'
+                                      : error == 'pricing_inquiry_required'
+                                      ? l10n.t('pricing_inquiry_required')
+                                      : controller.isLoading
+                                      ? l10n.t('calculating_price')
+                                      : l10n.t('cx_vehicle_error'),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (selected)
+                            const Icon(
+                              Icons.check_circle,
+                              color: AppTokens.primary,
+                            ),
+                        ],
+                      ),
+                      for (final r in rules)
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            top: AppTokens.spaceSm,
+                          ),
+                          child: Text(
+                            l10n
+                                .t('cx_capacity')
+                                .replaceAll('{p}', '${r['passengers']}')
+                                .replaceAll('{s}', '${r['luggage20']}')
+                                .replaceAll('{l}', '${r['luggage24']}')
+                                .replaceAll('{g}', '${r['golfBags']}'),
+                          ),
+                        ),
+                      if (!enabled)
+                        Text(
+                          l10n.t('customer_vehicle_not_suitable'),
+                          style: const TextStyle(
+                            color: AppTokens.textSecondary,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           );
         }),
+        Text(
+          l10n.t('cx_capacity_note'),
+          style: const TextStyle(color: AppTokens.textSecondary),
+        ),
         if (state.selectedVehicle == null)
           WizardUi.infoHint(l10n.t('wizard_pricing_after_vehicle'))
         else if (controller.isLoading && state.pricing == null)
@@ -228,5 +274,17 @@ class _PricingBreakdown extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Replace the asset path with a licensed JPG/PNG/WebP to switch to photography.
+class CustomerVehicleArtwork extends StatelessWidget {
+  const CustomerVehicleArtwork({super.key, required this.vehicle});
+  final String vehicle;
+  static const assets = {'SEDAN':'assets/images/vehicle_sedan.svg','SUV':'assets/images/vehicle_suv.svg','VAN':'assets/images/vehicle_van.svg'};
+  @override
+  Widget build(BuildContext context) {
+    final asset=assets[vehicle]!;
+    return asset.endsWith('.svg') ? SvgPicture.asset(asset,width:80,height:48) : Image.asset(asset,width:80,height:48,fit:BoxFit.contain);
   }
 }

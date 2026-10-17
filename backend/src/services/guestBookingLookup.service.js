@@ -150,6 +150,7 @@ class GuestBookingLookupService {
       || row.assigned_vehicle_type_name;
     const assignedDriver = row.driver_name
       ? {
+        photoUrl: row.driver_avatar_file_id ? `/api/v1/public/bookings/${row.id}/assigned-driver-photo` : null,
         name: row.driver_name,
         phone: row.driver_phone ?? null,
         vehicle: hasVehicleDetails || vehiclePhotoUrl

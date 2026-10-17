@@ -844,6 +844,7 @@ class BookingRepository {
               AND released_bda.assignment_reason IN ('DRIVER_RELEASED_ASSIGNMENT', 'ADMIN_SUSPENDED_DRIVER_RELEASE')
             LIMIT 1
           ) AS has_driver_release_history,
+          (SELECT f.id FROM files f WHERE f.entity_type = 'DRIVER_AVATAR' AND f.entity_id = d.user_id AND f.deleted_at IS NULL ORDER BY f.id DESC LIMIT 1) AS driver_avatar_file_id,
           d.name AS driver_name,
           d.phone AS driver_phone,
           dv.plate_number AS assigned_vehicle_plate,
@@ -1041,6 +1042,18 @@ class BookingRepository {
       [userId, bookingId],
     );
     return result.affectedRows ?? 0;
+  }
+
+  async findAssignedDriverAvatarFile(bookingId, tokenHash = null) {
+    const [rows] = await this.pool.query(`
+      SELECT f.file_path, f.mime_type, f.original_filename FROM bookings b
+      JOIN booking_driver_assignments bda ON bda.booking_id=b.id AND bda.is_active=1 AND bda.deleted_at IS NULL
+      JOIN drivers d ON d.id=bda.driver_id AND d.deleted_at IS NULL
+      JOIN files f ON f.entity_type='DRIVER_AVATAR' AND f.entity_id=d.user_id AND f.deleted_at IS NULL
+      WHERE b.id=? AND b.deleted_at IS NULL AND b.is_archived=0
+        AND (? IS NULL OR EXISTS (SELECT 1 FROM guest_access_tokens gat WHERE gat.booking_id=b.id AND gat.token_hash=? AND gat.revoked_at IS NULL AND gat.expires_at>CURRENT_TIMESTAMP))
+      ORDER BY f.id DESC LIMIT 1`, [bookingId,tokenHash,tokenHash]);
+    return rows[0] || null;
   }
 
   async findGuestAssignedDriverVehiclePhotoFile(bookingId, tokenHash) {

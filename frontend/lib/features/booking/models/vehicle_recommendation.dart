@@ -3,23 +3,29 @@ class VehicleRecommendation {
   final List<String> selectableVehicles;
   final bool multipleVehicles;
   final String message;
+  final List<Map<String, dynamic>> capacityRules;
 
   const VehicleRecommendation({
     required this.recommendedVehicle,
     required this.selectableVehicles,
     required this.multipleVehicles,
     required this.message,
+    this.capacityRules = const [],
   });
 
   factory VehicleRecommendation.fromJson(Map<String, dynamic> json) {
     return VehicleRecommendation(
       recommendedVehicle: json['recommendedVehicle'] as String?,
-      selectableVehicles: (json['selectableVehicles'] as List<dynamic>?)
+      selectableVehicles:
+          (json['selectableVehicles'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           [],
       multipleVehicles: json['multipleVehicles'] as bool? ?? false,
       message: json['message'] as String? ?? '',
+      capacityRules: (json['capacityRules'] as List? ?? [])
+          .map((r) => Map<String, dynamic>.from(r as Map))
+          .toList(),
     );
   }
 }

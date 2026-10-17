@@ -111,10 +111,10 @@ class VehicleRecommendationService {
     const counts = this.normalizeInput(input);
     const vehicleTypes = await this.vehicleRepository.findActiveTypesOrdered();
 
+    const capacityRules = await this.vehicleRepository.findActiveCapacityRules();
     let result = this.applyRecommendationRules(counts);
 
     if (!result) {
-      const capacityRules = await this.vehicleRepository.findActiveCapacityRules();
       result = this.findDbRecommendedVehicle(capacityRules, counts);
     }
 
@@ -126,6 +126,7 @@ class VehicleRecommendationService {
     const message = this.buildMessage({ multipleVehicles, recommendedVehicle });
 
     return {
+      capacityRules: capacityRules.map(r => ({ vehicleCode: r.code, passengers: r.max_passengers, luggage20: r.max_carriers_20_inch, luggage24: r.max_carriers_24_inch_plus, golfBags: r.max_golf_bags, specialLuggage: r.max_special_luggage })),
       recommendedVehicle,
       selectableVehicles,
       multipleVehicles,
