@@ -54,7 +54,7 @@ class _BookingVoucherState extends State<BookingVoucher> {
       image.dispose();
       final bytes = data!.buffer.asUint8List();
       if (print) {
-        printVoucher(bytes);
+        await printVoucher(bytes);
       } else {
         downloadBytes(bytes, '${widget.result.bookingNumber}.png', 'image/png');
       }
@@ -201,3 +201,4 @@ class _BookingVoucherState extends State<BookingVoucher> {
     );
   }
 }
+

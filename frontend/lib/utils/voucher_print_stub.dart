@@ -1,2 +1,2 @@
 import 'dart:typed_data';
-void printVoucher(Uint8List bytes) {}
+Future<void> printVoucher(Uint8List bytes) async {}
