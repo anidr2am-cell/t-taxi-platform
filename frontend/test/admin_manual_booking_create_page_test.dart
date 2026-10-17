@@ -354,7 +354,8 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('카카오톡 ID (선택)'), findsOneWidget);
-    expect(find.text('카카오톡 가입 전화번호 (필수)'), findsOneWidget);
+    expect(find.text('전화번호가 없으면 고객에게 연락하기 어려울 수 있습니다'), findsOneWidget);
+    expect(find.text('카카오톡 가입 전화번호 (필수)'), findsNothing);
     await tester.tap(messenger);
     await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.text('WhatsApp').last);
