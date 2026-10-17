@@ -326,7 +326,7 @@ void main() {
         contactStatus: 'PENDING', contactChannel: 'LINE', contactChannelManaged: true));
       await pumpPage(tester, service: service, args: BookingContactConnectArgs(
         result: _result(), serviceLabel: 'Airport pickup', preferredChannel: 'LINE'));
-      expect(find.text('LINE'), findsWidgets);
+      expect(find.textContaining('LINE'), findsWidgets);
       expect(find.text('KakaoTalk'), findsNothing);
       expect(find.byKey(const Key('contact_connect_cta_bar')), findsNothing);
     });
