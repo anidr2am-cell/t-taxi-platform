@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:frontend/providers/booking_provider.dart';
 import 'package:frontend/features/booking/models/pricing_result.dart';
+import 'package:frontend/features/booking/models/vehicle_recommendation.dart';
 import 'package:frontend/features/booking/services/booking_api_service.dart';
 import 'package:frontend/features/booking/widgets/step_route_select.dart';
 import 'package:frontend/features/booking/models/booking_wizard_state.dart';
@@ -17,6 +18,48 @@ class _Prices extends CapturingBookingApi {
   _Prices({this.inquiry = false});
   final bool inquiry;
   final vehicles = <String>[];
+  @override
+  Future<VehicleRecommendation> recommendVehicle({
+    required int adults,
+    int children = 0,
+    int infants = 0,
+    int luggage20 = 0,
+    int luggage24 = 0,
+    int golfBags = 0,
+    int specialLuggageCount = 0,
+  }) async => const VehicleRecommendation(
+    recommendedVehicle: 'SUV',
+    selectableVehicles: ['SUV', 'VAN'],
+    multipleVehicles: false,
+    message: 'OK',
+    capacityRules: [
+      {
+        'vehicleCode': 'SEDAN',
+        'passengers': 2,
+        'luggage20': 2,
+        'luggage24': 1,
+        'golfBags': 2,
+        'constraints': {'noLargeAtGolf': 2},
+      },
+      {
+        'vehicleCode': 'SUV',
+        'passengers': 3,
+        'luggage20': 4,
+        'luggage24': 4,
+        'golfBags': 3,
+        'constraints': {'maxCases': 4, 'maxCasesAndGolf': 6},
+      },
+      {
+        'vehicleCode': 'VAN',
+        'passengers': 8,
+        'luggage20': 8,
+        'luggage24': 8,
+        'golfBags': 8,
+        'constraints': {},
+      },
+    ],
+  );
+
   @override
   Future<PricingResult> calculatePricing({
     Map<String, dynamic>? golf,
@@ -54,8 +97,11 @@ class _Prices extends CapturingBookingApi {
 }
 
 void main() {
-  setUp(() {SharedPreferences.setMockInitialValues({});airportCatalogLoader=() async=>{'BKK','DMK','UTP'};});
-  tearDown(()=>airportCatalogLoader=null);
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    airportCatalogLoader = () async => {'BKK', 'DMK', 'UTP'};
+  });
+  tearDown(() => airportCatalogLoader = null);
   test(
     'all three fares use identical options and do not select an ineligible car',
     () async {
@@ -91,9 +137,9 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(find.text('1100 THB'), findsOneWidget);
-        expect(find.text('1400 THB'), findsWidgets);
-        expect(find.text('1800 THB'), findsOneWidget);
+        expect(find.text('฿1,100'), findsOneWidget);
+        expect(find.text('฿1,400'), findsWidgets);
+        expect(find.text('฿1,800'), findsOneWidget);
         expect(
           find.textContaining('is recommended for your party'),
           findsNothing,

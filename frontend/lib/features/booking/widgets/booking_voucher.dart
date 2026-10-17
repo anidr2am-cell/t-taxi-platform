@@ -140,7 +140,10 @@ class _BookingVoucherState extends State<BookingVoucher> {
                       ? (r.vehicleType ?? '—')
                       : l.t('cx_vehicle_${r.vehicleType?.toUpperCase()}'),
                 ),
-                row(l.t('total'), '${r.totalAmount} ${r.currency}'),
+                row(
+                  l.t('total'),
+                  CustomerBookingFormat.money(r.totalAmount, r.currency),
+                ),
                 row(
                   l.t('payment_method'),
                   CustomerBookingFormat.paymentMethod(l, r.paymentMethod),
@@ -161,8 +164,6 @@ class _BookingVoucherState extends State<BookingVoucher> {
                       customerAccessToken: widget.customerAccessToken,
                       height: 96,
                     ),
-                  if (r.vehicleModel?.isNotEmpty == true)
-                    row(l.t('guest_lookup_vehicle'), r.vehicleModel!),
                   AssignedDriverStatusCard(
                     result: r,
                     useCustomerAuth: widget.useCustomerAuth,
@@ -201,4 +202,3 @@ class _BookingVoucherState extends State<BookingVoucher> {
     );
   }
 }
-

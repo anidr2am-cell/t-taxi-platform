@@ -57,6 +57,12 @@ class VehicleRecommendationService {
   }
 
   fitsCapacityRule(rule, counts) {
+    const raw = rule.combination_constraints;
+    const limits = typeof raw === 'string' ? JSON.parse(raw) : (raw || {});
+    const cases = counts.luggage20 + counts.luggage24;
+    if (limits.maxCases != null && cases > limits.maxCases) return false;
+    if (limits.maxCasesAndGolf != null && cases + counts.golfBags > limits.maxCasesAndGolf) return false;
+    if (limits.noLargeAtGolf != null && counts.golfBags >= limits.noLargeAtGolf && counts.luggage24 > 0) return false;
     return (
       counts.passengerCount <= rule.max_passengers
       && counts.luggage20 <= rule.max_carriers_20_inch
@@ -112,21 +118,14 @@ class VehicleRecommendationService {
     const vehicleTypes = await this.vehicleRepository.findActiveTypesOrdered();
 
     const capacityRules = await this.vehicleRepository.findActiveCapacityRules();
-    let result = this.applyRecommendationRules(counts);
-
-    if (!result) {
-      result = this.findDbRecommendedVehicle(capacityRules, counts);
-    }
-
-    const { multipleVehicles, recommendedVehicle } = result;
-    const selectableVehicles = multipleVehicles
-      ? []
-      : this.buildSelectableVehicles(vehicleTypes, recommendedVehicle);
+    const { multipleVehicles, recommendedVehicle } = this.findDbRecommendedVehicle(capacityRules, counts);
+    const selectableVehicles = vehicleTypes.filter(type => capacityRules.some(rule =>
+      rule.code === type.code && this.fitsCapacityRule(rule, counts))).map(type => type.code);
 
     const message = this.buildMessage({ multipleVehicles, recommendedVehicle });
 
     return {
-      capacityRules: capacityRules.map(r => ({ vehicleCode: r.code, passengers: r.max_passengers, luggage20: r.max_carriers_20_inch, luggage24: r.max_carriers_24_inch_plus, golfBags: r.max_golf_bags, specialLuggage: r.max_special_luggage })),
+      capacityRules: capacityRules.map(r => ({ vehicleCode: r.code, passengers: r.max_passengers, luggage20: r.max_carriers_20_inch, luggage24: r.max_carriers_24_inch_plus, golfBags: r.max_golf_bags, specialLuggage: r.max_special_luggage, constraints: typeof r.combination_constraints === 'string' ? JSON.parse(r.combination_constraints) : (r.combination_constraints || {}) })),
       recommendedVehicle,
       selectableVehicles,
       multipleVehicles,

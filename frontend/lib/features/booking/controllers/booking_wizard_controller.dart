@@ -1409,9 +1409,7 @@ class BookingWizardController extends ChangeNotifier {
         step: _state.step == BookingWizardSteps.review
             ? BookingWizardSteps.review
             : (fieldError?.step ?? _state.step),
-        errorMessage:
-            fieldError?.messageKey ??
-            userFacingError(e, fallback: 'ui_load_failed'),
+        errorMessage: fieldError?.messageKey ?? 'ui_load_failed',
       );
       notifyListeners();
       return null;
@@ -1563,7 +1561,7 @@ class BookingWizardController extends ChangeNotifier {
     } catch (e) {
       if (generation != _recommendationGeneration) return;
       _state = _state.copyWith(
-        errorMessage: userFacingError(e, fallback: 'ui_load_failed'),
+        errorMessage: 'ui_load_failed',
         clearRecommendation: true,
       );
       _analytics.trackBookingFailed(
@@ -1885,7 +1883,10 @@ class BookingWizardController extends ChangeNotifier {
       vehiclePrices.clear();
       vehiclePriceErrors.clear();
       await Future.wait(
-        [...customerVehicleTierOrder.where((v) => v != requestVehicle), requestVehicle].map((vehicle) async {
+        [
+          ...customerVehicleTierOrder.where((v) => v != requestVehicle),
+          requestVehicle,
+        ].map((vehicle) async {
           try {
             final price = await _api.calculatePricing(
               golf: _state.serviceType == BookingServiceType.golfTransfer
@@ -1916,8 +1917,7 @@ class BookingWizardController extends ChangeNotifier {
           } catch (e) {
             if (generation == _pricingGeneration)
               vehiclePriceErrors[vehicle] =
-                  bookingPricingInquiryMessage(e) ??
-                  userFacingError(e, fallback: 'ui_action_failed');
+                  bookingPricingInquiryMessage(e) ?? 'ui_action_failed';
           }
         }),
       );
@@ -1940,9 +1940,7 @@ class BookingWizardController extends ChangeNotifier {
         return;
       }
       _state = _state.copyWith(
-        errorMessage:
-            bookingPricingInquiryMessage(e) ??
-            userFacingError(e, fallback: 'ui_action_failed'),
+        errorMessage: bookingPricingInquiryMessage(e) ?? 'ui_action_failed',
         clearPricing: true,
       );
       _analytics.trackBookingFailed(

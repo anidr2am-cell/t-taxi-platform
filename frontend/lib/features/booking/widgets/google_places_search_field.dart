@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
-import '../../../utils/user_facing_error.dart';
+import 'preferred_support_button.dart';
 import '../models/airport_shortcuts.dart';
 import '../services/registered_airport_service.dart';
 import '../models/location_option.dart';
@@ -200,7 +200,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
         if (!mounted) return;
         setState(() {
           _loadingDetails = false;
-          _error = userFacingError(e, fallback: 'ui_load_failed');
+          _error = 'cx_places_error';
         });
         widget.onSearchFailed?.call(
           BookingAnalytics.placeErrorCategory(e, noResults: false),
@@ -259,7 +259,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
     } catch (e) {
       setState(() {
         _loading = false;
-        _error = userFacingError(e, fallback: 'ui_load_failed');
+        _error = 'cx_places_error';
         _predictions = [];
       });
       widget.onSearchFailed?.call(
@@ -284,7 +284,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
     } catch (e) {
       setState(() {
         _loadingDetails = false;
-        _error = userFacingError(e, fallback: 'ui_load_failed');
+        _error = 'cx_places_error';
       });
       widget.onSearchFailed?.call(
         BookingAnalytics.placeErrorCategory(e, noResults: false),
@@ -531,7 +531,12 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: AppUi.errorState(message: l10n.t(_error!)),
+              child: Column(
+                children: [
+                  AppUi.errorState(message: l10n.t(_error!)),
+                  const PreferredSupportButton(),
+                ],
+              ),
             ),
         ],
       );
@@ -617,11 +622,16 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
         if (_error != null)
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: WizardErrorView(
-              message: _error!,
-              onRetry: _controller.text.length >= 2
-                  ? () => _fetchPredictions(_controller.text)
-                  : null,
+            child: Column(
+              children: [
+                WizardErrorView(
+                  message: _error!,
+                  onRetry: _controller.text.length >= 2
+                      ? () => _fetchPredictions(_controller.text)
+                      : null,
+                ),
+                const PreferredSupportButton(),
+              ],
             ),
           ),
         if (!_loading &&

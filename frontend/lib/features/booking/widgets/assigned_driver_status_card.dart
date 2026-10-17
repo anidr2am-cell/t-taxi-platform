@@ -51,6 +51,8 @@ class AssignedDriverStatusCard extends StatelessWidget {
     final vehicleLines = <String>[
       if (result.vehicleType?.trim().isNotEmpty == true)
         vehicleLabel == vehicleKey ? result.vehicleType!.trim() : vehicleLabel,
+      if (result.vehicleModel?.trim().isNotEmpty == true)
+        result.vehicleModel!.trim(),
       if (result.vehicleColor?.trim().isNotEmpty == true)
         result.vehicleColor!.trim(),
       if (result.vehiclePlateNumber?.trim().isNotEmpty == true)

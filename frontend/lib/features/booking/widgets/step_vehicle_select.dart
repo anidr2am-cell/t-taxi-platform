@@ -10,7 +10,7 @@ import 'wizard_compact.dart';
 import 'wizard_status_views.dart';
 import 'wizard_ui.dart';
 import 'fare_inquiry_card.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import '../utils/customer_booking_format.dart';
 
 class StepVehicleSelect extends StatelessWidget {
   final BookingWizardState state;
@@ -135,7 +135,10 @@ class StepVehicleSelect extends StatelessWidget {
                                   ),
                                 Text(
                                   price != null
-                                      ? '${price.totalAmount} ${price.currency}'
+                                      ? CustomerBookingFormat.money(
+                                          price.totalAmount,
+                                          price.currency,
+                                        )
                                       : error == 'pricing_inquiry_required'
                                       ? l10n.t('pricing_inquiry_required')
                                       : controller.isLoading
@@ -159,13 +162,44 @@ class StepVehicleSelect extends StatelessWidget {
                           ),
                           child: Text(
                             l10n
-                                .t('cx_capacity')
+                                .t(
+                                  (r['constraints'] as Map?)?['maxCases'] !=
+                                          null
+                                      ? 'cx_capacity_cases'
+                                      : 'cx_capacity',
+                                )
+                                .replaceAll(
+                                  '{c}',
+                                  '${(r['constraints'] as Map?)?['maxCases']}',
+                                )
                                 .replaceAll('{p}', '${r['passengers']}')
                                 .replaceAll('{s}', '${r['luggage20']}')
                                 .replaceAll('{l}', '${r['luggage24']}')
                                 .replaceAll('{g}', '${r['golfBags']}'),
                           ),
                         ),
+                      for (final r in rules) ...[
+                        if ((r['constraints'] as Map?)?['noLargeAtGolf'] !=
+                            null)
+                          Text(
+                            l10n
+                                .t('cx_capacity_no_large')
+                                .replaceAll(
+                                  '{g}',
+                                  '${r['constraints']['noLargeAtGolf']}',
+                                ),
+                          ),
+                        if ((r['constraints'] as Map?)?['maxCasesAndGolf'] !=
+                            null)
+                          Text(
+                            l10n
+                                .t('cx_capacity_combined')
+                                .replaceAll(
+                                  '{n}',
+                                  '${r['constraints']['maxCasesAndGolf']}',
+                                ),
+                          ),
+                      ],
                       if (!enabled)
                         Text(
                           l10n.t('customer_vehicle_not_suitable'),
@@ -258,17 +292,23 @@ class _PricingBreakdown extends StatelessWidget {
         children: [
           AppUi.summaryRow(
             label: l10n.t('base_price'),
-            value: '${pricing.basePrice} ${pricing.currency}',
+            value: CustomerBookingFormat.money(
+              pricing.basePrice,
+              pricing.currency,
+            ),
           ),
           for (final item in pricing.additionalCharges)
             AppUi.summaryRow(
               label: PricingDisplay.chargeItemLabel(l10n, item),
-              value: '${item.amount} ${pricing.currency}',
+              value: CustomerBookingFormat.money(item.amount, pricing.currency),
             ),
           Divider(height: compact ? 16 : 24),
           AppUi.summaryRow(
             label: l10n.t('total'),
-            value: '${pricing.totalAmount} ${pricing.currency}',
+            value: CustomerBookingFormat.money(
+              pricing.totalAmount,
+              pricing.currency,
+            ),
             emphasize: true,
           ),
         ],
@@ -281,10 +321,19 @@ class _PricingBreakdown extends StatelessWidget {
 class CustomerVehicleArtwork extends StatelessWidget {
   const CustomerVehicleArtwork({super.key, required this.vehicle});
   final String vehicle;
-  static const assets = {'SEDAN':'assets/images/vehicle_sedan.svg','SUV':'assets/images/vehicle_suv.svg','VAN':'assets/images/vehicle_van.svg'};
+  static const assets = {
+    'SEDAN': 'assets/images/vehicle_sedan.png',
+    'SUV': 'assets/images/vehicle_suv.png',
+    'VAN': 'assets/images/vehicle_van.png',
+  };
   @override
   Widget build(BuildContext context) {
-    final asset=assets[vehicle]!;
-    return asset.endsWith('.svg') ? SvgPicture.asset(asset,width:80,height:48) : Image.asset(asset,width:80,height:48,fit:BoxFit.contain);
+    final asset = assets[vehicle]!;
+    return Image.asset(
+      asset,
+      width: AppTokens.spaceXl * 3,
+      height: AppTokens.spaceXl * 2,
+      fit: BoxFit.contain,
+    );
   }
 }
