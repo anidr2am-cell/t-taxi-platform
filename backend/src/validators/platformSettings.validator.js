@@ -17,6 +17,7 @@ const adminSettingsUpdateSchema = Joi.object({
 }).unknown(false);
 
 const adminContactChannelsUpdateSchema = Joi.object({
+  contactDefaultChannel: Joi.string().valid('LINE','KAKAO','WHATSAPP','').allow(null).default(''),
   guestLookupInquiryBannerEnabled: booleanSetting.default(false),
   guestLookupInquiryBannerMessage: unicodeText({ max: 500, allowEmpty: true }).default(''),
   contactLineEnabled: booleanSetting.default(false),

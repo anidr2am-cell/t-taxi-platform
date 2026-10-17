@@ -1,11 +1,7 @@
 import 'booking_create_result.dart';
 import 'booking_contact_connect_args.dart';
 
-enum ContactCompletionTarget {
-  lookup,
-  urgentFlow,
-  completePage,
-}
+enum ContactCompletionTarget { lookup, urgentFlow, completePage }
 
 ContactCompletionTarget resolveContactCompletionTarget({
   BookingContactConnectArgs? args,
@@ -13,9 +9,8 @@ ContactCompletionTarget resolveContactCompletionTarget({
   BookingCreateResult? result,
 }) {
   if (result == null) return ContactCompletionTarget.lookup;
-  final isUrgent = args?.isUrgent ??
-      connection?.isUrgentRequest ??
-      result.isUrgentRequest;
+  final isUrgent =
+      args?.isUrgent ?? connection?.isUrgentRequest ?? result.isUrgentRequest;
   return isUrgent
       ? ContactCompletionTarget.urgentFlow
       : ContactCompletionTarget.completePage;
@@ -41,7 +36,8 @@ class ContactChannel {
   factory ContactChannel.fromJson(Map<String, dynamic> json) {
     return ContactChannel(
       code: json['code'] as String? ?? '',
-      displayName: json['displayName'] as String? ?? json['code'] as String? ?? '',
+      displayName:
+          json['displayName'] as String? ?? json['code'] as String? ?? '',
       addUrl: json['addUrl'] as String?,
       accountId: json['accountId'] as String?,
       phoneNumber: json['phoneNumber'] as String?,
@@ -55,6 +51,7 @@ class ContactConnectionState {
     required this.bookingNumber,
     required this.contactStatus,
     this.contactChannel,
+    this.contactChannelManaged = false,
     this.contactConnectionRequired = false,
     this.connectionChannel,
     this.connectionStatus,
@@ -69,6 +66,7 @@ class ContactConnectionState {
   final String bookingNumber;
   final String contactStatus;
   final String? contactChannel;
+  final bool contactChannelManaged;
   final bool contactConnectionRequired;
   final String? connectionChannel;
   final String? connectionStatus;
@@ -93,6 +91,7 @@ class ContactConnectionState {
       bookingNumber: json['bookingNumber'] as String? ?? '',
       contactStatus: json['contactStatus'] as String? ?? 'PENDING',
       contactChannel: json['contactChannel'] as String?,
+      contactChannelManaged: json['contactChannelManaged'] == true,
       contactConnectionRequired: json['contactConnectionRequired'] == true,
       connectionChannel: connection?['channel'] as String?,
       connectionStatus: connection?['status'] as String?,
@@ -118,6 +117,7 @@ class ContactConnectionState {
       trustMessage: '',
       isUrgentRequest: isUrgentRequest,
       contactStatus: contactStatus,
+      contactChannel: contactChannel,
       contactConnectionRequired: contactConnectionRequired,
     );
   }

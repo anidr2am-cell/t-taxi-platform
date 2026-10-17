@@ -165,7 +165,7 @@ class _BookingContactPreferenceSectionState
           Text(
             isKakao
                 ? l10n.t('booking_contact_kakao_phone_required')
-                : isPhone
+                : (isPhone || type == BookingContactPreference.line)
                 ? l10n.t('booking_contact_phone_required')
                 : l10n.t('booking_contact_emergency_phone_optional'),
             style: const TextStyle(fontWeight: FontWeight.w700),
@@ -206,8 +206,10 @@ class _BookingContactPreferenceSectionState
                     hintText: l10n.t('booking_contact_phone_hint'),
                     helperText: isKakao
                         ? l10n.t('booking_contact_kakao_phone_help')
+                        : type == BookingContactPreference.line
+                        ? l10n.t('contact_phone_required_help')
                         : null,
-                    helperMaxLines: isKakao ? 3 : null,
+                    helperMaxLines: 4,
                   ),
                   onChanged: widget.onPhoneChanged,
                 ),

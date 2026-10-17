@@ -49,13 +49,20 @@ test('requires a KakaoTalk phone but keeps the Kakao ID optional', () => {
   assert.equal(withId.value.customer.messengerId, 'searchable-id');
 });
 
-test('keeps LINE ID required and its emergency phone optional', () => {
+test('requires both LINE ID and international fallback phone', () => {
   const result = createBookingSchema.validate(payload({
     messengerType: 'LINE',
     messengerId: 'searchable-id',
   }));
-  assert.equal(result.error, undefined);
-  assert.equal(result.value.customer.phone, null);
+  assert.ok(result.error);
+  const valid = createBookingSchema.validate(payload({
+    messengerType: 'LINE', messengerId: 'searchable-id', phone: '+821012345678',
+  }));
+  assert.equal(valid.error, undefined);
+  assert.equal(valid.value.customer.phone, '+821012345678');
+  assert.ok(createBookingSchema.validate(payload({
+    messengerType: 'LINE', phone: '+821012345678',
+  })).error);
 });
 
 test('requires messenger type and id as a pair', () => {

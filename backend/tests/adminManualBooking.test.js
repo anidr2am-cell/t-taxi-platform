@@ -433,7 +433,7 @@ for (const [driverId, expectedCode] of [
   });
 }
 
-test('admin manual validator requires a Kakao phone and keeps its ID optional', () => {
+test('admin manual validator permits missing Kakao phone for administrator handling', () => {
   const base = {
     origin: { address: 'A' },
     destination: { address: 'B' },
@@ -474,7 +474,7 @@ test('admin manual validator requires a Kakao phone and keeps its ID optional', 
       messengerId: 'qa-id',
     },
   });
-  assert.ok(missingPhone.error);
+  assert.equal(missingPhone.error, undefined);
 
   const rejected = adminManualBookingCreateSchema.validate({
     ...base,

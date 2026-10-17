@@ -571,6 +571,10 @@ class AdminDispatchService {
         origin: {
           name: locationNames.origin.name,
           nameTh: locationNames.origin.nameTh,
+          nameKo: metadata?.originLocation?.nameKo ?? null,
+          nameEn: metadata?.originLocation?.nameEn ?? null,
+          nameJa: metadata?.originLocation?.nameJa ?? null,
+          nameZh: metadata?.originLocation?.nameZh ?? null,
           address: row.origin_address,
           placeId: row.origin_place_id,
           lat: row.origin_lat,
@@ -579,6 +583,10 @@ class AdminDispatchService {
         destination: {
           name: locationNames.destination.name,
           nameTh: locationNames.destination.nameTh,
+          nameKo: metadata?.destinationLocation?.nameKo ?? null,
+          nameEn: metadata?.destinationLocation?.nameEn ?? null,
+          nameJa: metadata?.destinationLocation?.nameJa ?? null,
+          nameZh: metadata?.destinationLocation?.nameZh ?? null,
           address: row.destination_address,
           placeId: row.destination_place_id,
           lat: row.destination_lat,

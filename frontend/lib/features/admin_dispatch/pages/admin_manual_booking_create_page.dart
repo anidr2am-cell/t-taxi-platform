@@ -875,7 +875,7 @@ class _AdminManualBookingCreatePageState
     final guestPhone = enteredPhone.isEmpty
         ? ''
         : normalizeAdminManualPhone(_guestPhoneDialCode, enteredPhone);
-    final phoneRequired = const {'KAKAO', 'WHATSAPP', 'SMS'}
+    final phoneRequired = const {'WHATSAPP', 'SMS'}
         .contains(_messengerType);
     if ((phoneRequired && guestPhone.isEmpty) ||
         (enteredPhone.isNotEmpty && guestPhone.isEmpty)) {
@@ -1048,7 +1048,7 @@ class _AdminManualBookingCreatePageState
   }
 
   Widget _phoneInput(AppLocalizations l10n) {
-    final required = const {'KAKAO', 'WHATSAPP', 'SMS'}
+    final required = const {'WHATSAPP', 'SMS'}
         .contains(_messengerType);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1077,12 +1077,13 @@ class _AdminManualBookingCreatePageState
             controller: _guestPhoneController,
             keyboardType: TextInputType.phone,
             decoration: InputDecoration(
-              labelText: _messengerType == 'KAKAO'
-                  ? l10n.t('admin_manual_booking_kakao_phone_required')
-                  : required
+              labelText: required
                   ? '${l10n.t('field_required')} ${l10n.t('phone')}'
                   : l10n.t('admin_manual_booking_guest_phone'),
               hintText: '010-1234-5678',
+              helperText: const {'KAKAO', 'LINE'}.contains(_messengerType)
+                  ? l10n.t('admin_contact_phone_optional_warning') : null,
+              helperMaxLines: 4,
             ),
           ),
         ),

@@ -17,6 +17,7 @@ class BookingCreateResult {
   final String? cancellationBlockedReason;
   final bool isUrgentRequest;
   final String? contactStatus;
+  final String? contactChannel;
   final bool contactConnectionRequired;
 
   const BookingCreateResult({
@@ -38,6 +39,7 @@ class BookingCreateResult {
     this.cancellationBlockedReason,
     this.isUrgentRequest = false,
     this.contactStatus,
+    this.contactChannel,
     this.contactConnectionRequired = false,
   });
 
@@ -67,6 +69,7 @@ class BookingCreateResult {
       cancellationBlockedReason: json['cancellationBlockedReason'] as String?,
       isUrgentRequest: json['isUrgentRequest'] == true,
       contactStatus: json['contactStatus'] as String?,
+      contactChannel: json['contactChannel'] as String?,
       contactConnectionRequired: json['contactConnectionRequired'] == true,
     );
   }

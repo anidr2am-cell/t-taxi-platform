@@ -1,3 +1,4 @@
+const { resolveBookingContactChannel } = require('../utils/bookingContactChannel');
 const { normalizeMarketingAttribution } = require('../utils/marketingAttribution.util');
 const { pickPersistableMessengerMetadata } = require('../utils/customerMessengerFields');
 const {
@@ -84,6 +85,7 @@ class BookingService {
     couponService = null,
     mileageService = null,
     bookingStatusService = null,
+    platformSettingsService = null,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -103,6 +105,7 @@ class BookingService {
     this.couponService = couponService;
     this.mileageService = mileageService;
     this.bookingStatusService = bookingStatusService;
+    this.platformSettingsService = platformSettingsService;
   }
 
   buildOpenCallPayload({
@@ -819,6 +822,7 @@ class BookingService {
       cancellationDeadline: cancellation.cancellationDeadline,
       cancellationBlockedReason: cancellation.cancellationBlockedReason,
       contactStatus: booking.contact_status ?? CONTACT_STATUS.VERIFIED,
+      contactChannel: booking.contact_channel ?? null,
       contactConnectionRequired: isContactConnectionRequired(),
       mileageUsed: Number(mileageUsed) || 0,
     };
@@ -826,6 +830,11 @@ class BookingService {
 
   shouldDeferDispatchUntilContactVerified() {
     return isContactConnectionRequired();
+  }
+
+  async resolveInitialContactChannel(customer = {}) {
+    const settings = this.platformSettingsService ? await this.platformSettingsService.getContactChannelsPublic() : {};
+    return resolveBookingContactChannel(customer.messengerType, settings);
   }
 
   resolveInitialContactStatus(customer = {}) {
@@ -1225,10 +1234,12 @@ class BookingService {
       const bookingMode = String(input.bookingMode ?? 'STANDARD').trim().toUpperCase();
       const isUrgentRequest = bookingMode === 'URGENT';
 
+      metadata.contactChannelPolicy = 1;
       const bookingId = await this.bookingRepository.insertBooking(conn, {
         bookingNumber,
         status: BOOKING_STATUS.OPEN,
         contactStatus: this.resolveInitialContactStatus(input.customer),
+        contactChannel: await this.resolveInitialContactChannel(input.customer),
         serviceTypeId: serviceType.id,
         originAddress,
         originPlaceId: origin.placeId ?? null,
@@ -2124,10 +2135,12 @@ class BookingService {
       const destinationAddress = this.resolvePlaceAddress(destination);
       const chargeItem = this.adminManualBaseChargeItem(manualPricing);
 
+      metadata.contactChannelPolicy = 1;
       const bookingId = await this.bookingRepository.insertBooking(conn, {
         bookingNumber,
         status: BOOKING_STATUS.OPEN,
         contactStatus: this.resolveInitialContactStatus(input.customer),
+        contactChannel: await this.resolveInitialContactChannel(input.customer),
         serviceTypeId: serviceType.id,
         bookingSource: 'ADMIN_MANUAL',
         commissionExempt: manualPricing.commissionExempt,

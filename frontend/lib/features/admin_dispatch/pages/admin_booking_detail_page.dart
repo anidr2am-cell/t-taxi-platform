@@ -1986,7 +1986,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
         children: [
           AppUi.summaryRow(
             label: l10n.t('service_type'),
-            value: (detail['serviceType'] as Map?)?['name'] as String? ?? '-',
+            value: _adminServiceTypeLabel(detail['serviceType'] as Map?, l10n),
           ),
           AppUi.summaryRow(
             label: l10n.t('admin_pickup_requested_at'),
@@ -2039,6 +2039,28 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       title: l10n.t('admin_detail_customer'),
       child: Column(
         children: [
+          if ((customer['messengerType'] as String?)?.isNotEmpty == true &&
+              (customer['contactChannel'] as String?)?.isNotEmpty == true &&
+              customer['messengerType'] != 'SMS' &&
+              customer['messengerType'] != customer['contactChannel'])
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppTokens.spaceSm),
+              child: Text(
+                l10n
+                    .t('admin_contact_channel_mismatch')
+                    .replaceAll('{preferred}', '${customer['messengerType']}')
+                    .replaceAll('{channel}', '${customer['contactChannel']}'),
+                style: const TextStyle(color: AppTokens.warning),
+              ),
+            ),
+          if ((customer['phone'] as String?)?.trim().isNotEmpty != true)
+            Text(
+              l10n.t('admin_contact_phone_missing'),
+              style: const TextStyle(color: AppTokens.warning),
+            ),
+          if (customer['messengerType'] == 'LINE' &&
+              (customer['messengerId'] as String?)?.trim().isNotEmpty == true)
+            Text(l10n.t('admin_contact_line_search')),
           AppUi.summaryRow(
             label: l10n.t('name'),
             value: customer['name'] as String? ?? '',
@@ -2881,11 +2903,23 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
 
 const _adminLocationHighlightColor = Color(0xFF006A60);
 
-String? _adminLocationName(Map<String, dynamic> location) {
-  final nameTh = (location['nameTh'] as String?)?.trim();
-  if (nameTh != null && nameTh.isNotEmpty) {
-    return nameTh;
+String _adminServiceTypeLabel(Map? service, AppLocalizations l10n) {
+  final code = (service?['code'] as String? ?? '').toLowerCase();
+  if (const {
+    'airport_pickup',
+    'airport_dropoff',
+    'city_transfer',
+    'golf_transfer',
+  }.contains(code)) {
+    return l10n.t(code);
   }
+  return service?['name'] as String? ?? '-';
+}
+
+String? _adminLocationName(Map<String, dynamic> location, String lang) {
+  final suffix = lang[0].toUpperCase() + lang.substring(1);
+  final translated = (location['name$suffix'] as String?)?.trim();
+  if (translated?.isNotEmpty == true) return translated;
   final name = (location['name'] as String?)?.trim();
   if (name != null && name.isNotEmpty) {
     return name;
@@ -2941,7 +2975,7 @@ class _AdminOperationsRouteEndpoint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = _adminLocationName(location);
+    final name = _adminLocationName(location, context.l10n.languageCode);
     final address = _adminLocationAddress(location);
 
     return Text.rich(
@@ -2988,7 +3022,7 @@ class _LocationSummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = _adminLocationName(location);
+    final name = _adminLocationName(location, context.l10n.languageCode);
     final address = _adminLocationAddress(location);
 
     return Padding(

@@ -172,14 +172,15 @@ const createBookingSchema = Joi.object({
       return helpers.message('unsupported messengerType');
     }
     if (!type && !id) {
+      if (!customer.phone?.trim()) return helpers.message('customer phone is required');
       return customer;
     }
     if (!type && id) {
       return helpers.message('messengerType is required when messengerId is supplied');
     }
     const phone = customer.phone?.trim();
-    if (type === 'KAKAO' && !/^\+[1-9]\d{6,14}$/.test(phone || '')) {
-      return helpers.message('KakaoTalk requires an international customer phone number');
+    if (['KAKAO','LINE','WHATSAPP','SMS'].includes(type) && !/^\+[1-9]\d{6,14}$/.test(phone || '')) {
+      return helpers.message('Selected messenger requires an international customer phone number');
     }
     if (type !== 'KAKAO' && !id) {
       return helpers.message('messengerId is required for the selected messengerType');

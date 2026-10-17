@@ -33,9 +33,11 @@ class BookingMessengerHandoffSection extends StatefulWidget {
     super.key,
     required this.bookingNumber,
     this.service,
+    this.contactChannel,
   });
 
   final String bookingNumber;
+  final String? contactChannel;
   final BookingContactConnectionService? service;
 
   @override
@@ -120,7 +122,10 @@ class _BookingMessengerHandoffSectionState
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final channels = bookingHandoffChannels(_channels, l10n.languageCode);
+    final ordered = bookingHandoffChannels(_channels, l10n.languageCode);
+    final channels = widget.contactChannel == null
+        ? ordered
+        : ordered.where((c) => c.code == widget.contactChannel).toList();
     if (!_loading && channels.isEmpty) return const SizedBox.shrink();
 
     return Column(

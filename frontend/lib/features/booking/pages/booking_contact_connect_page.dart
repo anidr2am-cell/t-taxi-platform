@@ -267,7 +267,10 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
       if (!mounted) return;
       setState(() {
         _connection = connection;
-        _selectedChannelCode = channel.code;
+        _selectedChannelCode =
+            connection.connectionChannel ??
+            connection.contactChannel ??
+            channel.code;
         _actionBusy = false;
       });
       _showPageSnackBar(context.l10n.t('contact_connect_ref_copied'));
@@ -525,7 +528,13 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
         !_isConfirmRequested &&
         _hasStartedConnection &&
         !keyboardVisible;
-    final orderedChannels = orderContactChannels(_channels, locale);
+    final orderedChannels = orderContactChannels(_channels, locale)
+        .where(
+          (c) =>
+              _connection?.contactChannelManaged != true ||
+              c.code == _connection?.contactChannel,
+        )
+        .toList();
     final preferred = widget.args?.preferredChannel;
     if (preferred != null) {
       orderedChannels.sort((a, b) {
