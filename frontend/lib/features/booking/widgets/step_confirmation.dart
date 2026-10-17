@@ -315,8 +315,14 @@ class StepConfirmation extends StatelessWidget {
                 padding: const EdgeInsets.only(left: 12, right: 12, bottom: 8),
                 child: SegmentedButton<String>(
                   segments: [
-                    ButtonSegment(value: 'KRW', label: Text(l10n.t('cx_currency_KRW'))),
-                    ButtonSegment(value: 'THB', label: Text(l10n.t('cx_currency_THB'))),
+                    ButtonSegment(
+                      value: 'KRW',
+                      label: Text(l10n.t('cx_currency_KRW')),
+                    ),
+                    ButtonSegment(
+                      value: 'THB',
+                      label: Text(l10n.t('cx_currency_THB')),
+                    ),
                   ],
                   selected: {state.paymentCurrency ?? 'KRW'},
                   onSelectionChanged: (values) =>
@@ -361,7 +367,12 @@ class StepConfirmation extends StatelessWidget {
                 messengerId: state.messengerId,
                 dialCode: state.customerCountryCode,
                 localNumber: state.customerPhone,
-                idLabel: l10n.t('booking_contact_kakao_id'),
+                idLabel: l10n.t(
+                  BookingContactPreference.normalize(state.messengerType) ==
+                          'LINE'
+                      ? 'booking_contact_line_id'
+                      : 'booking_contact_kakao_id',
+                ),
               ),
             ),
             if (BookingContactPreference.allowsEmergencyPhone(
