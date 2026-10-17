@@ -1047,7 +1047,12 @@ class BookingRepository {
   async findAssignedDriverAvatarFile(bookingId, tokenHash = null) {
     const [rows] = await this.pool.query(`
       SELECT f.file_path, f.mime_type, f.original_filename FROM bookings b
-      JOIN booking_driver_assignments bda ON bda.booking_id=b.id AND bda.is_active=1 AND bda.deleted_at IS NULL
+      JOIN booking_driver_assignments bda ON bda.id=(
+        SELECT history.id FROM booking_driver_assignments history
+        WHERE history.booking_id=b.id AND history.deleted_at IS NULL
+          AND (history.is_active=1 OR b.status IN ('SETTLEMENT_PENDING','COMPLETED'))
+        ORDER BY history.is_active DESC,history.updated_at DESC,history.id DESC LIMIT 1
+      )
       JOIN drivers d ON d.id=bda.driver_id AND d.deleted_at IS NULL
       JOIN files f ON f.entity_type='DRIVER_AVATAR' AND f.entity_id=d.user_id AND f.deleted_at IS NULL
       WHERE b.id=? AND b.deleted_at IS NULL AND b.is_archived=0
