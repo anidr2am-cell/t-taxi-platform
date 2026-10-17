@@ -57,3 +57,17 @@ Screenshots and validation artifacts: C:/TTaxi-screens/customer-experience/ (veh
 - Actual administrator login path: `/api/v1/auth/login`, JSON 200. Settings PUT and screen GET 200; five QA meeting texts saved only in isolated STG.
 
 No merge or production deploy. Review first; production approval remains separate.
+
+## Existing capacity consistency issue — review required before production
+
+No recommendation/data correction is included. `vehicleRecommendation.service.js` first applies legacy aggregate-count rules and consults database capacity combinations only as a fallback. Isolated STG reproduces:
+
+| Input | Existing recommendation | Active SEDAN database rule |
+|---|---|---|
+| 1 passenger, 1 golf bag | SEDAN selectable/recommended | max golf bags 0 |
+| 2 passengers, 3 small cases | SEDAN selectable/recommended | max small cases 2 |
+| 6 passengers | VAN only | SEDAN/SUV greyed out |
+
+This was pre-existing and is now visible alongside capacity text. The explicit instruction to keep capacity data/rules unchanged takes precedence; do not silently change eligibility or hide the discrepancy. Edward/Claude should resolve whether to align the legacy recommendation rules or revise capacity data before production approval. Raw evidence: C:/TTaxi-screens/customer-experience/capacity-consistency.json.
+
+Latest browser/CI results and screenshot gallery are provided in the local report.html. No production deploy is authorized.

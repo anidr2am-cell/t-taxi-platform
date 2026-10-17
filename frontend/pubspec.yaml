@@ -56,4 +56,3 @@ flutter:
     - family: NotoSansThai
       fonts:
         - asset: assets/fonts/NotoSansThai.ttf
-
