@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
-import '../../../utils/user_facing_error.dart';
+
 import '../../../widgets/app_ui.dart';
 import '../models/guest_booking_lookup_result.dart';
 import '../models/guest_contact_lookup_item.dart';
@@ -172,7 +172,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         _refreshing = false;
         _error = err.errorCode == 'BOOKING_NOT_FOUND'
             ? l10n.t('guest_lookup_not_found')
-            : userFacingError(err, fallback: l10n.t('guest_lookup_load_error'));
+            : l10n.t('guest_lookup_load_error');
       });
     } catch (_) {
       if (!mounted) return;
@@ -202,10 +202,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
       if (!mounted) return;
       setState(() {
         _refreshing = false;
-        _error = userFacingError(
-          err,
-          fallback: context.l10n.t('guest_lookup_load_error'),
-        );
+        _error = context.l10n.t('guest_lookup_load_error');
       });
     } catch (_) {
       if (!mounted) return;
@@ -294,7 +291,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         _loading = false;
         _error = err.errorCode == 'BOOKING_NOT_FOUND'
             ? l10n.t('guest_lookup_not_found')
-            : userFacingError(err, fallback: l10n.t('guest_lookup_load_error'));
+            : l10n.t('guest_lookup_load_error');
       });
     } catch (_) {
       if (!mounted) return;
@@ -335,7 +332,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         _loading = false;
         _error = err.errorCode == 'BOOKING_NOT_FOUND'
             ? l10n.t('guest_lookup_not_found')
-            : userFacingError(err, fallback: l10n.t('guest_lookup_load_error'));
+            : l10n.t('guest_lookup_load_error');
       });
     } catch (_) {
       if (!mounted) return;
@@ -747,7 +744,11 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
       children: [
         const GuestBookingLookupInquiryBanner(),
         const SizedBox(height: AppTokens.spaceMd),
-        BookingVoucher(result: result, useCustomerAuth: widget.fromMyBookings, customerAccessToken: _customerAccessToken),
+        BookingVoucher(
+          result: result,
+          useCustomerAuth: widget.fromMyBookings,
+          customerAccessToken: _customerAccessToken,
+        ),
         const SizedBox(height: AppTokens.spaceMd),
         _actionSummary(result),
         if (BookingStatusDisplay.customerGuidance(

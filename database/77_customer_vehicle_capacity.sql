@@ -1,9 +1,9 @@
 -- Capacity rules approved 2026-10-17. 76 is already golf pricing.
 -- Preserve exact old rows for rollback; no booking amounts are changed.
-CREATE TABLE migration_77_capacity_backup AS
+CREATE TABLE IF NOT EXISTS migration_77_capacity_backup AS
  SELECT * FROM vehicle_capacity_rules WHERE vehicle_type_id IN
  (SELECT id FROM vehicle_types WHERE code IN ('SEDAN','SUV','VAN'));
-ALTER TABLE vehicle_capacity_rules ADD COLUMN combination_constraints JSON NULL;
+ALTER TABLE vehicle_capacity_rules ADD COLUMN IF NOT EXISTS combination_constraints JSON NULL;
 START TRANSACTION;
 UPDATE vehicle_capacity_rules r JOIN vehicle_types v ON v.id=r.vehicle_type_id
 SET r.max_passengers=2, r.max_carriers_20_inch=2, r.max_carriers_24_inch_plus=1,
