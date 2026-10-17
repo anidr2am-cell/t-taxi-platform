@@ -82,7 +82,7 @@ class BookingRepository {
           special_requests, prefer_female_driver,
           metadata, boarding_qr_token_hash, boarding_qr_expires_at,
           is_urgent_request,
-          created_by, updated_by
+          created_by, updated_by, contact_channel
         ) VALUES (
           ?, ?, ?, ?,
           ?, ?,
@@ -93,7 +93,7 @@ class BookingRepository {
           ?, ?, ?,
           ?, ?, ?, ?, ?,
           ?, ?, ?, ?,
-          ?, ?
+          ?, ?, ?
         )
       `,
       [
@@ -135,6 +135,7 @@ class BookingRepository {
         row.isUrgentRequest ? 1 : 0,
         row.createdBy,
         row.updatedBy,
+        row.contactChannel ?? null,
       ],
     );
     return result.insertId;
@@ -699,6 +700,7 @@ class BookingRepository {
           b.id,
           b.booking_number,
           b.status,
+          b.metadata,
           b.contact_status,
           b.contact_channel,
           b.contact_requested_at,

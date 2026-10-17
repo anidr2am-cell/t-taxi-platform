@@ -44,14 +44,11 @@ class BookingContactPreference {
   };
 
   static bool usesPhone(String type) => type == whatsapp || type == sms;
-  static bool requiresPhone(String type) => type == kakao || usesPhone(type);
-  static bool allowsEmergencyPhone(String type) => type == line;
+  static bool requiresPhone(String type) =>
+      type == kakao || type == line || usesPhone(type);
+  static bool allowsEmergencyPhone(String type) => false;
 
-  static String contactPhone(
-    String type,
-    String dialCode,
-    String localNumber,
-  ) {
+  static String contactPhone(String type, String dialCode, String localNumber) {
     if (!requiresPhone(type) && !allowsEmergencyPhone(type)) return '';
     final value = localNumber.trim();
     if (value.startsWith('+')) {
@@ -76,7 +73,7 @@ class BookingContactPreference {
     final primary = requiresPhone(normalizedType)
         ? formatInternationalPhone(phone)
         : messengerId.trim();
-    final id = normalizedType == kakao ? messengerId.trim() : '';
+    final id = [kakao, line].contains(normalizedType) ? messengerId.trim() : '';
     return [
       channelLabel,
       if (primary.isNotEmpty) primary,

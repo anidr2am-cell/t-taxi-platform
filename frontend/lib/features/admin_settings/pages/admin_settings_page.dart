@@ -29,7 +29,8 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
       'accountNumber',
       'promptPayNumber',
       'googleReviewUrl',
-      for (final a in ['BKK','DMK','UTP']) for (final l in ['ko','en','th','ja','zh']) 'meeting${a}_$l',
+      for (final a in ['BKK', 'DMK', 'UTP'])
+        for (final l in ['ko', 'en', 'th', 'ja', 'zh']) 'meeting${a}_$l',
     ])
       key: TextEditingController(),
   };
@@ -42,6 +43,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
   Map<String, dynamic>? _settings;
   Map<String, dynamic>? _contactChannels;
   bool _guestLookupBannerEnabled = false;
+  String _contactDefaultChannel = '';
   bool _contactKakaoEnabled = false;
   bool _contactLineEnabled = false;
   bool _contactWhatsappEnabled = false;
@@ -103,6 +105,8 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
 
   void _applyContactChannels(Map<String, dynamic> contactChannels) {
     _contactChannels = Map<String, dynamic>.from(contactChannels);
+    _contactDefaultChannel =
+        contactChannels['contactDefaultChannel'] as String? ?? '';
     _guestLookupBannerEnabled =
         contactChannels['guestLookupInquiryBannerEnabled'] == true;
     _guestLookupBannerMessageController.text =
@@ -129,6 +133,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
       'guestLookupInquiryBannerMessage': _guestLookupBannerMessageController
           .text
           .trim(),
+      'contactDefaultChannel': _contactDefaultChannel,
       'contactKakaoEnabled': _contactKakaoEnabled,
       'contactKakaoAddUrl': _contactKakaoUrlController.text.trim(),
       'contactLineEnabled': _contactLineEnabled,
@@ -296,7 +301,12 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
               _field('accountNumber', l10n.t('admin_settings_account_number')),
               _field('promptPayNumber', 'PromptPay'),
               Text(l10n.t('cx_meeting_admin')),
-              for (final a in ['BKK','DMK','UTP']) for (final l in ['ko','en','th','ja','zh']) _field('meeting${a}_$l', '$a · ${AppLocalizations.languageNames[l]}'),
+              for (final a in ['BKK', 'DMK', 'UTP'])
+                for (final l in ['ko', 'en', 'th', 'ja', 'zh'])
+                  _field(
+                    'meeting${a}_$l',
+                    '$a · ${AppLocalizations.languageNames[l]}',
+                  ),
               _image('promptPayQrImageUrl'),
               KeyedSubtree(
                 key: const ValueKey('admin_settings_upload_promptpay_qr'),
@@ -367,6 +377,25 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              DropdownButtonFormField<String>(
+                initialValue: _contactDefaultChannel,
+                decoration: InputDecoration(
+                  labelText: l10n.t('admin_contact_default_channel'),
+                ),
+                items: ['', 'LINE', 'KAKAO', 'WHATSAPP']
+                    .map(
+                      (c) => DropdownMenuItem(
+                        value: c,
+                        child: Text(
+                          c.isEmpty ? l10n.t('admin_contact_default_auto') : c,
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: _savingContactChannels
+                    ? null
+                    : (c) => setState(() => _contactDefaultChannel = c ?? ''),
+              ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(l10n.t('admin_settings_contact_kakao_enabled')),

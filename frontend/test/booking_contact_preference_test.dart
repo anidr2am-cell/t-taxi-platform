@@ -210,7 +210,7 @@ void main() {
         final field = tester.widget<TextField>(
           find.byKey(const ValueKey('booking-contact-phone')),
         );
-        expect(field.decoration?.helperMaxLines, 3);
+        expect(field.decoration?.helperMaxLines, 4);
       },
     );
   }
@@ -242,5 +242,39 @@ void main() {
     expect(customer['phone'], '+821012345678');
     expect(customer['messengerType'], 'KAKAO');
     expect(customer.containsKey('messengerId'), isFalse);
+  });
+  test('LINE requires phone and preserves ID in the contact summary', () async {
+    final controller = await buildContractAirportPickupController();
+    await controller.updateCustomerInfo(
+      name: 'QA LINE',
+      phone: '',
+      messengerType: 'LINE',
+      messengerId: 'qa_line',
+    );
+    expect(
+      controller.safeEntryStep(controller.state, BookingWizardSteps.review),
+      BookingWizardSteps.customer,
+    );
+    await controller.updateCustomerInfo(
+      phone: '010-1234-5678',
+      countryCode: '+82',
+    );
+    expect(
+      controller.safeEntryStep(controller.state, BookingWizardSteps.review),
+      BookingWizardSteps.review,
+    );
+    final customer = controller.buildCreatePayload()['customer'] as Map;
+    expect(customer['phone'], '+821012345678');
+    expect(customer['messengerId'], 'qa_line');
+    expect(
+      BookingContactPreference.summaryValue(
+        type: 'LINE',
+        channelLabel: 'LINE',
+        messengerId: 'qa_line',
+        dialCode: '+82',
+        localNumber: '01012345678',
+      ),
+      'LINE · +82 10-1234-5678 · ID qa_line',
+    );
   });
 }

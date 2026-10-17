@@ -8,11 +8,7 @@ import 'package:frontend/l10n/app_localizations.dart';
 import 'package:frontend/theme/app_theme.dart';
 
 class _ContactDetailApi extends AdminDispatchApiService {
-  _ContactDetailApi({
-    required this.detail,
-    this.verifyError,
-    this.retryError,
-  });
+  _ContactDetailApi({required this.detail, this.verifyError, this.retryError});
 
   Map<String, dynamic> detail;
   final Object? verifyError;
@@ -40,7 +36,8 @@ class _ContactDetailApi extends AdminDispatchApiService {
       'allowedActions': allowedActions,
       'contactDispatch': {
         'state': dispatchState,
-        'persisted': dispatchState == 'DELIVERY_RETRY_NEEDED' ||
+        'persisted':
+            dispatchState == 'DELIVERY_RETRY_NEEDED' ||
             dispatchState == 'DELIVERY_ATTEMPTED',
         'deliveryAttempted': dispatchState == 'DELIVERY_ATTEMPTED',
         'retryable': retryable,
@@ -68,11 +65,7 @@ class _ContactDetailApi extends AdminDispatchApiService {
       },
       'vehicle': {'typeCode': 'VAN', 'typeName': 'Van', 'count': 1},
       'passengers': {'adults': 1, 'children': 0, 'infants': 0},
-      'luggage': {
-        'carriers20Inch': 0,
-        'carriers24InchPlus': 0,
-        'golfBags': 0,
-      },
+      'luggage': {'carriers20Inch': 0, 'carriers24InchPlus': 0, 'golfBags': 0},
     };
   }
 
@@ -203,11 +196,16 @@ void main() {
         ),
       );
       await _pumpPage(tester, api);
-      expect(find.byKey(const Key('admin-contact-dispatch-retry')), findsNothing);
+      expect(
+        find.byKey(const Key('admin-contact-dispatch-retry')),
+        findsNothing,
+      );
     }
   });
 
-  testWidgets('non-open contact flow hides verify and retry actions', (tester) async {
+  testWidgets('non-open contact flow hides verify and retry actions', (
+    tester,
+  ) async {
     final api = _ContactDetailApi(
       detail: _ContactDetailApi.fixture(
         status: 'DRIVER_ASSIGNED',
@@ -254,7 +252,9 @@ void main() {
     );
     await _pumpPage(tester, api);
     expect(api.loadCount, 1);
-    await tester.ensureVisible(find.byKey(const Key('admin-contact-dispatch-retry')));
+    await tester.ensureVisible(
+      find.byKey(const Key('admin-contact-dispatch-retry')),
+    );
     await tester.tap(find.byKey(const Key('admin-contact-dispatch-retry')));
     await tester.pumpAndSettle();
     expect(api.retryCount, 1);
@@ -276,7 +276,9 @@ void main() {
       ),
     );
     await _pumpPage(tester, api);
-    await tester.ensureVisible(find.byKey(const Key('admin-contact-dispatch-retry')));
+    await tester.ensureVisible(
+      find.byKey(const Key('admin-contact-dispatch-retry')),
+    );
     await tester.tap(find.byKey(const Key('admin-contact-dispatch-retry')));
     await tester.pumpAndSettle();
     expect(
@@ -284,4 +286,36 @@ void main() {
       findsOneWidget,
     );
   });
+  testWidgets(
+    'legacy mismatch and missing phone warn without changing booking data',
+    (tester) async {
+      final detail = _ContactDetailApi.fixture(
+        contactStatus: 'PENDING',
+        channel: 'KAKAO',
+      );
+      (detail['customer'] as Map).addAll(<String, String?>{
+        'messengerType': 'LINE',
+        'messengerId': 'qa_line',
+        'phone': null,
+      });
+      detail['serviceType'] = {
+        'code': 'AIRPORT_PICKUP',
+        'name': 'wrong fallback',
+      };
+      ((detail['route'] as Map)['origin'] as Map).addAll(<String, String>{
+        'name': 'Original BKK',
+        'nameTh': 'ไทย',
+        'nameEn': 'English BKK',
+      });
+      await _pumpPage(tester, _ContactDetailApi(detail: detail));
+      final l10n = AppLocalizations('en');
+      expect(find.text(l10n.t('admin_contact_phone_missing')), findsOneWidget);
+      expect(find.text(l10n.t('admin_contact_line_search')), findsOneWidget);
+      expect(find.textContaining('LINE').evaluate().isNotEmpty, isTrue);
+      expect(find.text('English BKK'), findsWidgets);
+      expect(find.text('ไทย'), findsNothing);
+      expect((detail['customer'] as Map)['contactChannel'], 'KAKAO');
+      expect((detail['customer'] as Map)['phone'], isNull);
+    },
+  );
 }

@@ -311,6 +311,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
               ),
               BookingMessengerHandoffSection(
                 bookingNumber: result.bookingNumber,
+                contactChannel: result.contactChannel,
               ),
               BookingSocialLoginSection(
                 authController: widget.authController,

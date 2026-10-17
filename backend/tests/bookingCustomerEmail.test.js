@@ -222,7 +222,7 @@ test('booking validator rejects invalid customer email', () => {
   assert.match(error.message, /email/i);
 });
 
-test('booking validator requires customer name and allows Kakao or LINE without phone', () => {
+test('booking validator requires customer name and LINE phone', () => {
   const missingName = createBookingSchema.validate(validPayload({
     customer: {
       phone: '+66123456789',
@@ -242,8 +242,7 @@ test('booking validator requires customer name and allows Kakao or LINE without 
       messengerId: 'line-user-id',
     },
   }));
-  assert.equal(missingPhone.error, undefined);
-  assert.equal(missingPhone.value.customer.phone, null);
+  assert.ok(missingPhone.error);
 });
 
 test('booking validator accepts multilingual customer names and free-text places', () => {

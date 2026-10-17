@@ -16,6 +16,7 @@ const CONTACT_GROUP = 'contact_channels';
 const MEETING_KEYS = ['BKK','DMK','UTP'].flatMap(a => ['ko','en','th','ja','zh'].map(l => `meeting${a}_${l}`));
 const TEXT_KEYS = [...MEETING_KEYS, 'lineQrDescription', 'bankName', 'accountName', 'accountNumber', 'promptPayNumber', 'googleReviewUrl'];
 const CONTACT_TEXT_KEYS = [
+  'contactDefaultChannel',
   'guestLookupInquiryBannerEnabled', 'guestLookupInquiryBannerMessage',
   'contactLineEnabled', 'contactLineDisplayName', 'contactLineAddUrl', 'contactLineAccountId',
   'contactKakaoEnabled', 'contactKakaoDisplayName', 'contactKakaoAddUrl', 'contactKakaoAccountId',
@@ -98,7 +99,7 @@ class PlatformSettingsService {
       ...Object.fromEntries(rows.map((row) => [row.key_name, row.value])),
       ...Object.fromEntries(contactRows.map((row) => [row.key_name, row.value])),
     };
-    return { channels: await this.buildContactChannelsPublic(values) };
+    return { defaultChannel: values.contactDefaultChannel || null, channels: await this.buildContactChannelsPublic(values) };
   }
 
   async getGuestLookupInquiryPublic() {
@@ -147,6 +148,7 @@ class PlatformSettingsService {
 
   mapContactChannelsAdmin(values = {}) {
     return {
+      contactDefaultChannel: values.contactDefaultChannel || '',
       guestLookupInquiryBannerEnabled: this.truthy(values.guestLookupInquiryBannerEnabled),
       guestLookupInquiryBannerMessage: values.guestLookupInquiryBannerMessage || '',
       contactLineEnabled: this.truthy(values.contactLineEnabled),

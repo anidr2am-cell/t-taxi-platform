@@ -84,4 +84,32 @@ void main() {
     expect(find.textContaining('Email'), findsNothing);
     expect(find.textContaining('이메일'), findsNothing);
   });
+  testWidgets('Korean completion shows LINE only when server selected LINE', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: [
+          AppLocalizationsDelegate('ko'),
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('ko')],
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: BookingMessengerHandoffSection(
+              bookingNumber: 'TX202610180099',
+              contactChannel: 'LINE',
+              service: _FakeContactService(channels),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('booking_handoff_line')), findsOneWidget);
+    expect(find.byKey(const Key('booking_handoff_kakao')), findsNothing);
+    expect(find.byKey(const Key('booking_handoff_whatsapp')), findsNothing);
+  });
 }

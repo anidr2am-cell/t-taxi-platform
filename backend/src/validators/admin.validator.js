@@ -257,8 +257,8 @@ const adminManualBookingCreateSchema = Joi.object({
       return helpers.message('messengerType is required when messengerId is supplied');
     }
     const phone = customer.phone?.trim();
-    if (type === 'KAKAO' && !/^\+[1-9]\d{6,14}$/.test(phone || '')) {
-      return helpers.message('KakaoTalk requires an international customer phone number');
+    if (type && phone && !/^\+[1-9]\d{6,14}$/.test(phone)) {
+      return helpers.message('Customer phone must use an international number');
     }
     if (type && type !== 'KAKAO' && !id) {
       return helpers.message('messengerId is required for the selected messengerType');

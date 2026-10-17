@@ -11,6 +11,7 @@ const {
   deriveContactDispatch,
   contactDispatchInputFromBooking,
 } = require('../policies/adminContactDispatch.policy');
+const { resolveBookingContactChannel } = require('../utils/bookingContactChannel');
 const logger = require('../utils/logger');
 
 class BookingContactConnectionService {
@@ -33,6 +34,7 @@ class BookingContactConnectionService {
       bookingNumber: booking.booking_number,
       contactStatus: booking.contact_status,
       contactChannel: booking.contact_channel,
+      contactChannelManaged: (typeof booking.metadata === 'string' ? JSON.parse(booking.metadata || '{}') : booking.metadata)?.contactChannelPolicy === 1,
       contactRequestedAt: booking.contact_requested_at,
       contactVerifiedAt: booking.contact_verified_at,
       isUrgentRequest: Number(booking.is_urgent_request) === 1,
@@ -120,6 +122,12 @@ class BookingContactConnectionService {
         authUser,
         guestAccessToken,
       );
+
+      const metadata = typeof booking.metadata === 'string' ? JSON.parse(booking.metadata) : (booking.metadata || {});
+      if (metadata.contactChannelPolicy === 1) {
+        channel = resolveBookingContactChannel(metadata.messengerType, await this.getPublicSettings());
+        if (!channel) throw this.validationError('Contact channel is not available');
+      }
 
       if (booking.contact_status === CONTACT_STATUS.VERIFIED) {
         await conn.commit();
