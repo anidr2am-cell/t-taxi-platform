@@ -33,8 +33,14 @@ class GuestBookingLookupResult {
     this.driverPhone,
     this.vehiclePhotoUrl,
     this.customerPhone,
+    this.driverPhotoUrl,
+    this.flightNumber,
+    this.vehicleModel,
   });
 
+  final String? driverPhotoUrl;
+  final String? flightNumber;
+  final String? vehicleModel;
   final int? bookingId;
   final String bookingNumber;
   final String status;
@@ -116,6 +122,9 @@ class GuestBookingLookupResult {
 
     return GuestBookingLookupResult(
       bookingId: json['bookingId'] as int?,
+      driverPhotoUrl: driver?['photoUrl'] as String?,
+      flightNumber: (json['flight'] as Map?)?['flightNumber'] as String?,
+      vehicleModel: driverVehicle['modelName'] as String?,
       bookingNumber: bookingNumber,
       status: json['status'] as String? ?? '',
       scheduledPickupAt: json['scheduledPickupAt'] as String?,
@@ -199,6 +208,9 @@ class GuestBookingLookupResult {
     GuestBookingReviewSnapshot? review,
   }) {
     return GuestBookingLookupResult(
+      driverPhotoUrl: driverPhotoUrl,
+      flightNumber: flightNumber,
+      vehicleModel: vehicleModel,
       bookingId: bookingId,
       bookingNumber: bookingNumber,
       status: status ?? this.status,
@@ -303,6 +315,7 @@ class GuestBookingLookupResult {
   }
 
   Map<String, dynamic> toJson() => {
+    'flight': {'flightNumber': flightNumber},
     'bookingId': bookingId,
     'bookingNumber': bookingNumber,
     'status': status,
@@ -348,9 +361,11 @@ class GuestBookingLookupResult {
     'assignedDriver': driverName == null
         ? null
         : {
+            'photoUrl': driverPhotoUrl,
             'name': driverName,
             'phone': driverPhone,
             'vehicle': {
+              'modelName': vehicleModel,
               'typeName': vehicleType,
               'color': vehicleColor,
               'plateNumber': vehiclePlateNumber,

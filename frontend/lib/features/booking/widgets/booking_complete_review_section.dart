@@ -4,6 +4,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../utils/pricing_display.dart';
+import '../utils/customer_booking_format.dart';
 import '../utils/booking_contact_preference.dart';
 import '../models/booking_complete_review.dart';
 import '../models/country_option.dart';
@@ -149,12 +150,18 @@ class BookingCompleteReviewSection extends StatelessWidget {
                 const SizedBox(height: AppTokens.spaceSm),
                 AppUi.summaryRow(
                   label: l10n.t('base_price'),
-                  value: '${pricing.basePrice} ${pricing.currency}',
+                  value: CustomerBookingFormat.money(
+                    pricing.basePrice,
+                    pricing.currency,
+                  ),
                 ),
                 for (final item in pricing.additionalCharges)
                   AppUi.summaryRow(
                     label: PricingDisplay.chargeItemLabel(l10n, item),
-                    value: '${item.amount} ${pricing.currency}',
+                    value: CustomerBookingFormat.money(
+                      item.amount,
+                      pricing.currency,
+                    ),
                   ),
               ],
             ),

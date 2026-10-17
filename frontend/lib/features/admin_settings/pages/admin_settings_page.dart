@@ -29,6 +29,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
       'accountNumber',
       'promptPayNumber',
       'googleReviewUrl',
+      for (final a in ['BKK','DMK','UTP']) for (final l in ['ko','en','th','ja','zh']) 'meeting${a}_$l',
     ])
       key: TextEditingController(),
   };
@@ -294,6 +295,8 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
               _field('accountName', l10n.t('admin_settings_account_name')),
               _field('accountNumber', l10n.t('admin_settings_account_number')),
               _field('promptPayNumber', 'PromptPay'),
+              Text(l10n.t('cx_meeting_admin')),
+              for (final a in ['BKK','DMK','UTP']) for (final l in ['ko','en','th','ja','zh']) _field('meeting${a}_$l', '$a · ${AppLocalizations.languageNames[l]}'),
               _image('promptPayQrImageUrl'),
               KeyedSubtree(
                 key: const ValueKey('admin_settings_upload_promptpay_qr'),
@@ -468,6 +471,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     padding: const EdgeInsets.only(bottom: 12),
     child: TextField(
       controller: _controllers[key],
+      maxLines: key.startsWith('meeting') ? 3 : 1,
       decoration: InputDecoration(labelText: label),
     ),
   );

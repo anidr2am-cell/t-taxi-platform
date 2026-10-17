@@ -4,8 +4,9 @@ import 'package:flutter/services.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
-import '../../../utils/user_facing_error.dart';
+import 'preferred_support_button.dart';
 import '../models/airport_shortcuts.dart';
+import '../services/registered_airport_service.dart';
 import '../models/location_option.dart';
 import '../models/place_prediction.dart';
 import '../services/booking_analytics.dart';
@@ -80,6 +81,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
   bool _loadingRecents = false;
   String? _error;
   bool _editing = false;
+  Set<String> _registeredAirportCodes = {};
   int _highlightedIndex = 0;
 
   @override
@@ -95,6 +97,13 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
       _controller.text = widget.selected!.name ?? widget.selected!.displayName;
     }
     _loadRecents();
+    {
+      registeredAirportCodes()
+          .then((codes) {
+            if (mounted) setState(() => _registeredAirportCodes = codes);
+          })
+          .catchError((_) {});
+    }
   }
 
   @override
@@ -191,7 +200,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
         if (!mounted) return;
         setState(() {
           _loadingDetails = false;
-          _error = userFacingError(e, fallback: 'ui_load_failed');
+          _error = 'cx_places_error';
         });
         widget.onSearchFailed?.call(
           BookingAnalytics.placeErrorCategory(e, noResults: false),
@@ -250,7 +259,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
     } catch (e) {
       setState(() {
         _loading = false;
-        _error = userFacingError(e, fallback: 'ui_load_failed');
+        _error = 'cx_places_error';
         _predictions = [];
       });
       widget.onSearchFailed?.call(
@@ -275,7 +284,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
     } catch (e) {
       setState(() {
         _loadingDetails = false;
-        _error = userFacingError(e, fallback: 'ui_load_failed');
+        _error = 'cx_places_error';
       });
       widget.onSearchFailed?.call(
         BookingAnalytics.placeErrorCategory(e, noResults: false),
@@ -388,14 +397,17 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: AirportShortcuts.thailandAirports.map((airport) {
-            return OutlinedButton(
-              onPressed: _loadingDetails
-                  ? null
-                  : () => _selectShortcut(airport),
-              child: Text(airport.code ?? airport.displayName),
-            );
-          }).toList(),
+          children: AirportShortcuts.thailandAirports
+              .where((a) => _registeredAirportCodes.contains(a.code))
+              .map((airport) {
+                return OutlinedButton(
+                  onPressed: _loadingDetails
+                      ? null
+                      : () => _selectShortcut(airport),
+                  child: Text(airport.code ?? airport.displayName),
+                );
+              })
+              .toList(),
         ),
         const SizedBox(height: 16),
       ],
@@ -519,7 +531,12 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: AppUi.errorState(message: l10n.t(_error!)),
+              child: Column(
+                children: [
+                  AppUi.errorState(message: l10n.t(_error!)),
+                  const PreferredSupportButton(),
+                ],
+              ),
             ),
         ],
       );
@@ -605,11 +622,16 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
         if (_error != null)
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: WizardErrorView(
-              message: _error!,
-              onRetry: _controller.text.length >= 2
-                  ? () => _fetchPredictions(_controller.text)
-                  : null,
+            child: Column(
+              children: [
+                WizardErrorView(
+                  message: _error!,
+                  onRetry: _controller.text.length >= 2
+                      ? () => _fetchPredictions(_controller.text)
+                      : null,
+                ),
+                const PreferredSupportButton(),
+              ],
             ),
           ),
         if (!_loading &&

@@ -82,6 +82,7 @@ class _CustomerLandingPageState extends State<CustomerLandingPage> {
           : BookingWizardRouteArgs(
               serviceType: _draft.serviceType!,
               initialStep: BookingWizardSteps.route,
+              freshEntry: true,
             ),
     );
   }

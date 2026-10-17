@@ -1,11 +1,11 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/analytics/marketing_attribution_provider.dart';
-import '../../../utils/user_facing_error.dart';
 import '../../account/services/coupon_api_service.dart';
 import '../../account/services/mileage_api_service.dart';
 import '../models/booking_wizard_steps.dart';
 import '../models/airport_shortcuts.dart';
+import '../models/pricing_result.dart';
 import '../models/booking_wizard_state.dart';
 import '../models/booking_complete_review.dart';
 import '../models/booking_create_result.dart';
@@ -213,7 +213,12 @@ class BookingWizardController extends ChangeNotifier {
     '아유타야': 'AYUTTHAYA',
   };
 
-  Future<void> initialize({BookingServiceType? initialServiceType}) async {
+  Future<void> initialize({
+    BookingServiceType? initialServiceType,
+    bool freshEntry = false,
+  }) async {
+    if (freshEntry) await _storage.clear();
+    entryServiceCollapsed = initialServiceType != null;
     final restored = await _storage.load();
     if (restored != null) {
       final serviceChanged =
@@ -1403,9 +1408,7 @@ class BookingWizardController extends ChangeNotifier {
         step: _state.step == BookingWizardSteps.review
             ? BookingWizardSteps.review
             : (fieldError?.step ?? _state.step),
-        errorMessage:
-            fieldError?.messageKey ??
-            userFacingError(e, fallback: 'ui_load_failed'),
+        errorMessage: fieldError?.messageKey ?? 'ui_load_failed',
       );
       notifyListeners();
       return null;
@@ -1557,7 +1560,7 @@ class BookingWizardController extends ChangeNotifier {
     } catch (e) {
       if (generation != _recommendationGeneration) return;
       _state = _state.copyWith(
-        errorMessage: userFacingError(e, fallback: 'ui_load_failed'),
+        errorMessage: 'ui_load_failed',
         clearRecommendation: true,
       );
       _analytics.trackBookingFailed(
@@ -1568,7 +1571,7 @@ class BookingWizardController extends ChangeNotifier {
       if (generation == _recommendationGeneration) {
         _setLoading(false);
         notifyListeners();
-        if (_state.selectedVehicle != null && _state.pricing == null) {
+        if (_state.recommendation != null && _state.pricing == null) {
           await loadPricing();
         }
       }
@@ -1850,9 +1853,14 @@ class BookingWizardController extends ChangeNotifier {
     };
   }
 
+  bool entryServiceCollapsed = false;
+
+  final Map<String, PricingResult> vehiclePrices = {};
+  final Map<String, String> vehiclePriceErrors = {};
+
   Future<void> loadPricing() async {
-    if (!canLoadPricing()) return;
-    if (_state.serviceType == null || _state.selectedVehicle == null) return;
+    if (!canLoadRecommendation() || _state.recommendation == null) return;
+    if (_state.serviceType == null) return;
 
     final generation = ++_pricingGeneration;
     final scheduledPickupAt = scheduledPickupAtIso();
@@ -1868,33 +1876,58 @@ class BookingWizardController extends ChangeNotifier {
 
     final locations = _pricingLocationParams();
     final coordinates = await _pricingCoordinateParams();
-    final requestVehicle = _state.selectedVehicle!;
+    final requestVehicle = _state.selectedVehicle ?? 'SEDAN';
     _setLoading(true);
     try {
-      final pricing = await _api.calculatePricing(
-        golf: _state.serviceType == BookingServiceType.golfTransfer
-            ? _state.golf
-            : null,
-        serviceTypeCode: _state.serviceType!.apiCode,
-        vehicleTypeCode: requestVehicle,
-        originAirportIata: locations['originAirportIata'],
-        destinationRegion: locations['destinationRegion'],
-        originLocationCode: locations['originLocationCode'],
-        destinationLocationCode: locations['destinationLocationCode'],
-        originLat: coordinates?['originLat'],
-        originLng: coordinates?['originLng'],
-        destinationLat: coordinates?['destinationLat'],
-        destinationLng: coordinates?['destinationLng'],
-        scheduledPickupAt: scheduledPickupAt,
-        nameSign: _state.nameSign,
-        adults: _state.adults,
-        children: _state.children,
-        infants: _state.infants,
-        luggage20: _state.luggage20,
-        luggage24: _state.luggage24,
-        golfBags: _state.golfBags,
-        specialLuggageCount: _state.specialLuggageCount,
+      vehiclePrices.clear();
+      vehiclePriceErrors.clear();
+      await Future.wait(
+        [
+          ...customerVehicleTierOrder.where((v) => v != requestVehicle),
+          requestVehicle,
+        ].map((vehicle) async {
+          try {
+            final price = await _api.calculatePricing(
+              golf: _state.serviceType == BookingServiceType.golfTransfer
+                  ? _state.golf
+                  : null,
+              serviceTypeCode: _state.serviceType!.apiCode,
+              vehicleTypeCode: vehicle,
+              originAirportIata: locations['originAirportIata'],
+              destinationRegion: locations['destinationRegion'],
+              originLocationCode: locations['originLocationCode'],
+              destinationLocationCode: locations['destinationLocationCode'],
+              originLat: coordinates?['originLat'],
+              originLng: coordinates?['originLng'],
+              destinationLat: coordinates?['destinationLat'],
+              destinationLng: coordinates?['destinationLng'],
+              scheduledPickupAt: scheduledPickupAt,
+              nameSign: _state.nameSign,
+              adults: _state.adults,
+              children: _state.children,
+              infants: _state.infants,
+              luggage20: _state.luggage20,
+              luggage24: _state.luggage24,
+              golfBags: _state.golfBags,
+              specialLuggageCount: _state.specialLuggageCount,
+            );
+            if (generation == _pricingGeneration)
+              vehiclePrices[vehicle] = price;
+          } catch (e) {
+            if (generation == _pricingGeneration)
+              vehiclePriceErrors[vehicle] =
+                  bookingPricingInquiryMessage(e) ?? 'ui_action_failed';
+          }
+        }),
       );
+      final pricing = vehiclePrices[requestVehicle];
+      if (pricing == null)
+        throw BookingApiException(
+          vehiclePriceErrors[requestVehicle] ?? 'ui_action_failed',
+          vehiclePriceErrors[requestVehicle] == 'pricing_inquiry_required'
+              ? 'INQUIRY_REQUIRED'
+              : null,
+        );
       if (generation != _pricingGeneration ||
           _state.selectedVehicle != requestVehicle) {
         return;
@@ -1906,9 +1939,7 @@ class BookingWizardController extends ChangeNotifier {
         return;
       }
       _state = _state.copyWith(
-        errorMessage:
-            bookingPricingInquiryMessage(e) ??
-            userFacingError(e, fallback: 'ui_action_failed'),
+        errorMessage: bookingPricingInquiryMessage(e) ?? 'ui_action_failed',
         clearPricing: true,
       );
       _analytics.trackBookingFailed(

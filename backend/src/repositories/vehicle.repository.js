@@ -66,6 +66,7 @@ class VehicleRepository {
           vcr.max_carriers_24_inch_plus,
           vcr.max_golf_bags,
           vcr.max_special_luggage,
+          vcr.combination_constraints,
           vcr.priority
         FROM vehicle_capacity_rules vcr
         INNER JOIN vehicle_types vt ON vt.id = vcr.vehicle_type_id

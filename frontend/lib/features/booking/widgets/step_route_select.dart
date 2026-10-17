@@ -38,6 +38,7 @@ class StepRouteSelect extends StatefulWidget {
 
 class _StepRouteSelectState extends State<StepRouteSelect> {
   int _originEditingResetToken = 0;
+  bool _serviceExpanded = false;
 
   bool get _canSwap =>
       widget.state.origin != null || widget.state.destination != null;
@@ -55,11 +56,24 @@ class _StepRouteSelectState extends State<StepRouteSelect> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AppUi.sectionHeader(context, title: l10n.t('select_service')),
-        StepServiceSelect(
-          embedded: true,
-          selected: state.serviceType,
-          onSelected: controller.selectService,
-        ),
+        if (controller.entryServiceCollapsed &&
+            !_serviceExpanded &&
+            state.serviceType != null)
+          Row(
+            children: [
+              Expanded(child: Text(l10n.t(state.serviceType!.labelKey))),
+              TextButton(
+                onPressed: () => setState(() => _serviceExpanded = true),
+                child: Text(l10n.t('change_location')),
+              ),
+            ],
+          )
+        else
+          StepServiceSelect(
+            embedded: true,
+            selected: state.serviceType,
+            onSelected: (service) { controller.selectService(service); setState(() => _serviceExpanded = false); },
+          ),
         const SizedBox(height: WizardCompact.sectionGap),
         if (state.serviceType == BookingServiceType.golfTransfer)
           GolfTripFields(

@@ -3,6 +3,21 @@ import 'package:frontend/features/booking/utils/customer_booking_format.dart';
 import 'package:frontend/l10n/app_localizations.dart';
 
 void main() {
+  for (final lang in ['ko', 'en', 'th', 'ja', 'zh']) {
+    test('capacity and safe place error translations exist in $lang', () {
+      final l = AppLocalizations(lang);
+      for (final key in [
+        'cx_capacity_cases',
+        'cx_capacity_no_large',
+        'cx_capacity_combined',
+        'cx_places_error',
+      ]) {
+        expect(l.t(key), isNot(key));
+        expect(l.t(key), isNot(contains('provider is not configured')));
+      }
+    });
+  }
+
   test('formats THB without exposing raw currency layout', () {
     expect(CustomerBookingFormat.money(1300, 'THB'), '฿1,300');
     expect(CustomerBookingFormat.money(1300.4, 'thb'), '฿1,300');

@@ -10,6 +10,7 @@ import 'wizard_compact.dart';
 import 'wizard_status_views.dart';
 import 'wizard_ui.dart';
 import 'fare_inquiry_card.dart';
+import '../utils/customer_booking_format.dart';
 
 class StepVehicleSelect extends StatelessWidget {
   final BookingWizardState state;
@@ -22,16 +23,6 @@ class StepVehicleSelect extends StatelessWidget {
     required this.controller,
     this.embedded = false,
   });
-
-  IconData _iconForVehicle(String vehicle) {
-    if (vehicle.contains('Van') || vehicle.contains('VAN')) {
-      return Icons.airport_shuttle_outlined;
-    }
-    if (vehicle.contains('SUV')) {
-      return Icons.directions_car_filled_outlined;
-    }
-    return Icons.directions_car_outlined;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,13 +61,13 @@ class StepVehicleSelect extends StatelessWidget {
             context,
             title: l10n.t('select_vehicle'),
             subtitle:
-                '${l10n.t('recommended')}: ${recommendation.recommendedVehicle}',
+                '${l10n.t('recommended')}: ${l10n.t('cx_vehicle_${recommendation.recommendedVehicle}')}',
           ),
         if (embedded && !recommendation.multipleVehicles)
           Padding(
             padding: const EdgeInsets.only(bottom: WizardCompact.fieldGap),
             child: Text(
-              '${l10n.t('recommended')}: ${recommendation.recommendedVehicle}',
+              '${l10n.t('recommended')}: ${l10n.t('cx_vehicle_${recommendation.recommendedVehicle}')}',
               style: WizardCompact.hintTextStyle,
             ),
           ),
@@ -95,49 +86,138 @@ class StepVehicleSelect extends StatelessWidget {
         ...BookingWizardController.customerVehicleTierOrder.map((vehicle) {
           final enabled = controller.isVehicleEnabled(vehicle);
           final selected = state.selectedVehicle == vehicle;
-          final isRecommended = recommendation.recommendedVehicle == vehicle;
+          final price = controller.vehiclePrices[vehicle];
+          final error = controller.vehiclePriceErrors[vehicle];
+          final rules = recommendation.capacityRules.where(
+            (r) => r['vehicleCode'] == vehicle,
+          );
           return Padding(
-            padding: EdgeInsets.only(
-              bottom: embedded ? WizardCompact.fieldGap : 10,
-            ),
-            child: Semantics(
-              button: true,
-              selected: selected,
-              label: vehicle,
-              child: embedded
-                  ? WizardUi.selectionTile(
-                      title: vehicle,
-                      subtitle: enabled
-                          ? (isRecommended ? recommendation.message : null)
-                          : l10n.t('customer_vehicle_not_suitable'),
-                      icon: _iconForVehicle(vehicle),
-                      selected: selected,
-                      onTap: () {
-                        if (enabled) {
-                          controller.selectVehicle(vehicle);
-                        } else {
-                          controller.reportVehicleCapacityWarning(vehicle);
-                        }
-                      },
-                    )
-                  : AppUi.selectionTile(
-                      title: vehicle,
-                      subtitle: enabled
-                          ? (isRecommended ? recommendation.message : null)
-                          : l10n.t('customer_vehicle_not_suitable'),
-                      icon: _iconForVehicle(vehicle),
-                      selected: selected,
-                      onTap: () {
-                        if (enabled) {
-                          controller.selectVehicle(vehicle);
-                        } else {
-                          controller.reportVehicleCapacityWarning(vehicle);
-                        }
-                      },
-                    ),
+            padding: const EdgeInsets.only(bottom: AppTokens.spaceSm),
+            child: Material(
+              color: enabled
+                  ? (selected ? AppTokens.primaryLight : AppTokens.surface)
+                  : AppTokens.surfaceMuted,
+              shape: RoundedRectangleBorder(
+                borderRadius: AppTokens.borderRadiusMd,
+                side: BorderSide(
+                  color: selected ? AppTokens.primary : AppTokens.border,
+                ),
+              ),
+              child: InkWell(
+                borderRadius: AppTokens.borderRadiusMd,
+                onTap: enabled ? () => controller.selectVehicle(vehicle) : null,
+                child: Padding(
+                  padding: const EdgeInsets.all(AppTokens.spaceMd),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          CustomerVehicleArtwork(vehicle: vehicle),
+                          const SizedBox(width: AppTokens.spaceSm),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  l10n.t('cx_vehicle_$vehicle'),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                if (recommendation.recommendedVehicle ==
+                                    vehicle)
+                                  Text(
+                                    l10n.t('recommended'),
+                                    style: const TextStyle(
+                                      color: AppTokens.primary,
+                                    ),
+                                  ),
+                                Text(
+                                  price != null
+                                      ? CustomerBookingFormat.money(
+                                          price.totalAmount,
+                                          price.currency,
+                                        )
+                                      : error == 'pricing_inquiry_required'
+                                      ? l10n.t('pricing_inquiry_required')
+                                      : controller.isLoading
+                                      ? l10n.t('calculating_price')
+                                      : l10n.t('cx_vehicle_error'),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (selected)
+                            const Icon(
+                              Icons.check_circle,
+                              color: AppTokens.primary,
+                            ),
+                        ],
+                      ),
+                      for (final r in rules)
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            top: AppTokens.spaceSm,
+                          ),
+                          child: Text(
+                            l10n
+                                .t(
+                                  (r['constraints'] as Map?)?['maxCases'] !=
+                                          null
+                                      ? 'cx_capacity_cases'
+                                      : 'cx_capacity',
+                                )
+                                .replaceAll(
+                                  '{c}',
+                                  '${(r['constraints'] as Map?)?['maxCases']}',
+                                )
+                                .replaceAll('{p}', '${r['passengers']}')
+                                .replaceAll('{s}', '${r['luggage20']}')
+                                .replaceAll('{l}', '${r['luggage24']}')
+                                .replaceAll('{g}', '${r['golfBags']}'),
+                          ),
+                        ),
+                      for (final r in rules) ...[
+                        if ((r['constraints'] as Map?)?['noLargeAtGolf'] !=
+                            null)
+                          Text(
+                            l10n
+                                .t('cx_capacity_no_large')
+                                .replaceAll(
+                                  '{g}',
+                                  '${r['constraints']['noLargeAtGolf']}',
+                                ),
+                          ),
+                        if ((r['constraints'] as Map?)?['maxCasesAndGolf'] !=
+                            null)
+                          Text(
+                            l10n
+                                .t('cx_capacity_combined')
+                                .replaceAll(
+                                  '{n}',
+                                  '${r['constraints']['maxCasesAndGolf']}',
+                                ),
+                          ),
+                      ],
+                      if (!enabled)
+                        Text(
+                          l10n.t('customer_vehicle_not_suitable'),
+                          style: const TextStyle(
+                            color: AppTokens.textSecondary,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           );
         }),
+        Text(
+          l10n.t('cx_capacity_note'),
+          style: const TextStyle(color: AppTokens.textSecondary),
+        ),
         if (state.selectedVehicle == null)
           WizardUi.infoHint(l10n.t('wizard_pricing_after_vehicle'))
         else if (controller.isLoading && state.pricing == null)
@@ -212,21 +292,48 @@ class _PricingBreakdown extends StatelessWidget {
         children: [
           AppUi.summaryRow(
             label: l10n.t('base_price'),
-            value: '${pricing.basePrice} ${pricing.currency}',
+            value: CustomerBookingFormat.money(
+              pricing.basePrice,
+              pricing.currency,
+            ),
           ),
           for (final item in pricing.additionalCharges)
             AppUi.summaryRow(
               label: PricingDisplay.chargeItemLabel(l10n, item),
-              value: '${item.amount} ${pricing.currency}',
+              value: CustomerBookingFormat.money(item.amount, pricing.currency),
             ),
           Divider(height: compact ? 16 : 24),
           AppUi.summaryRow(
             label: l10n.t('total'),
-            value: '${pricing.totalAmount} ${pricing.currency}',
+            value: CustomerBookingFormat.money(
+              pricing.totalAmount,
+              pricing.currency,
+            ),
             emphasize: true,
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Replace the asset path with a licensed JPG/PNG/WebP to switch to photography.
+class CustomerVehicleArtwork extends StatelessWidget {
+  const CustomerVehicleArtwork({super.key, required this.vehicle});
+  final String vehicle;
+  static const assets = {
+    'SEDAN': 'assets/images/vehicle_sedan.png',
+    'SUV': 'assets/images/vehicle_suv.png',
+    'VAN': 'assets/images/vehicle_van.png',
+  };
+  @override
+  Widget build(BuildContext context) {
+    final asset = assets[vehicle]!;
+    return Image.asset(
+      asset,
+      width: AppTokens.spaceXl * 3,
+      height: AppTokens.spaceXl * 2,
+      fit: BoxFit.contain,
     );
   }
 }

@@ -155,7 +155,15 @@ const getGuestAssignedDriverVehiclePhoto = asyncHandler(async (req, res) => {
   return res.sendFile(resolveUploadAbsolutePath(file.filePath));
 });
 
+const getGuestAssignedDriverPhoto = asyncHandler(async (req,res) => {
+  const file = await getGuestVehiclePhotoService().getAssignedDriverAvatarFile(Number(req.params.bookingId),extractGuestAccessTokenFromHeader(req),req.user??null);
+  res.setHeader('Cache-Control','private, no-store');
+  res.type(file.mimeType || 'application/octet-stream');
+  return res.sendFile(resolveUploadAbsolutePath(file.filePath));
+});
+
 module.exports = {
+  getGuestAssignedDriverPhoto,
   recommendVehicle,
   createBooking,
   updateBookingStatus,

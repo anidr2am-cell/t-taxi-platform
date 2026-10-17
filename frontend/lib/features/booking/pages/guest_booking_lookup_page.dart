@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
-import '../../../utils/user_facing_error.dart';
+
 import '../../../widgets/app_ui.dart';
 import '../models/guest_booking_lookup_result.dart';
 import '../models/guest_contact_lookup_item.dart';
@@ -12,11 +12,10 @@ import '../services/guest_booking_lookup_service.dart';
 import '../../auth/services/auth_token_storage.dart';
 import '../utils/booking_status_display.dart';
 import '../utils/customer_booking_format.dart';
-import '../utils/location_display.dart';
 import '../widgets/guest_booking_lookup_inquiry_banner.dart';
 import '../widgets/booking_notification_section.dart';
 import '../widgets/booking_review_form.dart';
-import '../widgets/assigned_driver_status_card.dart';
+import '../widgets/booking_voucher.dart';
 import '../widgets/airport_meeting_guide_card.dart';
 import '../widgets/guest_booking_cancel_section.dart';
 import '../widgets/customer_payment_instructions_card.dart';
@@ -173,7 +172,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         _refreshing = false;
         _error = err.errorCode == 'BOOKING_NOT_FOUND'
             ? l10n.t('guest_lookup_not_found')
-            : userFacingError(err, fallback: l10n.t('guest_lookup_load_error'));
+            : l10n.t('guest_lookup_load_error');
       });
     } catch (_) {
       if (!mounted) return;
@@ -203,10 +202,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
       if (!mounted) return;
       setState(() {
         _refreshing = false;
-        _error = userFacingError(
-          err,
-          fallback: context.l10n.t('guest_lookup_load_error'),
-        );
+        _error = context.l10n.t('guest_lookup_load_error');
       });
     } catch (_) {
       if (!mounted) return;
@@ -295,7 +291,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         _loading = false;
         _error = err.errorCode == 'BOOKING_NOT_FOUND'
             ? l10n.t('guest_lookup_not_found')
-            : userFacingError(err, fallback: l10n.t('guest_lookup_load_error'));
+            : l10n.t('guest_lookup_load_error');
       });
     } catch (_) {
       if (!mounted) return;
@@ -336,7 +332,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         _loading = false;
         _error = err.errorCode == 'BOOKING_NOT_FOUND'
             ? l10n.t('guest_lookup_not_found')
-            : userFacingError(err, fallback: l10n.t('guest_lookup_load_error'));
+            : l10n.t('guest_lookup_load_error');
       });
     } catch (_) {
       if (!mounted) return;
@@ -748,58 +744,13 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
       children: [
         const GuestBookingLookupInquiryBanner(),
         const SizedBox(height: AppTokens.spaceMd),
-        AppUi.surfaceCard(
-          backgroundColor: AppTokens.primaryLight,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.t('guest_lookup_booking_number'),
-                style: const TextStyle(
-                  color: AppTokens.textSecondary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 8),
-              SelectableText(
-                result.bookingNumber,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.1,
-                  color: AppTokens.primaryDark,
-                ),
-              ),
-              const SizedBox(height: AppTokens.spaceMd),
-              AppUi.statusBadge(
-                BookingStatusDisplay.label(
-                  l10n,
-                  result.status,
-                  reassignmentInProgress: result.reassignmentInProgress,
-                ),
-                tone: result.reassignmentInProgress
-                    ? AppStatusTone.warning
-                    : AppUi.toneForBookingStatus(result.status),
-              ),
-            ],
-          ),
+        BookingVoucher(
+          result: result,
+          useCustomerAuth: widget.fromMyBookings,
+          customerAccessToken: _customerAccessToken,
         ),
         const SizedBox(height: AppTokens.spaceMd),
         _actionSummary(result),
-        if (result.driverName?.trim().isNotEmpty == true) ...[
-          const SizedBox(height: AppTokens.spaceMd),
-          AssignedDriverStatusCard(
-            result: result,
-            allowDriverPhoneWithoutGuestToken:
-                widget.fromMyBookings &&
-                _customerAccessToken?.trim().isNotEmpty == true,
-            useCustomerAuth: widget.fromMyBookings,
-            customerAccessToken: widget.fromMyBookings
-                ? _customerAccessToken
-                : null,
-          ),
-        ],
         if (BookingStatusDisplay.customerGuidance(
               l10n,
               result.status,
@@ -877,49 +828,6 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
           ),
         ],
         const SizedBox(height: AppTokens.spaceMd),
-        AppUi.sectionHeader(
-          context,
-          title: l10n.t('guest_lookup_trip_details'),
-        ),
-        AppUi.surfaceCard(
-          child: Column(
-            children: [
-              AppUi.summaryRow(
-                label: l10n.t('guest_lookup_pickup'),
-                value: CustomerBookingFormat.pickupDateTime(
-                  l10n,
-                  result.scheduledPickupAt,
-                ),
-              ),
-              AppUi.summaryRow(
-                label: l10n.t('guest_lookup_service'),
-                value: result.serviceTypeName,
-              ),
-              bookingLocationSummaryRow(
-                label: l10n.t('origin'),
-                name: result.originName,
-                address: result.originAddress,
-              ),
-              bookingLocationSummaryRow(
-                label: l10n.t('destination'),
-                name: result.destinationName,
-                address: result.destinationAddress,
-              ),
-              if (result.driverName != null) ...[
-                const Divider(height: 24),
-                AppUi.summaryRow(
-                  label: l10n.t('guest_lookup_driver'),
-                  value: result.driverName!,
-                ),
-                if (_canShowDriverPhone(result))
-                  AppUi.summaryRow(
-                    label: l10n.t('guest_lookup_driver_phone'),
-                    value: result.driverPhone!.trim(),
-                  ),
-              ],
-            ],
-          ),
-        ),
         if (AirportMeetingGuideCard.shouldShow(
           serviceTypeCode: result.serviceTypeCode,
           originAirportCode: result.originAirportCode,

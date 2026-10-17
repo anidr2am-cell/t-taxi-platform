@@ -13,7 +13,8 @@ const { validateContactChannelUrl } = require('../utils/contactChannelUrl.util')
 
 const GROUP = 'operations';
 const CONTACT_GROUP = 'contact_channels';
-const TEXT_KEYS = ['lineQrDescription', 'bankName', 'accountName', 'accountNumber', 'promptPayNumber', 'googleReviewUrl'];
+const MEETING_KEYS = ['BKK','DMK','UTP'].flatMap(a => ['ko','en','th','ja','zh'].map(l => `meeting${a}_${l}`));
+const TEXT_KEYS = [...MEETING_KEYS, 'lineQrDescription', 'bankName', 'accountName', 'accountNumber', 'promptPayNumber', 'googleReviewUrl'];
 const CONTACT_TEXT_KEYS = [
   'guestLookupInquiryBannerEnabled', 'guestLookupInquiryBannerMessage',
   'contactLineEnabled', 'contactLineDisplayName', 'contactLineAddUrl', 'contactLineAccountId',
@@ -42,6 +43,7 @@ class PlatformSettingsService {
     const rows = await this.settingsRepository.findByGroup(GROUP);
     const values = Object.fromEntries(rows.map((row) => [row.key_name, row.value]));
     return {
+      ...Object.fromEntries(MEETING_KEYS.map(k => [k, values[k] || ''])),
       googleReviewUrl: values.googleReviewUrl || '',
       lineQrDescription: values.lineQrDescription || '',
       bankName: values.bankName || '',
@@ -57,6 +59,7 @@ class PlatformSettingsService {
     const rows = await this.settingsRepository.findByGroup(GROUP);
     const values = Object.fromEntries(rows.map((row) => [row.key_name, row.value]));
     return {
+      ...Object.fromEntries(MEETING_KEYS.map(k => [k, values[k] || ''])),
       googleReviewUrl: values.googleReviewUrl || '',
       lineQrDescription: values.lineQrDescription || '',
       lineQrImageUrl: settingsAssetUrl('lineQr', values.lineQrImagePath),
@@ -242,7 +245,7 @@ class PlatformSettingsService {
   }
 
   async update(input, userId) {
-    await Promise.all(TEXT_KEYS.filter((key) => key !== 'googleReviewUrl' || Object.hasOwn(input, key)).map((key) => this.settingsRepository.upsert(
+    await Promise.all(TEXT_KEYS.filter((key) => (!MEETING_KEYS.includes(key) && key !== 'googleReviewUrl') || Object.hasOwn(input, key)).map((key) => this.settingsRepository.upsert(
       GROUP, key, String(input[key] ?? '').trim(), userId,
     )));
     return this.getAdmin();

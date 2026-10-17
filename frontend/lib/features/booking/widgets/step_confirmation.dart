@@ -314,9 +314,9 @@ class StepConfirmation extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(left: 12, right: 12, bottom: 8),
                 child: SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'KRW', label: Text('KRW (원화)')),
-                    ButtonSegment(value: 'THB', label: Text('THB (바트)')),
+                  segments: [
+                    ButtonSegment(value: 'KRW', label: Text(l10n.t('cx_currency_KRW'))),
+                    ButtonSegment(value: 'THB', label: Text(l10n.t('cx_currency_THB'))),
                   ],
                   selected: {state.paymentCurrency ?? 'KRW'},
                   onSelectionChanged: (values) =>

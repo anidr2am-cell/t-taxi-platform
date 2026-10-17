@@ -79,7 +79,7 @@ describe('PlatformSettingsService', () => {
       promptPayQrImagePath: 'settings/promptpay.png',
     }).getPublic();
 
-    assert.deepEqual(Object.keys(settings).sort(), ['googleReviewUrl', 'lineQrDescription', 'lineQrImageUrl']);
+    assert.deepEqual(Object.keys(settings).sort(), ['googleReviewUrl', 'lineQrDescription', 'lineQrImageUrl', ...['BKK','DMK','UTP'].flatMap(a => ['ko','en','th','ja','zh'].map(l => `meeting${a}_${l}`))].sort());
     assert.equal(settings.lineQrDescription, 'LINE 문의 안내');
     expectVersionedAssetUrl(settings.lineQrImageUrl, 'lineQr');
     assert.equal(settings.bankName, undefined);
@@ -108,7 +108,7 @@ describe('PlatformSettingsService', () => {
     const publicSettings = await service.getPublic();
     const contactChannels = await service.getContactChannelsPublic();
 
-    assert.deepEqual(Object.keys(publicSettings).sort(), ['googleReviewUrl', 'lineQrDescription', 'lineQrImageUrl']);
+    assert.deepEqual(Object.keys(publicSettings).sort(), ['googleReviewUrl', 'lineQrDescription', 'lineQrImageUrl', ...['BKK','DMK','UTP'].flatMap(a => ['ko','en','th','ja','zh'].map(l => `meeting${a}_${l}`))].sort());
     assert.equal(publicSettings.contactChannels, undefined);
     assert.equal(contactChannels.channels.length, 1);
     assert.equal(contactChannels.channels[0].code, 'LINE');

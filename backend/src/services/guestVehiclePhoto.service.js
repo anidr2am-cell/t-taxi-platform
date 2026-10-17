@@ -11,6 +11,25 @@ class GuestVehiclePhotoService {
     this.pool = pool;
   }
 
+  async getAssignedDriverAvatarFile(bookingId, guestAccessToken, authUser = null) {
+    let authorized = false;
+    if (authUser?.role === ROLES.CUSTOMER && this.pool && this.bookingService) {
+      const conn = await this.pool.getConnection();
+      try {
+        const booking = await this.bookingRepository.findById(bookingId, conn);
+        if (booking?.customer_user_id === authUser.id) {
+          await this.bookingService.assertCustomerOrGuestAccess(conn, booking, authUser, null);
+          authorized = true;
+        }
+      } finally { conn.release(); }
+    }
+    const token = String(guestAccessToken ?? '').trim();
+    if (!authorized && !token) throw new AppError('Booking is not accessible', {statusCode: HTTP_STATUS.FORBIDDEN, errorCode: ERROR_CODES.BOOKING_NOT_ACCESSIBLE});
+    const file = await this.bookingRepository.findAssignedDriverAvatarFile(bookingId, authorized ? null : hashToken(token));
+    if (!file) throw new AppError('Photo not found', {statusCode: HTTP_STATUS.NOT_FOUND,errorCode:ERROR_CODES.NOT_FOUND});
+    return this.mapPhotoFileRow(file);
+  }
+
   buildPublicPhotoPath(bookingId) {
     return `/api/v1/public/bookings/${bookingId}/assigned-driver-vehicle-photo`;
   }

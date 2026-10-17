@@ -46,9 +46,13 @@ class AssignedDriverStatusCard extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    final vehicleKey = 'cx_vehicle_${result.vehicleType?.trim().toUpperCase()}';
+    final vehicleLabel = l10n.t(vehicleKey);
     final vehicleLines = <String>[
       if (result.vehicleType?.trim().isNotEmpty == true)
-        result.vehicleType!.trim(),
+        vehicleLabel == vehicleKey ? result.vehicleType!.trim() : vehicleLabel,
+      if (result.vehicleModel?.trim().isNotEmpty == true)
+        result.vehicleModel!.trim(),
       if (result.vehicleColor?.trim().isNotEmpty == true)
         result.vehicleColor!.trim(),
       if (result.vehiclePlateNumber?.trim().isNotEmpty == true)

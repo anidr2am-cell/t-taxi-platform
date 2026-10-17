@@ -1489,7 +1489,7 @@ void main() {
       expect(find.textContaining('km est'), findsNothing);
       expect(find.textContaining('132.34'), findsNothing);
       expect(find.text('Base price'), findsOneWidget);
-      expect(find.textContaining('1300 THB'), findsAtLeastNWidgets(1));
+      expect(find.textContaining('฿1,300'), findsAtLeastNWidgets(1));
     },
   );
 

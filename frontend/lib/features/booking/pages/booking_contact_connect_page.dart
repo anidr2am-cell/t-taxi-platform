@@ -67,8 +67,7 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
 
   bool get _isVerified => _connection?.isVerified ?? false;
 
-  bool get _isConfirmRequested =>
-      _connection?.isConfirmRequested ?? false;
+  bool get _isConfirmRequested => _connection?.isConfirmRequested ?? false;
 
   bool get _hasStartedConnection =>
       _selectedChannelCode != null ||
@@ -114,10 +113,7 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
       }
 
       if (_result != null) {
-        await BookingReviewApi().persistGuestToken(
-          widget.bookingNumber,
-          token,
-        );
+        await BookingReviewApi().persistGuestToken(widget.bookingNumber, token);
       }
 
       final channelsFuture = _service.getPublicChannels();
@@ -153,7 +149,7 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _errorMessage = e.toString();
+        _errorMessage = context.l10n.t('ui_load_failed');
       });
     }
   }
@@ -199,7 +195,9 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
       }
     } catch (_) {
       if (!silent && mounted) {
-        setState(() => _errorMessage = context.l10n.t('contact_connect_load_failed'));
+        setState(
+          () => _errorMessage = context.l10n.t('contact_connect_load_failed'),
+        );
       }
     } finally {
       _isRefreshing = false;
@@ -281,7 +279,7 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
       if (!mounted) return;
       setState(() {
         _actionBusy = false;
-        _errorMessage = e.toString();
+        _errorMessage = context.l10n.t('ui_load_failed');
       });
     }
   }
@@ -349,7 +347,7 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
       setState(() {
         _actionBusy = false;
         _confirmSubmitting = false;
-        _errorMessage = e.toString();
+        _errorMessage = context.l10n.t('ui_load_failed');
       });
     }
   }
@@ -361,7 +359,8 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
     final args = widget.args;
     final resolvedConnection = connection ?? _connection;
     final token = guestToken ?? _guestToken;
-    final result = args?.result ??
+    final result =
+        args?.result ??
         (resolvedConnection != null
             ? resolvedConnection.toMinimalCreateResult(guestAccessToken: token)
             : null);
@@ -379,7 +378,9 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
         Navigator.of(context).pushReplacementNamed('/booking/lookup');
         return;
       case ContactCompletionTarget.urgentFlow:
-        _analytics.trackContactConnectSucceeded(bookingId: widget.bookingNumber);
+        _analytics.trackContactConnectSucceeded(
+          bookingId: widget.bookingNumber,
+        );
         _analytics.trackBookingFullyCompleted(
           bookingId: widget.bookingNumber,
           vehicleType: args?.selectedVehicle,
@@ -396,7 +397,9 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
         );
         return;
       case ContactCompletionTarget.completePage:
-        _analytics.trackContactConnectSucceeded(bookingId: widget.bookingNumber);
+        _analytics.trackContactConnectSucceeded(
+          bookingId: widget.bookingNumber,
+        );
         _analytics.trackBookingFullyCompleted(
           bookingId: widget.bookingNumber,
           vehicleType: args?.selectedVehicle,
@@ -433,10 +436,9 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
               scheduledPickupAt: args.scheduledPickupAt,
               selectedVehicle: args.selectedVehicle,
               enableCustomerTools: true,
-              meetingVehicleInfo: args.meetingVehicleInfo ??
-                  AirportMeetingVehicleInfo(
-                    vehicleType: args.selectedVehicle,
-                  ),
+              meetingVehicleInfo:
+                  args.meetingVehicleInfo ??
+                  AirportMeetingVehicleInfo(vehicleType: args.selectedVehicle),
             ),
           ),
         );
@@ -518,7 +520,8 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
     final l10n = context.l10n;
     final locale = context.watch<LocaleState>().languageCode;
     final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
-    final showCtaBar = !_loading &&
+    final showCtaBar =
+        !_loading &&
         !_isConfirmRequested &&
         _hasStartedConnection &&
         !keyboardVisible;
@@ -532,9 +535,9 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
       });
     }
     final selectedChannel = orderedChannels.cast<ContactChannel?>().firstWhere(
-          (channel) => channel!.code == _selectedChannelCode,
-          orElse: () => null,
-        );
+      (channel) => channel!.code == _selectedChannelCode,
+      orElse: () => null,
+    );
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
@@ -556,10 +559,7 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _ProgressSteps(
-                        currentStep: _progressStep,
-                        l10n: l10n,
-                      ),
+                      _ProgressSteps(currentStep: _progressStep, l10n: l10n),
                       const SizedBox(height: AppTokens.spaceMd),
                       AppUi.surfaceCard(
                         child: Column(
@@ -578,15 +578,14 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                        ),
+                                        ?.copyWith(fontWeight: FontWeight.w700),
                                   ),
                                 ),
                                 IconButton(
                                   tooltip: l10n.t('booking_number_copy'),
-                                  onPressed:
-                                      _confirmSubmitting ? null : _copyBookingRef,
+                                  onPressed: _confirmSubmitting
+                                      ? null
+                                      : _copyBookingRef,
                                   icon: const Icon(Icons.copy_outlined),
                                 ),
                               ],
@@ -633,9 +632,7 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
               child: ColoredBox(
                 key: const Key('contact_connect_confirm_overlay'),
                 color: const Color(0x3D000000),
-                child: const Center(
-                  child: CircularProgressIndicator(),
-                ),
+                child: const Center(child: CircularProgressIndicator()),
               ),
             ),
         ],
@@ -667,9 +664,7 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
+                              child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : Text(l10n.t('contact_connect_confirm_sent')),
                     ),
@@ -771,10 +766,11 @@ class _ChannelButton extends StatelessWidget {
             ? FilledButton(
                 onPressed: busy ? null : onTap,
                 child: Text(
-                  context.l10n
-                      .t(channel.code == 'KAKAO'
-                          ? 'booking_contact_confirm_kakao'
-                          : 'booking_contact_confirm_line'),
+                  context.l10n.t(
+                    channel.code == 'KAKAO'
+                        ? 'booking_contact_confirm_kakao'
+                        : 'booking_contact_confirm_line',
+                  ),
                 ),
               )
             : OutlinedButton(

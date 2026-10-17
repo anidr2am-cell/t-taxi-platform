@@ -398,7 +398,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Jul 1, 2026, 9:30 AM'), findsWidgets);
-    expect(find.text('฿1,500'), findsOneWidget);
+    expect(find.text('฿1,500'), findsWidgets);
     expect(find.text('Pay the driver at the destination'), findsWidgets);
     expect(find.text('PAY_DRIVER'), findsNothing);
     expect(find.text('2026-07-01T09:30:00+07:00'), findsNothing);
@@ -912,7 +912,7 @@ void main() {
         find.text(
           'Before the trip starts, you can cancel through booking lookup free of charge for a full refund if pickup is more than 2 hours away.',
         ),
-        findsOneWidget,
+        findsNWidgets(2),
       );
     },
   );

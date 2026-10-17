@@ -27,7 +27,7 @@
  document.querySelector('#cookie-deny').addEventListener('click',()=>save('denied'));
  document.querySelector('#consent-settings').addEventListener('click',()=>banner.hidden=false);
  banner.hidden=['granted','denied'].includes(read());if(read()==='granted'){captureAttribution();analytics();}
- document.querySelectorAll('[data-service]').forEach(a=>a.addEventListener('click',()=>event('landing_service_click',{service_type:a.dataset.service})));
+ document.querySelectorAll('[data-service]').forEach(a=>a.addEventListener('click',()=>{const url=new URL(a.href);url.searchParams.set('entry',crypto.randomUUID());a.href=url.href;event('landing_service_click',{service_type:a.dataset.service});}));
  document.querySelector('#language-select').addEventListener('change',e=>{const lang=e.target.value;if(!['ko','en','th','ja','zh'].includes(lang))return;event('landing_language_change',{destination_language:lang});location.href=lang==='ko'?'/':`/${lang}/`;});
  document.querySelector('#support-actions').addEventListener('click',e=>{const a=e.target.closest('[data-channel]');if(a)event('landing_support_click',{channel:a.dataset.channel});});
  document.querySelector('.airport-tabs').addEventListener('click',e=>{
@@ -54,6 +54,7 @@
    document.querySelector('tbody').replaceChildren(tbody);document.querySelector('.airport-tabs').replaceChildren(tabs);document.querySelector('#hero-price-amount').textContent=hero.prices.SEDAN.toLocaleString('en-US');
    const channels=[...body.data.channels].sort((a,b)=>data.contactOrder.indexOf(a.code)-data.contactOrder.indexOf(b.code));
    const links=channels.flatMap(c=>{if(!data.channels[c.code])return[];const digits=(c.phoneNumber||'').replace(/\D/g,'');const raw=c.code==='WHATSAPP'?(digits?`https://wa.me/${digits}`:null):(c.addUrl||`/support?lang=${data.lang}`);if(!raw)return[];const url=allowedContact(raw);if(!url)return[];const a=document.createElement('a');a.dataset.channel=c.code;a.href=url;a.rel='noopener noreferrer';a.target='_blank';a.textContent=data.channels[c.code]+data.contactSuffix;return[a];});
+   const heroSupport=document.querySelector('#hero-support');if(heroSupport&&links.length){const first=links[0].cloneNode(true);first.className='service';first.textContent=data.heroContact.replace('{channel}',data.channels[channels[0].code]);heroSupport.replaceChildren(first);}
    const parent=document.querySelector('#support-actions');parent.querySelectorAll('[data-channel]').forEach(a=>a.remove());links.forEach(a=>parent.insertBefore(a,parent.lastElementChild));
    document.querySelector('#fare-status').textContent=data.fareMessages[0];
   }catch{document.querySelector('#fare-status').textContent=data.fareMessages[1]+' ('+data.snapshotDate+')';}
