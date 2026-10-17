@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/analytics/marketing_attribution_provider.dart';
-import '../../../utils/user_facing_error.dart';
 import '../../account/services/coupon_api_service.dart';
 import '../../account/services/mileage_api_service.dart';
 import '../models/booking_wizard_steps.dart';

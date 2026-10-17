@@ -71,3 +71,36 @@ No recommendation/data correction is included. `vehicleRecommendation.service.js
 This was pre-existing and is now visible alongside capacity text. The explicit instruction to keep capacity data/rules unchanged takes precedence; do not silently change eligibility or hide the discrepancy. Edward/Claude should resolve whether to align the legacy recommendation rules or revise capacity data before production approval. Raw evidence: C:/TTaxi-screens/customer-experience/capacity-consistency.json.
 
 Latest browser/CI results and screenshot gallery are provided in the local report.html. No production deploy is authorized.
+
+
+## 2026-10-17 approved capacity update
+
+Migration 76 is already deployed for golf fares. Capacity changes use 77;
+76 is never overwritten. `combination_constraints` is one nullable JSON column.
+SEDAN: 2 passengers / 2 small / 1 large / 2 golf; no large case with 2 golf.
+SUV: 3 passengers / at most 4 cases of any size / 3 golf; cases + golf <= 6.
+VAN: 8 passengers / 8 small / 8 large / 8 golf. Special luggage limits unchanged.
+Recommendation and selectable vehicles now use only active DB capacity rules.
+The response carries the same limits and combination constraints for display.
+
+9,720 combinations compared to deployed legacy behavior: unavailable 0.
+Unchanged 7,562; changes: SEDAN->SUV 14, SEDAN->VAN 14, SUV->SEDAN 24,
+SUV->VAN 2,027, VAN->SUV 77, VAN->SEDAN 2. Total changed 2,158.
+Legacy over-capacity recommendations account for movements to larger vehicles.
+Explicit tests: golf2+large1=>SUV; golf3+cases3=>SUV; golf3+cases4=>VAN.
+
+STG migration apply / rollback / reapply passed. Original three rows retained
+in migration_77_capacity_backup. Rollback restores exact original maxima and
+clears new constraints; retain additive nullable column and backup for safety.
+Production precheck must match IDs 1/2/4 and original maxima and confirm no
+existing migration_77_capacity_backup or combination_constraints before first apply.
+
+Customer-supplied original PNGs replace the 3 vehicle illustrations unchanged.
+All cards/breakdowns/voucher prices use CustomerBookingFormat.money.
+Model/color/plate are inside the assigned-driver card only; upper voucher shows
+only class. Search exceptions never render raw provider messages and include
+support; booking controller and contact/lookup errors use localized safe text.
+
+Production requires PR-only range, main CI, backup + Drive count verification,
+77 precheck/apply, backend then frontend --no-deps, 30 minute observation.
+No production booking, email, DB/proxy restart or APK change.
