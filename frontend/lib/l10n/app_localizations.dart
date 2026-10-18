@@ -17,6 +17,9 @@ class AppLocalizations {
 
   static final Map<String, Map<String, String>> _translations = {
     'en': {
+      "admin_copy_action": "Copy {field}",
+      "admin_copy_success": "Copied",
+      "admin_copy_failed": "Could not copy. Please select the text and copy it manually.",
       "cx_notice_BOOKING_CREATED": "Booking created\nYour booking has been created.",
       "cx_notice_BOOKING_CONFIRMED": "Booking confirmed\nYour booking has been confirmed.",
       "cx_notice_BOOKING_CANCELLED": "Booking cancelled\nYour booking has been cancelled.",
@@ -2058,6 +2061,9 @@ class AppLocalizations {
       'guest_lookup_booking_number_hint': 'TX202607010001',
     },
     'ko': {
+      "admin_copy_action": "{field} 복사",
+      "admin_copy_success": "복사했습니다",
+      "admin_copy_failed": "복사하지 못했습니다. 텍스트를 선택해 직접 복사해 주세요.",
       "cx_notice_BOOKING_CREATED": "예약 접수\n예약이 접수되었습니다.",
       "cx_notice_BOOKING_CONFIRMED": "예약 확정\n예약이 확정되었습니다.",
       "cx_notice_BOOKING_CANCELLED": "예약 취소\n예약이 취소되었습니다.",
@@ -3537,6 +3543,9 @@ class AppLocalizations {
       'customer_driver_location_retry': '다시 시도',
     },
     'zh': {
+      "admin_copy_action": "复制{field}",
+      "admin_copy_success": "已复制",
+      "admin_copy_failed": "复制失败。请选择文字后手动复制。",
       "cx_notice_BOOKING_CREATED": "预订已受理\n您的预订已受理。",
       "cx_notice_BOOKING_CONFIRMED": "预订已确认\n您的预订已确认。",
       "cx_notice_BOOKING_CANCELLED": "预订已取消\n您的预订已取消。",
@@ -4518,6 +4527,9 @@ class AppLocalizations {
       'thb': 'THB',
     },
     'ja': {
+      "admin_copy_action": "{field}をコピー",
+      "admin_copy_success": "コピーしました",
+      "admin_copy_failed": "コピーできませんでした。テキストを選択して手動でコピーしてください。",
       "cx_notice_BOOKING_CREATED": "予約受付\nご予約を受け付けました。",
       "cx_notice_BOOKING_CONFIRMED": "予約確定\nご予約が確定しました。",
       "cx_notice_BOOKING_CANCELLED": "予約キャンセル\nご予約がキャンセルされました。",
@@ -5539,6 +5551,9 @@ class AppLocalizations {
       'thb': 'THB',
     },
     'th': {
+      "admin_copy_action": "คัดลอก{field}",
+      "admin_copy_success": "คัดลอกแล้ว",
+      "admin_copy_failed": "คัดลอกไม่สำเร็จ โปรดเลือกข้อความแล้วคัดลอกด้วยตนเอง",
       "cx_notice_BOOKING_CREATED": "รับการจองแล้ว\nระบบรับการจองของคุณแล้ว",
       "cx_notice_BOOKING_CONFIRMED": "ยืนยันการจองแล้ว\nการจองของคุณได้รับการยืนยันแล้ว",
       "cx_notice_BOOKING_CANCELLED": "ยกเลิกการจองแล้ว\nการจองของคุณถูกยกเลิกแล้ว",

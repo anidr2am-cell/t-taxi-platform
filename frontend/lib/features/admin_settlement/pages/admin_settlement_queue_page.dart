@@ -1,3 +1,4 @@
+import '../../admin/widgets/admin_selection_area.dart';
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -126,7 +127,7 @@ class _AdminSettlementQueuePageState extends State<AdminSettlementQueuePage> {
                         return AppUi.adminQueueCard(
                           onTap: () => Navigator.push(
                             context,
-                            MaterialPageRoute(
+                            AdminPageRoute(
                               builder: (_) => AdminSettlementDetailPage(
                                 bookingNumber: item['bookingNumber'] as String,
                                 api: _api,

@@ -1,3 +1,4 @@
+import '../../admin/widgets/admin_selection_area.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../booking/widgets/golf_trip_fields.dart';
@@ -602,7 +603,7 @@ class _AdminManualBookingCreatePageState
     final bookingNumber = _activeBookingNumber;
     if (bookingNumber == null) return;
     await Navigator.of(context).push(
-      MaterialPageRoute(
+      AdminPageRoute(
         builder: (_) => AdminBookingDetailPage(
           bookingNumber: bookingNumber,
           api: _dispatchApi,

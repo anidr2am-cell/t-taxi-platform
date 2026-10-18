@@ -1,3 +1,4 @@
+import '../../admin/widgets/admin_selection_area.dart';
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -142,7 +143,7 @@ class _AdminNotificationQueuePageState
     if (!mounted) return;
     await Navigator.push(
       context,
-      MaterialPageRoute(
+      AdminPageRoute(
         builder: (_) => AdminDriverApplicationDetailPage(id: applicationId),
       ),
     );
@@ -161,7 +162,7 @@ class _AdminNotificationQueuePageState
                 label: Text(context.l10n.t('admin_email_title')),
                 onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
+                  AdminPageRoute(
                     builder: (_) => const AdminEmailReviewPage(),
                   ),
                 ),

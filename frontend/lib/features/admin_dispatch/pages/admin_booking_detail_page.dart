@@ -1,3 +1,5 @@
+import '../../admin/widgets/admin_copy_button.dart';
+import '../../admin/widgets/admin_selection_area.dart';
 import 'package:flutter/material.dart';
 import '../widgets/admin_review_request_card.dart';
 
@@ -176,7 +178,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
 
   Future<void> _openManualCallEdit() async {
     final changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
+      AdminPageRoute(
         builder: (context) => Scaffold(
           appBar: AppBar(
             title: Text(context.l10n.t('admin_manual_booking_edit_title')),
@@ -1026,7 +1028,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     final detail = _detail;
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.bookingNumber)),
+      appBar: AppBar(title: Text(widget.bookingNumber), actions: [AdminCopyButton(text: widget.bookingNumber, label: l10n.t('booking_number_label'))]),
       bottomNavigationBar: detail == null || _loading || _error != null
           ? null
           : _secondaryActionBar(l10n, actions, detail),
@@ -2065,7 +2067,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             label: l10n.t('name'),
             value: customer['name'] as String? ?? '',
           ),
-          AppUi.summaryRow(
+          AdminCopyRow(
             label: l10n.t('phone'),
             value: (customer['phone'] as String?)?.trim().isNotEmpty == true
                 ? customer['phone'] as String
@@ -2164,12 +2166,12 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
           if (customer['messengerId'] != null &&
               customer['messengerId'] != 'PENDING' &&
               customer['messengerId'] != 'POST_CREATE')
-            AppUi.summaryRow(
+            AdminCopyRow(
               label: l10n.t('messenger_id'),
               value: customer['messengerId'] as String,
             ),
           if (customer['email'] != null)
-            AppUi.summaryRow(
+            AdminCopyRow(
               label: l10n.t('email'),
               value: customer['email'] as String,
             ),
@@ -2466,7 +2468,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   List<Widget> _flightRows(AppLocalizations l10n, Map<String, dynamic> detail) {
     final flight = Map<String, dynamic>.from(detail['flight'] as Map);
     return [
-      AppUi.summaryRow(
+      AdminCopyRow(
         label: l10n.t('admin_detail_flight'),
         value: flight['flightNumber'] as String? ?? '-',
       ),
@@ -3078,6 +3080,7 @@ class _LocationSummaryRow extends StatelessWidget {
                     ),
                   ),
           ),
+          AdminCopyButton(text: address ?? name ?? '', label: label),
         ],
       ),
     );

@@ -1,3 +1,4 @@
+import '../../features/admin/widgets/admin_selection_area.dart';
 import 'package:flutter/material.dart';
 import '../../features/admin_pricing/pages/admin_golf_prices_panel.dart';
 
@@ -220,7 +221,7 @@ class _AdminScreenState extends State<AdminScreen> {
       );
     }
 
-    return PopScope(
+    return AdminSelectionArea(child: PopScope(
       canPop: false,
       child: Scaffold(
         key: _drawerKey,
@@ -281,7 +282,7 @@ class _AdminScreenState extends State<AdminScreen> {
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildContent(AppLocalizations l10n) {

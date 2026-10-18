@@ -1,3 +1,5 @@
+import '../../admin/widgets/admin_copy_button.dart';
+import '../../admin/widgets/admin_selection_area.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -381,7 +383,7 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
   Future<void> _openDetail(String bookingNumber) async {
     await Navigator.push(
       context,
-      MaterialPageRoute(
+      AdminPageRoute(
         builder: (_) => AdminBookingDetailPage(
           bookingNumber: bookingNumber,
           api: _api,
@@ -808,6 +810,7 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
                 ),
               ),
               const SizedBox(height: AppTokens.spaceSm),
+              AdminCopyButton(text: item['bookingNumber'] as String? ?? '', label: l10n.t('booking_number_label')),
               AppUi.statusBadge(
                 BookingStatusDisplay.label(
                   l10n,

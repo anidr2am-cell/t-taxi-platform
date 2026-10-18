@@ -1,3 +1,4 @@
+import '../../admin/widgets/admin_selection_area.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -314,7 +315,7 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                               )
                             : null,
                         onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
+                          AdminPageRoute(
                             builder: (_) => AdminBookingDetailPage(
                               bookingNumber: item['bookingNumber'] as String,
                               api: _dispatchApi,
@@ -347,7 +348,7 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                             color: AppTokens.error,
                           ),
                           onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
+                            AdminPageRoute(
                               builder: (_) => AdminBookingDetailPage(
                                 bookingNumber: item['bookingNumber'] as String,
                                 api: _dispatchApi,
@@ -557,12 +558,12 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                     child: ClipRRect(
                       borderRadius: AppTokens.borderRadiusLg,
                       child: LayoutBuilder(
-                        builder: (context, constraints) => DriverLocationMap(
+                        builder: (context, constraints) => SelectionContainer.disabled(child: DriverLocationMap(
                           locations: mapLocations,
                           height: constraints.maxHeight,
                           onTapLocation: (location) =>
                               setState(() => _selected = location),
-                        ),
+                        )),
                       ),
                     ),
                   ),

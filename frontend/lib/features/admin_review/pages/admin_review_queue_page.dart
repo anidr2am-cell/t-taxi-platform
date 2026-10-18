@@ -1,3 +1,4 @@
+import '../../admin/widgets/admin_selection_area.dart';
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -62,7 +63,7 @@ class _AdminReviewQueuePageState extends State<AdminReviewQueuePage> {
   void _openDetail(int reviewId) {
     Navigator.push(
       context,
-      MaterialPageRoute(
+      AdminPageRoute(
         builder: (_) => AdminReviewDetailPage(reviewId: reviewId, api: _api),
       ),
     ).then((_) => _load());
