@@ -1,3 +1,4 @@
+import '../../admin/widgets/admin_selection_area.dart';
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -68,7 +69,7 @@ class _AdminSupportInquiryPageState extends State<AdminSupportInquiryPage> {
   void _openDetail(int id) {
     Navigator.push(
       context,
-      MaterialPageRoute(
+      AdminPageRoute(
         builder: (_) => AdminSupportInquiryDetailPage(id: id, api: _api),
       ),
     ).then((_) => _load());

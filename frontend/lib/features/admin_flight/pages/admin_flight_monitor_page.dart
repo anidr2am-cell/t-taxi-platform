@@ -1,3 +1,4 @@
+import '../../admin/widgets/admin_selection_area.dart';
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -174,7 +175,7 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
     final bookingNumber = item['bookingNumber'] as String?;
     if (bookingNumber == null || bookingNumber.isEmpty) return;
     await Navigator.of(context).push(
-      MaterialPageRoute(
+      AdminPageRoute(
         builder: (_) => AdminBookingDetailPage(
           bookingNumber: bookingNumber,
           api: _dispatchApi,

@@ -1,3 +1,4 @@
+import '../../admin/widgets/admin_selection_area.dart';
 import 'package:flutter/material.dart';
 
 import '../../../features/driver_application/models/driver_application_models.dart';
@@ -91,7 +92,7 @@ class _AdminDriverApplicationListPageState
   Future<void> _openDetail(int id) async {
     await Navigator.push(
       context,
-      MaterialPageRoute(
+      AdminPageRoute(
         builder: (_) => AdminDriverApplicationDetailPage(
           id: id,
           api: _api,
