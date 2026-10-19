@@ -1,6 +1,6 @@
 ---
-title: "Burapha Golf Club Green Fee: Seasonal Rates and Per-Person Transfer Costs"
-description: Plan your Burapha golf budget with high- and low-season green fees, included caddie and cart fees, return transfer fares and per-person cost examples.
+title: "Burapha Golf Club Green Fee: High-Season Rates and Per-Person Transfer Costs"
+description: Plan your Burapha golf budget with high-season green fees, included caddie and cart fees, return transfer fares and per-person cost examples.
 slug: burapha-cc-green-fee-en
 lang: en
 category: golf
@@ -14,14 +14,15 @@ related:
 
 For a clearer Pattaya golf budget, look at the **Burapha Golf Club green fee** and your transfer cost separately. The green fees below are per person and include the caddie fee and cart fee; caddie tips are separate. Transfers are priced per vehicle, so only each passenger's share of the transport cost changes with the number travelling.
 
-## Burapha Golf Club green fees by season
+## Burapha Golf Club high-season green fees
 
 Burapha's high season runs from **October 16 to March 31**. The general high season is November 1 to March 31, but some golf courses apply high-season rates from October.
 
 | Season | Weekday per person | Weekend per person | Included |
 | --- | ---: | ---: | --- |
-| High season | THB 2,750 | THB 3,150 | Caddie fee and cart fee |
-| Low season | THB 2,350 | THB 2,650 | Caddie fee and cart fee |
+| High season (Oct 16–Mar 31) | THB 2,750 | THB 3,150 | Caddie fee and cart fee |
+
+Rates as of October 17, 2026. Prices may vary by season and day of the week; the final rate will be confirmed when you book.
 
 These **Burapha Golf Club green fees** do not include caddie tips. Before booking, check the season and whether your chosen date falls on a weekday or weekend.
 
@@ -38,6 +39,8 @@ Burapha is in Group B of TRider's golf transfer fare groups. These fixed fares a
 ## Per-person cost for 18 holes on a high-season weekday
 
 Add each passenger's share of the 18-hole return transfer to the high-season weekday **Burapha Golf Club green fee** of THB 2,750:
+
+For two travellers, a sedan costs THB 900 per person for the transfer; for three, an SUV costs about THB 667 each — choosing a vehicle that fits your group helps keep each person’s transfer cost down.
 
 | Party and vehicle | Green fee | Transfer share per person | Total |
 | --- | ---: | ---: | ---: |
