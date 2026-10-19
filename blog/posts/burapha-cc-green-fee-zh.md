@@ -6,7 +6,7 @@ lang: zh
 category: golf
 translationKey: burapha-cc-green-fee
 date: 2026-10-07
-updated: 2026-10-14
+updated: 2026-10-19
 related:
   - pattaya-golf-price-match-guarantee-zh
   - trounding-golf-join-bar-benefits-zh
@@ -35,8 +35,6 @@ related:
 | SUV | 2,000泰铢 | 2,400泰铢 | 2,600泰铢 |
 | 面包车 | 2,300泰铢 | 2,600泰铢 | 2,900泰铢 |
 
-价格保障适用于TRounding销售的产品；TRider接送不在保障范围内，采用独立固定价格。
-
 ## 旺季平日18洞的人均费用
 
 在旺季平日**布拉帕高尔夫球场果岭费**2,750泰铢的基础上，加上每人分摊的18洞往返接送费，计算如下。
@@ -60,10 +58,10 @@ related:
 
 ## 积分与付款方式
 
-在TRounding购买任何产品，均可获得**支付金额5%的积分**，没有有效期限制。旺季平日2,750泰铢的产品，可积累约137泰铢积分。使用方法请通过Naver Band聊天咨询。
+在TRounding购买任何产品，均可获得**支付金额5%的积分**。使用方法请通过Naver Band聊天咨询。
 
-现金与银行卡支付价格相同，刷卡无手续费。**布拉帕高尔夫球场果岭费**的价格保障适用于TRounding同条件的产品。将其他商家的公开报价资料发送给管理员，即可申请退还差价或匹配相同价格，没有排除条件。
+现金与银行卡支付价格相同，刷卡无手续费。
 
 ## 预订布拉帕产品与接送
 
-机场和球场接送，请在[TRider预订页面](https://trider.taxi/)预订。高尔夫拼组、布拉帕产品及价格保障申请，请通过[TRounding Naver Band](https://band.us/@trounding)聊天咨询。
+机场和球场接送，请在[TRider预订页面](https://trider.taxi/)预订。高尔夫拼组、布拉帕产品，请通过[TRounding Naver Band](https://band.us/@trounding)聊天咨询。

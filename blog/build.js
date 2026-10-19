@@ -62,6 +62,20 @@ renderer.image = ({ href, title, text }) => {
 };
 marked.use({ renderer, gfm: true });
 
+// Preserve a reader's language on booking links in article Markdown as well as CTAs.
+function localizeBookingLinks(html, lang) {
+  return html.replace(/href="([^"]+)"/g, (attribute, href) => {
+    if (!href || href.startsWith('#') || href.startsWith('?')) return attribute;
+    let url;
+    try { url = new URL(href.replaceAll('&amp;', '&'), BLOG_ORIGIN); }
+    catch { return attribute; }
+    if (url.origin !== BLOG_ORIGIN || !['/', '/booking'].includes(url.pathname)) return attribute;
+    url.pathname = '/booking';
+    url.searchParams.set('lang', lang);
+    return `href="${escapeHtml(url.pathname + url.search + url.hash)}"`;
+  });
+}
+
 function readPosts() {
   const slugs = new Set();
   return fs.readdirSync(postsDir)
@@ -108,7 +122,7 @@ function page({ title, description, canonical, lang = 'ko', body, image, jsonLd 
   ${jsonLd.map((item) => `<script type="application/ld+json">${escapeJson(item)}</script>`).join('\n  ')}
 </head>
 <body>
-  <header class="site-header"><div class="header-inner"><a class="brand" href="${listPath(lang)}">TRider</a><a class="book-button" href="https://trider.taxi/">${UI[lang].book}</a></div></header>
+  <header class="site-header"><div class="header-inner"><a class="brand" href="${listPath(lang)}">TRider</a><a class="book-button" href="/booking?lang=${lang}">${UI[lang].book}</a></div></header>
   ${body}
   <footer>© TRider · Thailand transfer guide</footer>
 </body>
@@ -213,7 +227,7 @@ function build() {
     const cover = post.cover
       ? `<img class="cover" src="${escapeHtml(post.cover)}" alt="" loading="lazy" decoding="async" width="${Number(post.coverWidth)}" height="${Number(post.coverHeight)}">`
       : '';
-    const body = `<main><article class="article"><nav><a href="${listPath(post.lang)}">${ui.blog}</a> / <a href="${categoryPath(post.lang, post.category)}">${CATEGORY_LABELS[post.lang][post.category]}</a></nav>${languageSwitcher(translations, post.lang)}<h1>${escapeHtml(post.title)}</h1><p class="updated">${ui.updated}: <time datetime="${post.updated}">${post.updated}</time></p>${cover}<div class="content">${marked.parse(post.content)}</div>${relatedBlock(post, posts)}<aside class="cta"><strong>${ui.cta}</strong><div><a class="cta-primary" href="https://trider.taxi/">${ui.book}</a><a class="cta-secondary" href="${ui.supportUrl}" rel="noopener noreferrer">${ui.support}</a></div></aside></article></main>`;
+    const body = `<main><article class="article"><nav><a href="${listPath(post.lang)}">${ui.blog}</a> / <a href="${categoryPath(post.lang, post.category)}">${CATEGORY_LABELS[post.lang][post.category]}</a></nav>${languageSwitcher(translations, post.lang)}<h1>${escapeHtml(post.title)}</h1><p class="updated">${ui.updated}: <time datetime="${post.updated}">${post.updated}</time></p>${cover}<div class="content">${localizeBookingLinks(marked.parse(post.content), post.lang)}</div>${relatedBlock(post, posts)}<aside class="cta"><strong>${ui.cta}</strong><div><a class="cta-primary" href="/booking?lang=${post.lang}">${ui.book}</a><a class="cta-secondary" href="${ui.supportUrl}" rel="noopener noreferrer">${ui.support}</a></div></aside></article></main>`;
     write(path.join(post.slug, 'index.html'), page({
       title: `${post.title} | TRider`, description: post.description,
       canonical, lang: post.lang, body, image: post.cover, jsonLd,

@@ -6,7 +6,7 @@ lang: en
 category: golf
 translationKey: burapha-cc-green-fee
 date: 2026-10-07
-updated: 2026-10-14
+updated: 2026-10-19
 related:
   - pattaya-golf-price-match-guarantee-en
   - trounding-golf-join-bar-benefits-en
@@ -35,8 +35,6 @@ Burapha is in Group B of TRider's golf transfer fare groups. These fixed fares a
 | SUV | THB 2,000 | THB 2,400 | THB 2,600 |
 | Van | THB 2,300 | THB 2,600 | THB 2,900 |
 
-The price match guarantee applies to products sold by TRounding. TRider transfers are not covered and have separate fixed fares.
-
 ## Per-person cost for 18 holes on a high-season weekday
 
 Add each passenger's share of the 18-hole return transfer to the high-season weekday **Burapha Golf Club green fee** of THB 2,750:
@@ -60,10 +58,10 @@ Green fees, caddie fees and cart fees stay the same per person regardless of par
 
 ## Rewards and payment
 
-Every product purchased through TRounding earns **5% of the payment amount in rewards**, with no expiry date. A high-season weekday product at THB 2,750 earns approximately THB 137. Ask through Naver Band chat about how to use your rewards.
+Every product purchased through TRounding earns **5% of the payment amount in rewards**. Ask through Naver Band chat about how to use your rewards.
 
-Cash and card prices are identical, with no card surcharge. The **Burapha Golf Club green fee** price match guarantee applies to equivalent TRounding products on the same terms. Send the administrator another provider's published price information to request a difference refund or a matching price. There are no exclusions.
+Cash and card prices are identical, with no card surcharge.
 
 ## Book your Burapha round and arrange transport
 
-Book airport and golf course transfers on the [TRider booking page](https://trider.taxi/). For golf pairing, Burapha products and price match requests, contact [TRounding Naver Band](https://band.us/@trounding) chat.
+Book airport and golf course transfers on the [TRider booking page](https://trider.taxi/). For golf pairing and Burapha products, contact [TRounding Naver Band](https://band.us/@trounding) chat.
