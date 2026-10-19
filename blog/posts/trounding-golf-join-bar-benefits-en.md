@@ -1,12 +1,12 @@
 ---
-title: "TRounding Pattaya Golf Join Bar: 5% Rewards, No Card Surcharge and Price Matching"
-description: Find Korean golf partners at TRounding in Pattaya, with 5% rewards that never expire, equal cash and card prices, and a like-for-like price match guarantee.
+title: "TRounding Pattaya Golf Join Lounge: 5% Rewards and Equal Cash/Card Prices"
+description: Check golf fee inclusions and separate expenses in Pattaya, plus TRounding’s 5% rewards on all products and equal cash and card prices.
 slug: trounding-golf-join-bar-benefits-en
 lang: en
 category: golf
 translationKey: trounding-golf-join-bar-benefits
 date: 2026-10-07
-updated: 2026-10-14
+updated: 2026-10-19
 related:
   - pattaya-golf-price-match-guarantee-en
   - burapha-cc-green-fee-en
@@ -24,23 +24,15 @@ For the golf bar's location and visiting information, please enquire only throug
 
 ## Earn 5% rewards on every product
 
-Every product purchased through **Pattaya golf join bar** TRounding earns **5% of the payment amount in rewards**. The rewards have no expiry date.
+Every product purchased through **Pattaya golf join bar** TRounding earns **5% of the payment amount in rewards**.
 
-For example, a THB 2,750 product earns approximately THB 137. Ask through Naver Band chat about how to use your rewards. The administrator will explain the current process; no additional redemption steps or conditions are set out here.
+Ask through Naver Band chat about how to use your rewards. The administrator will explain the current process; no additional redemption steps or conditions are set out here.
 
 ## The same price for cash and card
 
 Product prices are the same whether you pay by cash or card. With no additional card surcharge, you can choose the payment method that suits your trip.
 
 When arranging your **Pattaya golf join bar** visit, there is no need to recalculate prices based on payment method. You can ask about golf products, pairing and payment together through Naver Band chat.
-
-## Price matching on equivalent offers
-
-All products sold by TRounding are covered by the price match guarantee. If another provider publishes a lower price for an equivalent product on the same terms, send the details to the administrator for checking. A quotation, promotional poster or webpage screenshot showing the terms and published price can be used.
-
-After confirmation, TRounding refunds the difference or matches the price. There are no exclusions. The **Pattaya golf join bar** product guarantee is based on checking equivalent terms and publicly available prices.
-
-The price match guarantee applies to products sold by TRounding. TRider transfers are not covered and have separate fixed fares.
 
 ## Airport and golf course transfers with TRider
 
@@ -52,7 +44,7 @@ Green fees, caddie fees and cart fees stay the same per person regardless of par
 
 ## Arrange golf pairing and book your transfer
 
-For pairing at **Pattaya golf join bar** TRounding, price match requests, golf products and rewards enquiries, contact [TRounding Naver Band](https://band.us/@trounding) chat.
+For pairing at **Pattaya golf join bar** TRounding, golf products and rewards enquiries, contact [TRounding Naver Band](https://band.us/@trounding) chat.
 
 Airport and golf course transfers can be booked on the [TRider booking page](https://trider.taxi/).
 

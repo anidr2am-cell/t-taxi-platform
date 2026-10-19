@@ -1,12 +1,12 @@
 ---
-title: "芭提雅高尔夫拼组吧TRounding：5%积分、刷卡免手续费与价格保障"
-description: 在芭提雅TRounding与韩国球友组队，了解所有产品5%永久有效积分、现金刷卡同价及同等条件公开报价的价格保障。机场与球场接送可另在TRider预订。
+title: "芭提雅高尔夫拼组休息室TRounding：5%积分与现金刷卡同价"
+description: 了解芭提雅高尔夫费用的包含项目与另付费用，以及TRounding所有产品5%积分、现金刷卡同价和拼组咨询方式。
 slug: trounding-golf-join-bar-benefits-zh
 lang: zh
 category: golf
 translationKey: trounding-golf-join-bar-benefits
 date: 2026-10-07
-updated: 2026-10-14
+updated: 2026-10-19
 related:
   - pattaya-golf-price-match-guarantee-zh
   - burapha-cc-green-fee-zh
@@ -24,23 +24,15 @@ related:
 
 ## 所有产品均享支付金额5%的积分
 
-在**芭提雅高尔夫拼组吧**TRounding购买任何产品，均可获得**支付金额5%的积分**。已积累的积分没有有效期限制。
+在**芭提雅高尔夫拼组吧**TRounding购买任何产品，均可获得**支付金额5%的积分**。
 
-例如，购买2,750泰铢的产品，可积累约137泰铢积分。实际使用方法请通过Naver Band聊天咨询。本文不另行添加使用流程或条件，管理员会说明当前的使用方式。
+实际使用方法请通过Naver Band聊天咨询。本文不另行添加使用流程或条件，管理员会说明当前的使用方式。
 
 ## 现金与银行卡支付同价
 
 现金付款与银行卡付款的产品价格相同。刷卡没有额外手续费，可按行程与个人习惯选择付款方式。
 
 准备到访**芭提雅高尔夫拼组吧**时，不必因付款方式不同而重新计算价格。高尔夫产品、拼组安排及付款方式，都可通过Naver Band聊天一并咨询。
-
-## 同等条件下提供价格保障
-
-TRounding销售的所有产品均适用价格保障。如果其他商家公开的同条件产品价格更低，可将相关资料交给管理员核实。报价单、宣传海报、网页截图等，只要能展示条件与公开价格即可。
-
-核实后，可退还差价或匹配相同价格，没有排除条件。**芭提雅高尔夫拼组吧**产品的价格保障以同等条件和公开资料为依据，并非笼统的低价宣传。
-
-价格保障适用于TRounding销售的产品；TRider接送不在保障范围内，采用独立固定价格。
 
 ## 机场与球场接送选择TRider
 
@@ -52,7 +44,7 @@ TRounding销售的所有产品均适用价格保障。如果其他商家公开�
 
 ## 拼组咨询与接送预订
 
-**芭提雅高尔夫拼组吧**TRounding的组队安排、价格保障申请、高尔夫产品及积分问题，请通过[TRounding Naver Band](https://band.us/@trounding)聊天咨询。
+**芭提雅高尔夫拼组吧**TRounding的组队安排、高尔夫产品及积分问题，请通过[TRounding Naver Band](https://band.us/@trounding)聊天咨询。
 
 机场和球场接送可在[TRider预订页面](https://trider.taxi/)预订。
 

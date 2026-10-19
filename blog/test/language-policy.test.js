@@ -1,0 +1,40 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {execFileSync} from 'node:child_process';
+import matter from 'gray-matter';
+const root=path.resolve(import.meta.dirname,'../..');
+const temp=fs.mkdtempSync(path.join(os.tmpdir(),'trider-language-policy-'));
+const blog=path.join(temp,'blog'),landing=path.join(temp,'landing');
+execFileSync(process.execPath,['blog/build.js'],{cwd:root,env:{...process.env,BLOG_DIST_DIR:blog}});
+execFileSync(process.execPath,['landing/build.cjs'],{cwd:root,env:{...process.env,LANDING_DIST_DIR:landing}});
+const posts=fs.readdirSync(path.join(root,'blog/posts')).filter(n=>n.endsWith('.md')).map(n=>matter(fs.readFileSync(path.join(root,'blog/posts',n),'utf8')).data);
+const read=(dir,part)=>fs.readFileSync(path.join(dir,part,'index.html'),'utf8');
+const forbidden=/최저가\s*보장|차액\s*환불|price[ -]match|lowest[ -]price|価格保証|最安値保証|价格保[障证]|最低价保证|รับประกันราคาต่ำสุด/i;
+test('landing guide links retain the existing blog language and English SEO is specific',()=>{
+ for(const lang of ['ko','en','ja','zh','th']){
+  const html=read(landing,lang==='ko'?'':lang),expected=['en','ja','zh'].includes(lang)?`/blog/lang/${lang}/`:'/blog/';
+  assert.ok(html.includes(`href="${expected}"`),lang);
+ }
+ const en=read(landing,'en');assert.match(en,/<title>[^<]*Tolls &amp; airport parking included/);assert.doesNotMatch(en,/<title>[^<]*No extra charges/);
+ assert.match(en,/optional name.sign/);assert.match(en,/address-based distance charge/);
+});
+test('all blog headers, article CTAs and inline booking links preserve page language',()=>{
+ for(const post of posts){
+  const html=read(blog,post.slug),links=[...html.matchAll(/href="([^"#]+)"/g)].map(m=>new URL(m[1].replaceAll('&amp;','&'),'https://trider.taxi'));
+  const booking=links.filter(u=>u.origin==='https://trider.taxi'&&['/','/booking'].includes(u.pathname));
+  assert(booking.length>=2,post.slug);for(const url of booking){assert.equal(url.pathname,'/booking',post.slug);assert.equal(url.searchParams.get('lang'),post.lang,post.slug);}
+ }
+ for(const lang of ['en','ja','zh']) assert.ok(read(blog,`lang/${lang}`).includes(`/booking?lang=${lang}`));
+});
+test('guarantees disappear from published body, list, related cards, titles, metadata and JSON-LD; legacy slugs remain',()=>{
+ function audit(dir){for(const item of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,item.name);if(item.isDirectory())audit(p);else if(item.name.endsWith('.html')){
+  // The published URL/translation identity is intentionally unchanged.
+  const html=fs.readFileSync(p,'utf8').replaceAll(/pattaya-golf-price-match-guarantee(?:-(?:en|ja|zh))?/g,'legacy-golf-guide');assert.doesNotMatch(html,forbidden,p);
+ }}}audit(blog);
+ for(const suffix of ['','-en','-ja','-zh']){const slug='pattaya-golf-price-match-guarantee'+suffix,html=read(blog,slug);assert.ok(html.includes('https://trider.taxi/blog/'+slug));assert.match(html,/"@type":"Article"/);assert.match(html,/2026-10-19/);}
+ const sitemap=fs.readFileSync(path.join(blog,'sitemap-blog.xml'),'utf8');for(const post of posts)assert.ok(sitemap.includes('/blog/'+post.slug+'</loc>'),post.slug);
+});
+test.after(()=>fs.rmSync(temp,{recursive:true,force:true}));

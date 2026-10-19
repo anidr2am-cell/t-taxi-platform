@@ -34,14 +34,17 @@ test('changed FAQ policy answers also appear in the visible article in every exi
   }
 });
 
-test('TRounding price guarantees retain the explicit exclusion of TRider transfers', () => {
-  const exclusion = {
-    ko: '최저가 보장은 TRounding 판매 상품에 적용되며, TRider 이동 요금은 별도 정찰제입니다.',
-    en: 'TRider transfers are not covered and have separate fixed fares.',
-    ja: 'TRiderの送迎は価格保証の対象外で、別途定額料金となります。',
-    zh: 'TRider接送不在保障范围内，采用独立固定价格。',
-  };
-  for (const post of posts.filter(p => /^(pattaya-golf-price-match-guarantee|trounding-golf-join-bar-benefits|burapha-cc-green-fee)/.test(p.name))) {
-    assert.ok(post.content.includes(exclusion[post.data.lang]), post.name);
+test('golf copy retains confirmed benefits without price guarantees or unconfirmed expiry promises', () => {
+  const golf = posts.filter(p => p.data.category === 'golf');
+  for (const post of golf) {
+    const publicCopy = [post.data.title, post.data.description, post.content].join('\n');
+    assert.doesNotMatch(publicCopy, /최저가|차액\s*환불|price[ -]match|price matching|refunds? the difference|価格保証|差額.{0,4}返金|价格保障|退还差价/i, post.name);
+    assert.doesNotMatch(publicCopy, /무기한|유효기간.{0,6}없|no expiry|never expir|無期限|有効期限はありません|永久有效|没有有效期限制/i, post.name);
+    assert.doesNotMatch(publicCopy, /11월\s*1일.{0,12}오픈|오픈.{0,12}11월\s*1일|opening.{0,12}November 1/i, post.name);
+  }
+  for (const post of golf.filter(p => /^(pattaya-golf-price-match-guarantee|trounding-golf-join-bar-benefits|burapha-cc-green-fee)/.test(p.name))) {
+    assert.match(post.content, /5%/, post.name);
+    assert.match(post.content, /현금|cash|現金|现金/i, post.name);
+    assert.match(post.content, /카드|card|カード|银行卡/i, post.name);
   }
 });
