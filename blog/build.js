@@ -49,6 +49,7 @@ function validatePost(data, file) {
   if (String(data.description).length > 160) throw new Error(`${file}: description must be 160 characters or fewer`);
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(data.slug)) throw new Error(`${file}: invalid slug`);
   if (!LANGUAGES.includes(data.lang)) throw new Error(`${file}: unsupported lang ${data.lang}`);
+  if (data.bookingService && !['AIRPORT_PICKUP', 'AIRPORT_DROPOFF', 'CITY_TRANSFER', 'GOLF_TRANSFER'].includes(data.bookingService)) throw new Error(`${file}: unsupported bookingService`);
   if (!CATEGORIES.includes(data.category)) throw new Error(`${file}: unsupported category ${data.category}`);
   if (data.cover && (!data.coverWidth || !data.coverHeight)) {
     throw new Error(`${file}: coverWidth and coverHeight are required with cover`);
@@ -96,7 +97,7 @@ function readPosts() {
     .sort((a, b) => b.date.localeCompare(a.date));
 }
 
-function page({ title, description, canonical, lang = 'ko', body, image, jsonLd = [], alternates = '' }) {
+function page({ title, description, canonical, lang = 'ko', body, image, jsonLd = [], alternates = '', bookingHref = `/booking?lang=${lang}` }) {
   const ogImage = image ? new URL(image, BLOG_ORIGIN).href : DEFAULT_OG_IMAGE;
   return `<!doctype html>
 <html lang="${escapeHtml(lang)}">
@@ -122,7 +123,7 @@ function page({ title, description, canonical, lang = 'ko', body, image, jsonLd 
   ${jsonLd.map((item) => `<script type="application/ld+json">${escapeJson(item)}</script>`).join('\n  ')}
 </head>
 <body>
-  <header class="site-header"><div class="header-inner"><a class="brand" href="${listPath(lang)}">TRider</a><a class="book-button" href="/booking?lang=${lang}">${UI[lang].book}</a></div></header>
+  <header class="site-header"><div class="header-inner"><a class="brand" href="${listPath(lang)}">TRider</a><a class="book-button" href="${escapeHtml(bookingHref)}">${UI[lang].book}</a></div></header>
   ${body}
   <footer>© TRider · Thailand transfer guide</footer>
 </body>
@@ -227,10 +228,11 @@ function build() {
     const cover = post.cover
       ? `<img class="cover" src="${escapeHtml(post.cover)}" alt="" loading="lazy" decoding="async" width="${Number(post.coverWidth)}" height="${Number(post.coverHeight)}">`
       : '';
-    const body = `<main><article class="article"><nav><a href="${listPath(post.lang)}">${ui.blog}</a> / <a href="${categoryPath(post.lang, post.category)}">${CATEGORY_LABELS[post.lang][post.category]}</a></nav>${languageSwitcher(translations, post.lang)}<h1>${escapeHtml(post.title)}</h1><p class="updated">${ui.updated}: <time datetime="${post.updated}">${post.updated}</time></p>${cover}<div class="content">${localizeBookingLinks(marked.parse(post.content), post.lang)}</div>${relatedBlock(post, posts)}<aside class="cta"><strong>${ui.cta}</strong><div><a class="cta-primary" href="/booking?lang=${post.lang}">${ui.book}</a><a class="cta-secondary" href="${ui.supportUrl}" rel="noopener noreferrer">${ui.support}</a></div></aside></article></main>`;
+    const bookingHref = post.bookingService ? `/booking?service=${post.bookingService}&lang=${post.lang}` : `/booking?lang=${post.lang}`;
+    const body = `<main><article class="article"><nav><a href="${listPath(post.lang)}">${ui.blog}</a> / <a href="${categoryPath(post.lang, post.category)}">${CATEGORY_LABELS[post.lang][post.category]}</a></nav>${languageSwitcher(translations, post.lang)}<h1>${escapeHtml(post.title)}</h1><p class="updated">${ui.updated}: <time datetime="${post.updated}">${post.updated}</time></p>${cover}<div class="content">${localizeBookingLinks(marked.parse(post.content), post.lang)}</div>${relatedBlock(post, posts)}<aside class="cta"><strong>${ui.cta}</strong><div><a class="cta-primary" href="${escapeHtml(bookingHref)}">${ui.book}</a><a class="cta-secondary" href="${ui.supportUrl}" rel="noopener noreferrer">${ui.support}</a></div></aside></article></main>`;
     write(path.join(post.slug, 'index.html'), page({
       title: `${post.title} | TRider`, description: post.description,
-      canonical, lang: post.lang, body, image: post.cover, jsonLd,
+      canonical, lang: post.lang, body, image: post.cover, jsonLd, bookingHref,
       alternates: alternateLinks(translations),
     }));
   }

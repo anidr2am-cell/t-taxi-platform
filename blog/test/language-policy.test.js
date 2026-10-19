@@ -38,3 +38,16 @@ test('guarantees disappear from published body, list, related cards, titles, met
  const sitemap=fs.readFileSync(path.join(blog,'sitemap-blog.xml'),'utf8');for(const post of posts)assert.ok(sitemap.includes('/blog/'+post.slug+'</loc>'),post.slug);
 });
 test.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
+
+test('Pattaya return-transfer article alone presets English airport drop-off in all three CTAs',()=>{
+ const slug='pattaya-to-airport-transfer-en',html=read(blog,slug);
+ const expected='/booking?service=AIRPORT_DROPOFF&amp;lang=en';
+ assert.equal((html.match(/href="\/booking[^"]*"/g)||[]).length,3);
+ assert.equal(html.split('href="'+expected+'"').length-1,3);
+ assert.ok(html.includes('>Book your airport drop-off in English</a>'));
+ for(const post of posts.filter(p=>p.slug!==slug)){
+  const page=read(blog,post.slug);
+  assert.ok(page.includes('class="book-button" href="/booking?lang='+post.lang+'"'),post.slug);
+  assert.ok(page.includes('class="cta-primary" href="/booking?lang='+post.lang+'"'),post.slug);
+ }
+});

@@ -3,6 +3,7 @@ title: "Pattaya to Bangkok Airports: Plan Your Return Transfer"
 description: "Book a Pattaya transfer to Suvarnabhumi or Don Mueang. Check your airport, pickup time, luggage, final quote and return-trip details."
 slug: pattaya-to-airport-transfer-en
 lang: en
+bookingService: AIRPORT_DROPOFF
 category: airport
 translationKey: pattaya-to-airport-transfer
 date: 2026-10-19
@@ -62,6 +63,6 @@ For a trip that has not started, free cancellation through booking lookup is ava
 - Final per-vehicle quote and any requested extras checked.
 - Booking number and a working contact method ready.
 
-[Check your transfer and book in English](/booking?lang=en).
+[Book your airport drop-off in English](/booking?service=AIRPORT_DROPOFF&lang=en).
 
 For the arrival leg, see our [Suvarnabhumi to Pattaya guide](/blog/suvarnabhumi-to-pattaya-en) or [Don Mueang to Pattaya guide](/blog/don-mueang-to-pattaya-en).
