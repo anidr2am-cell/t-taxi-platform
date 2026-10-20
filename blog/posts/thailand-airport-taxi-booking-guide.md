@@ -6,7 +6,7 @@ lang: ko
 category: airport
 translationKey: thailand-airport-taxi-booking-guide
 date: 2026-10-17
-updated: 2026-10-17
+updated: 2026-10-20
 related:
   - suvarnabhumi-to-pattaya
   - don-mueang-to-pattaya
@@ -53,9 +53,21 @@ related:
 
 예약 화면에서 인원과 짐을 입력하면 맞는 차량을 추천받을 수 있습니다. 차종별 최대 적재 수량을 서로 더해 모두 동시에 실을 수 있다고 해석하지 말고, 실제 짐 조합에 맞는지 확인하세요.
 
+<figure style="margin: 1.5rem 0; max-width: 480px;">
+  <img src="/blog/assets/photos/airport-transfer-luggage-space.jpg" alt="뒷좌석을 세운 상태에서 촬영한 공항 이동 차량의 빈 트렁크 공간" width="1108" height="1477" loading="lazy" decoding="async">
+  <figcaption>보관된 차량 사진으로 보는 트렁크 공간 예시입니다. 실제 적재 가능 여부는 배정 차종과 짐의 크기·조합에 따라 확인하세요.</figcaption>
+</figure>
+
+짐을 아직 싸기 전이라면 일행별로 가져갈 캐리어와 골프백을 먼저 정리하세요. 큰 짐은 크기도 함께 전달하고, 유모차는 접었을 때의 상태를 알려주면 상담에 도움이 됩니다. 빈 트렁크 사진만 보고 적재를 판단하기보다, 실제 가져갈 짐 구성을 기준으로 차량을 확인하는 편이 좋습니다.
+
 ## 예약 완료 후 차량과 만남 안내를 확인하세요
 
 예약을 마쳤다면 예약 조회에 표시되는 공항, 항공편, 픽업 일정, 목적지와 차종을 다시 확인하세요. 배정된 차량의 사진도 미리 살펴볼 수 있습니다. 차량 배정과 만남 안내는 실제 예약에 표시된 내용을 기준으로 확인하는 것이 좋습니다.
+
+<figure style="margin: 1.5rem 0; max-width: 480px;">
+  <img src="/blog/assets/photos/airport-transfer-cabin.jpg" alt="검은색 뒷좌석과 안전벨트가 보이는 공항 이동 차량 실내" width="1108" height="1477" loading="lazy" decoding="async">
+  <figcaption>차량 실내 참고 사진입니다. 예약한 차종과 실제 배정 차량은 예약 조회에서 확인하세요.</figcaption>
+</figure>
 
 이름 피켓을 원한다면 네임보드는 별도 신청하는 유료 서비스입니다. 일반 픽업에 자동으로 포함된 것으로 생각하지 마세요. 수완나품 도착 일정은 [공항 픽업 미팅 안내](/blog/suvarnabhumi-airport-pickup-guide)를 참고하고, 돈므앙에서는 해당 예약의 만남 안내를 따르세요.
 
