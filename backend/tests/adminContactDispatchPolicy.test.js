@@ -105,7 +105,7 @@ const cases = [
     retryable: false,
   },
   {
-    name: 'non-open CONFIRM_REQUESTED contact flow is NOT_OPEN and cannot verify',
+    name: 'assigned CONFIRM_REQUESTED allows verification without dispatch retry',
     input: {
       contactStatus: CONTACT_STATUS.CONFIRM_REQUESTED,
       status: BOOKING_STATUS.DRIVER_ASSIGNED,
@@ -114,7 +114,7 @@ const cases = [
     },
     state: CONTACT_DISPATCH_STATE.NOT_OPEN,
     retryable: false,
-    verify: false,
+    verify: true,
   },
   {
     name: 'non-open immediate booking without contact flow is NOT_APPLICABLE',

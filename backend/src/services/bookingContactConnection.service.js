@@ -10,6 +10,7 @@ const {
 const {
   deriveContactDispatch,
   contactDispatchInputFromBooking,
+  isContactVerificationStatusAllowed,
 } = require('../policies/adminContactDispatch.policy');
 const { resolveBookingContactChannel } = require('../utils/bookingContactChannel');
 const logger = require('../utils/logger');
@@ -252,8 +253,8 @@ class BookingContactConnectionService {
         throw this.notFound();
       }
 
-      if (booking.status !== BOOKING_STATUS.OPEN) {
-        throw new AppError('Booking is not open for contact verification', {
+      if (!isContactVerificationStatusAllowed(booking)) {
+        throw new AppError('Booking status does not allow contact verification', {
           statusCode: HTTP_STATUS.CONFLICT,
           errorCode: ERROR_CODES.INVALID_STATUS_TRANSITION,
         });
@@ -262,7 +263,8 @@ class BookingContactConnectionService {
       if (booking.contact_status === CONTACT_STATUS.VERIFIED) {
         const bookingWithMeta = await this.bookingRepository.findById(booking.id, conn);
         bookingSnapshot = bookingWithMeta ?? booking;
-        shouldDispatch = this.bookingService.needsContactDispatchRetry(bookingSnapshot);
+        shouldDispatch = booking.status === BOOKING_STATUS.OPEN
+          && this.bookingService.needsContactDispatchRetry(bookingSnapshot);
         await conn.commit();
       } else {
         if (booking.contact_status !== CONTACT_STATUS.CONFIRM_REQUESTED) {

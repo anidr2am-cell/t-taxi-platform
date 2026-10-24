@@ -233,7 +233,7 @@ test('gate=false leftover CONFIRM_REQUESTED verify starts dispatch once', async 
   assert.equal(booking.contact_status, CONTACT_STATUS.VERIFIED);
 });
 
-test('adminVerify rejects non-open CONFIRM_REQUESTED before updates or dispatch', async () => {
+test('adminVerify rejects completed CONFIRM_REQUESTED before updates or dispatch', async () => {
   const {
     service,
     getDispatchCalls,
@@ -242,7 +242,7 @@ test('adminVerify rejects non-open CONFIRM_REQUESTED before updates or dispatch'
   } = createRetryService({
     booking: {
       contact_status: CONTACT_STATUS.CONFIRM_REQUESTED,
-      status: BOOKING_STATUS.DRIVER_ASSIGNED,
+      status: BOOKING_STATUS.COMPLETED,
       contact_requested_at: '2026-09-26 01:00:00',
     },
   });
@@ -415,7 +415,7 @@ test('admin detail exposes derived contactDispatch and matching allowedActions',
   assert.equal(detail.statusHistory[0].createdAt, '2026-10-10T08:13:29.000Z');
 });
 
-test('admin detail marks non-open contact flow NOT_OPEN without verify or retry actions', async () => {
+test('admin detail permits assigned contact verification without dispatch retry', async () => {
   const bookingRepo = {
     async findAdminBookingDetail() {
       return {
@@ -461,6 +461,6 @@ test('admin detail marks non-open contact flow NOT_OPEN without verify or retry 
 
   const detail = await service.getBookingDetail('TX202609260011', { id: 1, role: 'ADMIN' });
   assert.equal(detail.contactDispatch.state, CONTACT_DISPATCH_STATE.NOT_OPEN);
-  assert.ok(!detail.allowedActions.includes('VERIFY_CONTACT'));
+  assert.ok(detail.allowedActions.includes('VERIFY_CONTACT'));
   assert.ok(!detail.allowedActions.includes('RETRY_CONTACT_DISPATCH'));
 });

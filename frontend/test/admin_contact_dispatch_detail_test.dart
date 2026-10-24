@@ -90,6 +90,18 @@ class _ContactDetailApi extends AdminDispatchApiService {
   ) async {
     verifyCount += 1;
     if (verifyError != null) throw verifyError!;
+    if (detail['status'] != 'OPEN') {
+      detail = {
+        ...detail,
+        'customer': {
+          ...Map<String, dynamic>.from(detail['customer'] as Map),
+          'contactStatus': 'VERIFIED',
+        },
+        'allowedActions': ['REASSIGN_DRIVER'],
+      };
+      return {'dispatchStarted': false};
+    }
+
     detail = fixture(
       contactStatus: 'VERIFIED',
       verifiedAt: '2026-09-26T01:10:00.000Z',
@@ -203,7 +215,7 @@ void main() {
     }
   });
 
-  testWidgets('non-open contact flow hides verify and retry actions', (
+  testWidgets('assigned contact flow shows verify without dispatch retry', (
     tester,
   ) async {
     final api = _ContactDetailApi(
@@ -212,12 +224,21 @@ void main() {
         contactStatus: 'CONFIRM_REQUESTED',
         dispatchState: 'NOT_OPEN',
         retryable: false,
-        allowedActions: const ['REASSIGN_DRIVER'],
+        allowedActions: const ['REASSIGN_DRIVER', 'VERIFY_CONTACT'],
       ),
     );
     await _pumpPage(tester, api);
-    expect(find.byKey(const Key('admin-contact-verify')), findsNothing);
+    expect(find.byKey(const Key('admin-contact-verify')), findsOneWidget);
     expect(find.byKey(const Key('admin-contact-dispatch-retry')), findsNothing);
+    await tester.ensureVisible(find.byKey(const Key('admin-contact-verify')));
+    await tester.tap(find.byKey(const Key('admin-contact-verify')));
+    await tester.pumpAndSettle();
+    expect(api.verifyCount, 1);
+    expect(api.retryCount, 0);
+    expect(api.detail['status'], 'DRIVER_ASSIGNED');
+    expect(find.byKey(const Key('admin-contact-verify')), findsNothing);
+    expect(find.text('Connection confirmed'), findsOneWidget);
+
   });
 
   testWidgets('STANDARD label is shown for open-call mode', (tester) async {
