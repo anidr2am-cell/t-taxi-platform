@@ -2,11 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:frontend/features/auth/widgets/booking_social_login_section.dart';
+import 'support/booking_complete_test_helpers.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/booking/models/booking_contact_connect_args.dart';
 import 'package:frontend/features/booking/models/booking_create_result.dart';
 import 'package:frontend/features/booking/models/contact_channel.dart';
 import 'package:frontend/features/booking/pages/booking_contact_connect_page.dart';
+import 'package:frontend/features/booking/pages/booking_complete_page.dart';
 import 'package:frontend/features/booking/services/booking_analytics.dart';
 import 'package:frontend/features/booking/services/booking_contact_connection_service.dart';
 import 'package:frontend/features/booking/widgets/booking_review_form.dart';
@@ -16,11 +20,11 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeContactService extends BookingContactConnectionService {
-  _FakeContactService({
-    required this.channels,
-    required this.connection,
-  }) : super(baseUrl: 'http://test');
+  _FakeContactService({required this.channels, required this.connection})
+    : super(baseUrl: 'http://test');
 
+  int confirmCalls = 0;
+  bool failConfirm = false;
   final List<ContactChannel> channels;
   ContactConnectionState connection;
 
@@ -31,8 +35,7 @@ class _FakeContactService extends BookingContactConnectionService {
   Future<ContactConnectionState> getConnection({
     required String bookingNumber,
     required String guestAccessToken,
-  }) async =>
-      connection;
+  }) async => connection;
 
   @override
   Future<ContactConnectionState> startConnection({
@@ -54,6 +57,9 @@ class _FakeContactService extends BookingContactConnectionService {
     required String bookingNumber,
     required String guestAccessToken,
   }) async {
+    confirmCalls++;
+    if (failConfirm)
+      throw BookingContactConnectionException('QA confirm failed');
     connection = ContactConnectionState(
       bookingNumber: bookingNumber,
       contactStatus: 'CONFIRM_REQUESTED',
@@ -65,10 +71,7 @@ class _FakeContactService extends BookingContactConnectionService {
 }
 
 class _SlowConfirmFakeService extends _FakeContactService {
-  _SlowConfirmFakeService({
-    required super.channels,
-    required super.connection,
-  });
+  _SlowConfirmFakeService({required super.channels, required super.connection});
 
   Completer<ContactConnectionState>? confirmCompleter;
 
@@ -77,6 +80,7 @@ class _SlowConfirmFakeService extends _FakeContactService {
     required String bookingNumber,
     required String guestAccessToken,
   }) async {
+    confirmCalls++;
     confirmCompleter = Completer<ContactConnectionState>();
     return confirmCompleter!.future;
   }
@@ -141,26 +145,24 @@ void main() {
 
   group('contact channel ordering', () {
     test('orders channels for Korean locale', () {
-      final ordered = orderContactChannels(
-        const [
-          ContactChannel(code: 'LINE', displayName: 'LINE'),
-          ContactChannel(code: 'KAKAO', displayName: 'KakaoTalk'),
-          ContactChannel(code: 'WHATSAPP', displayName: 'WhatsApp'),
-        ],
-        'ko',
-      );
-      expect(ordered.map((c) => c.code).toList(), ['KAKAO', 'LINE', 'WHATSAPP']);
+      final ordered = orderContactChannels(const [
+        ContactChannel(code: 'LINE', displayName: 'LINE'),
+        ContactChannel(code: 'KAKAO', displayName: 'KakaoTalk'),
+        ContactChannel(code: 'WHATSAPP', displayName: 'WhatsApp'),
+      ], 'ko');
+      expect(ordered.map((c) => c.code).toList(), [
+        'KAKAO',
+        'LINE',
+        'WHATSAPP',
+      ]);
     });
 
     test('orders channels for English locale', () {
-      final ordered = orderContactChannels(
-        const [
-          ContactChannel(code: 'LINE', displayName: 'LINE'),
-          ContactChannel(code: 'KAKAO', displayName: 'KakaoTalk'),
-          ContactChannel(code: 'WHATSAPP', displayName: 'WhatsApp'),
-        ],
-        'en',
-      );
+      final ordered = orderContactChannels(const [
+        ContactChannel(code: 'LINE', displayName: 'LINE'),
+        ContactChannel(code: 'KAKAO', displayName: 'KakaoTalk'),
+        ContactChannel(code: 'WHATSAPP', displayName: 'WhatsApp'),
+      ], 'en');
       expect(ordered.map((c) => c.code).toList(), [
         'WHATSAPP',
         'LINE',
@@ -201,13 +203,25 @@ void main() {
       required _FakeContactService service,
       BookingContactConnectArgs? args,
       bool settle = true,
+      String language = 'en',
     }) async {
+      final auth = createSignedOutAuthController();
+      await auth.initialize();
+      addTearDown(auth.dispose);
       await tester.pumpWidget(
         ChangeNotifierProvider(
           create: (_) => LocaleState(),
           child: MaterialApp(
-            localizationsDelegates: [AppLocalizationsDelegate('en')],
-            supportedLocales: const [Locale('en')],
+            builder: (context, child) =>
+                AuthScope(controller: auth, child: child!),
+            locale: Locale(language),
+            localizationsDelegates: [
+              AppLocalizationsDelegate(language),
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: [Locale(language)],
             home: BookingContactConnectPage(
               bookingNumber: 'TX202608130001',
               args: args,
@@ -243,11 +257,11 @@ void main() {
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(SystemChannels.platform, (call) async {
-        if (call.method == 'Clipboard.setData') {
-          return null;
-        }
-        return null;
-      });
+            if (call.method == 'Clipboard.setData') {
+              return null;
+            }
+            return null;
+          });
       addTearDown(() {
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
             .setMockMethodCallHandler(SystemChannels.platform, null);
@@ -284,11 +298,13 @@ void main() {
       final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
       expect(snackBar.behavior, SnackBarBehavior.floating);
 
-      final ctaRect = tester.getRect(find.byKey(const Key('contact_connect_cta_bar')));
-      final snackTextRect =
-          tester.getRect(find.text('Booking reference copied'));
+      final ctaRect = tester.getRect(
+        find.byKey(const Key('contact_connect_cta_bar')),
+      );
+      final snackTextRect = tester.getRect(
+        find.text('Booking reference copied'),
+      );
       expect(snackTextRect.bottom, lessThanOrEqualTo(ctaRect.top));
-
     }
 
     testWidgets('shows booking number and enabled channels', (tester) async {
@@ -318,117 +334,128 @@ void main() {
       expect(analyticsSink.named('contact_connect_viewed'), hasLength(1));
     });
 
-    testWidgets('stored preferred channel still shows connect button before connection starts', (tester) async {
-      final service = _FakeContactService(channels: const [
-        ContactChannel(code: 'KAKAO', displayName: 'KakaoTalk'),
-        ContactChannel(code: 'LINE', displayName: 'LINE'),
-      ], connection: ContactConnectionState(bookingNumber: 'TX202608130001',
-        contactStatus: 'PENDING', contactChannel: 'LINE', contactChannelManaged: true));
-      await pumpPage(tester, service: service, args: BookingContactConnectArgs(
-        result: _result(), serviceLabel: 'Airport pickup', preferredChannel: 'LINE'));
-      expect(find.textContaining('LINE'), findsWidgets);
-      expect(find.text('KakaoTalk'), findsNothing);
-      expect(find.byKey(const Key('contact_connect_cta_bar')), findsNothing);
-    });
+    testWidgets(
+      'stored preferred channel still shows connect button before connection starts',
+      (tester) async {
+        final service = _FakeContactService(
+          channels: const [
+            ContactChannel(code: 'KAKAO', displayName: 'KakaoTalk'),
+            ContactChannel(code: 'LINE', displayName: 'LINE'),
+          ],
+          connection: ContactConnectionState(
+            bookingNumber: 'TX202608130001',
+            contactStatus: 'PENDING',
+            contactChannel: 'LINE',
+            contactChannelManaged: true,
+          ),
+        );
+        await pumpPage(
+          tester,
+          service: service,
+          args: BookingContactConnectArgs(
+            result: _result(),
+            serviceLabel: 'Airport pickup',
+            preferredChannel: 'LINE',
+          ),
+        );
+        expect(find.textContaining('LINE'), findsWidgets);
+        expect(find.text('KakaoTalk'), findsNothing);
+        expect(find.byKey(const Key('contact_connect_cta_bar')), findsNothing);
+      },
+    );
 
     testWidgets('copy snackbar floats above confirm CTA', (tester) async {
       await _expectSnackbarAboveCtaForChannel(tester, 'LINE', 'LINE');
     });
 
-    testWidgets('copy snackbar floats above confirm CTA for KakaoTalk', (tester) async {
+    testWidgets('copy snackbar floats above confirm CTA for KakaoTalk', (
+      tester,
+    ) async {
       await _expectSnackbarAboveCtaForChannel(tester, 'KAKAO', 'KakaoTalk');
     });
 
-    testWidgets('copy snackbar floats above confirm CTA for WhatsApp', (tester) async {
+    testWidgets('copy snackbar floats above confirm CTA for WhatsApp', (
+      tester,
+    ) async {
       await _expectSnackbarAboveCtaForChannel(tester, 'WHATSAPP', 'WhatsApp');
     });
 
-    testWidgets('confirm overlay shows while confirm-sent request is in flight',
-        (tester) async {
-      final service = _SlowConfirmFakeService(
-        channels: const [
-          ContactChannel(code: 'WHATSAPP', displayName: 'WhatsApp'),
-        ],
-        connection: ContactConnectionState(
-          bookingNumber: 'TX202608130001',
-          contactStatus: 'PENDING',
-          connectionChannel: 'WHATSAPP',
-        ),
-      );
+    testWidgets(
+      'confirm overlay shows while confirm-sent request is in flight',
+      (tester) async {
+        final service = _SlowConfirmFakeService(
+          channels: const [
+            ContactChannel(code: 'WHATSAPP', displayName: 'WhatsApp'),
+          ],
+          connection: ContactConnectionState(
+            bookingNumber: 'TX202608130001',
+            contactStatus: 'PENDING',
+            connectionChannel: 'WHATSAPP',
+          ),
+        );
 
-      await pumpPage(
-        tester,
-        service: service,
-        args: BookingContactConnectArgs(
-          result: _result(),
-          serviceLabel: 'Airport pickup',
-        ),
-        settle: false,
-      );
+        await pumpPage(
+          tester,
+          service: service,
+          args: BookingContactConnectArgs(
+            result: _result(),
+            serviceLabel: 'Airport pickup',
+          ),
+          settle: false,
+        );
 
-      await tester.tap(find.text('I sent the message'));
-      await tester.pump();
+        await tester.tap(find.text('I sent the message'));
+        await tester.pump();
 
-      expect(
-        find.byKey(const Key('contact_connect_confirm_overlay')),
-        findsOneWidget,
-      );
+        expect(
+          find.byKey(const Key('contact_connect_confirm_overlay')),
+          findsOneWidget,
+        );
 
-      service.completeConfirm();
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+        service.completeConfirm();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
 
-      expect(
-        find.byKey(const Key('contact_connect_confirm_overlay')),
-        findsNothing,
-      );
-      expect(find.textContaining('Waiting for T-Rider'), findsOneWidget);
-    });
+        expect(
+          find.byKey(const Key('contact_connect_confirm_overlay')),
+          findsNothing,
+        );
+        expect(find.byType(BookingCompletePage), findsOneWidget);
+        expect(service.connection.contactStatus, 'CONFIRM_REQUESTED');
+        expect(analyticsSink.named('contact_connect_succeeded'), isEmpty);
+      },
+    );
 
-    testWidgets('polling skips refresh while previous request is in flight',
-        (tester) async {
-      final service = _PollingGuardFakeService(
-        channels: const [
-          ContactChannel(code: 'WHATSAPP', displayName: 'WhatsApp'),
-        ],
-        connection: const ContactConnectionState(
-          bookingNumber: 'TX202608130001',
-          contactStatus: 'CONFIRM_REQUESTED',
-          connectionChannel: 'WHATSAPP',
-          connectionStatus: 'CONFIRM_REQUESTED',
-        ),
-      );
+    testWidgets(
+      'reopening confirm-requested contact goes to completion without polling',
+      (tester) async {
+        final service = _PollingGuardFakeService(
+          channels: const [ContactChannel(code: 'LINE', displayName: 'LINE')],
+          connection: const ContactConnectionState(
+            bookingNumber: 'TX202608130001',
+            contactStatus: 'CONFIRM_REQUESTED',
+            connectionChannel: 'LINE',
+            connectionStatus: 'CONFIRM_REQUESTED',
+          ),
+        );
+        await pumpPage(
+          tester,
+          service: service,
+          args: BookingContactConnectArgs(
+            result: _result(),
+            serviceLabel: 'Airport pickup',
+          ),
+        );
+        expect(find.byType(BookingCompletePage), findsOneWidget);
+        await tester.pump(const Duration(seconds: 20));
+        expect(service.getConnectionCalls, 1);
+        expect(analyticsSink.named('contact_connect_succeeded'), isEmpty);
+      },
+    );
 
-      await pumpPage(
-        tester,
-        service: service,
-        args: BookingContactConnectArgs(
-          result: _result(contactStatus: 'CONFIRM_REQUESTED'),
-          serviceLabel: 'Airport pickup',
-        ),
-        settle: false,
-      );
-
-      expect(service.getConnectionCalls, 1);
-
-      await tester.pump(BookingContactConnectPage.pollInterval);
-      await tester.pump();
-      expect(service.getConnectionCalls, 2);
-      expect(service.pendingRefresh, isNotNull);
-
-      await tester.pump(BookingContactConnectPage.pollInterval);
-      await tester.pump();
-      expect(service.getConnectionCalls, 2);
-
-      service.completePendingRefresh();
-      await tester.pump();
-
-      await tester.pump(BookingContactConnectPage.pollInterval);
-      await tester.pump();
-      expect(service.getConnectionCalls, 3);
-    });
-
-    testWidgets('confirm sent shows waiting state', (tester) async {
+    testWidgets('confirm sent opens completion without admin verification', (
+      tester,
+    ) async {
       final service = _FakeContactService(
         channels: const [
           ContactChannel(code: 'WHATSAPP', displayName: 'WhatsApp'),
@@ -451,26 +478,159 @@ void main() {
 
       await tester.tap(find.text('I sent the message'));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
-      expect(find.textContaining('Waiting for T-Rider'), findsOneWidget);
+      expect(find.byType(BookingCompletePage), findsOneWidget);
+      expect(service.connection.contactStatus, 'CONFIRM_REQUESTED');
+      expect(analyticsSink.named('contact_connect_succeeded'), isEmpty);
       expect(analyticsSink.named('contact_confirm_requested'), hasLength(1));
     });
 
-    test('resolveContactCompletionTarget uses server urgent flag on reload', () {
-      final connection = ContactConnectionState(
-        bookingNumber: 'TX202608130001',
-        contactStatus: 'VERIFIED',
-        isUrgentRequest: true,
-        bookingStatus: 'OPEN',
+    testWidgets('failed message confirmation stays on contact screen', (
+      tester,
+    ) async {
+      final service = _FakeContactService(
+        channels: const [ContactChannel(code: 'LINE', displayName: 'LINE')],
+        connection: const ContactConnectionState(
+          bookingNumber: 'TX202608130001',
+          contactStatus: 'PENDING',
+          connectionChannel: 'LINE',
+        ),
+      )..failConfirm = true;
+      await pumpPage(
+        tester,
+        service: service,
+        args: BookingContactConnectArgs(
+          result: _result(),
+          serviceLabel: 'Airport pickup',
+        ),
       );
-      final result = connection.toMinimalCreateResult(guestAccessToken: 'guest-token');
-
+      await tester.tap(find.text('I sent the message'));
+      await tester.pumpAndSettle();
+      expect(find.byType(BookingCompletePage), findsNothing);
+      expect(find.byType(BookingContactConnectPage), findsOneWidget);
       expect(
-        resolveContactCompletionTarget(connection: connection, result: result),
-        ContactCompletionTarget.urgentFlow,
+        find.text(AppLocalizations('en').t('ui_load_failed')),
+        findsOneWidget,
       );
+      expect(service.confirmCalls, 1);
     });
+
+    for (final language in ['ko', 'en', 'th', 'ja', 'zh']) {
+      testWidgets('sent-message completion notice at 375px in $language', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(375, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final service = _FakeContactService(
+          channels: const [ContactChannel(code: 'LINE', displayName: 'LINE')],
+          connection: const ContactConnectionState(
+            bookingNumber: 'TX202608130001',
+            contactStatus: 'PENDING',
+            connectionChannel: 'LINE',
+          ),
+        );
+        await pumpPage(
+          tester,
+          language: language,
+          service: service,
+          args: BookingContactConnectArgs(
+            result: _result(),
+            serviceLabel: 'Airport pickup',
+          ),
+        );
+        await tester.tap(
+          find.text(
+            AppLocalizations(language).t('contact_connect_confirm_sent'),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(BookingCompletePage), findsOneWidget);
+        expect(
+          find.byKey(const Key('contact-sent-complete-notice')),
+          findsOneWidget,
+        );
+        expect(
+          find.text(
+            AppLocalizations(
+              language,
+            ).t('contact_connect_sent_complete_notice'),
+          ),
+          findsOneWidget,
+        );
+        expect(service.connection.contactStatus, 'CONFIRM_REQUESTED');
+        expect(service.confirmCalls, 1);
+        expect(analyticsSink.named('contact_connect_succeeded'), isEmpty);
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    test(
+      'contact snapshot preserves booking amount, payment and access details',
+      () {
+        final original = BookingCreateResult(
+          bookingId: 7,
+          bookingNumber: 'TX202608130001',
+          status: 'OPEN',
+          paymentMethod: 'PAY_DRIVER',
+          paymentStatus: 'UNPAID',
+          paymentCurrency: 'THB',
+          paymentInstructions: const {'note': 'keep'},
+          totalAmount: 1500,
+          currency: 'THB',
+          guestAccessToken: 'guest',
+          boardingQrToken: 'qr',
+          trustMessage: 'keep',
+          canCancel: true,
+          trackingAvailable: true,
+          cancellationDeadline: '2026-11-01T10:00:00Z',
+          isUrgentRequest: true,
+          contactConnectionRequired: true,
+        );
+        final updated = original.withContactState(
+          contactStatus: 'CONFIRM_REQUESTED',
+          contactChannel: 'LINE',
+          bookingStatus: 'DRIVER_ASSIGNED',
+        );
+        expect(updated.contactStatus, 'CONFIRM_REQUESTED');
+        expect(updated.contactChannel, 'LINE');
+        expect(updated.status, 'DRIVER_ASSIGNED');
+        expect(updated.totalAmount, original.totalAmount);
+        expect(updated.paymentMethod, original.paymentMethod);
+        expect(updated.paymentInstructions, original.paymentInstructions);
+        expect(updated.guestAccessToken, original.guestAccessToken);
+        expect(updated.boardingQrToken, original.boardingQrToken);
+        expect(updated.canCancel, original.canCancel);
+        expect(updated.cancellationDeadline, original.cancellationDeadline);
+        expect(updated.isUrgentRequest, isTrue);
+        expect(updated.contactConnectionRequired, isTrue);
+      },
+    );
+
+    test(
+      'resolveContactCompletionTarget uses server urgent flag on reload',
+      () {
+        final connection = ContactConnectionState(
+          bookingNumber: 'TX202608130001',
+          contactStatus: 'VERIFIED',
+          isUrgentRequest: true,
+          bookingStatus: 'OPEN',
+        );
+        final result = connection.toMinimalCreateResult(
+          guestAccessToken: 'guest-token',
+        );
+
+        expect(
+          resolveContactCompletionTarget(
+            connection: connection,
+            result: result,
+          ),
+          ContactCompletionTarget.urgentFlow,
+        );
+      },
+    );
 
     test('toMinimalCreateResult preserves urgent flag', () {
       final state = ContactConnectionState(
@@ -481,7 +641,9 @@ void main() {
         totalAmount: 1500,
         currency: 'THB',
       );
-      final result = state.toMinimalCreateResult(guestAccessToken: 'guest-token');
+      final result = state.toMinimalCreateResult(
+        guestAccessToken: 'guest-token',
+      );
       expect(result.isUrgentRequest, isTrue);
       expect(result.bookingNumber, 'TX202608130001');
       expect(result.guestAccessToken, 'guest-token');

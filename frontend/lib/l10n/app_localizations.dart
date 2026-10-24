@@ -756,6 +756,7 @@ class AppLocalizations {
       'contact_connect_after_launch':
           'After sending a message with your booking reference, tap the button below.',
       'contact_connect_confirm_sent': 'I sent the message',
+      'contact_connect_sent_complete_notice': 'Your booking has been received. We have recorded that you sent the message. If we need any further details, we will contact you through your selected messenger.',
       'contact_connect_waiting': 'Waiting for T-Rider to confirm your message',
       'contact_connect_waiting_hint':
           'This usually takes a few minutes. You can keep this page open.',
@@ -2600,6 +2601,7 @@ class AppLocalizations {
       'contact_connect_choose_channel': '메신저 선택',
       'contact_connect_after_launch': '예약번호가 포함된 메시지를 보낸 뒤 아래 버튼을 눌러 주세요.',
       'contact_connect_confirm_sent': '메시지를 보냈습니다',
+      'contact_connect_sent_complete_notice': '예약이 정상 접수되었습니다. 메시지 전송 완료로 기록했어요. 추가 안내가 필요하면 선택하신 메신저로 연락드릴게요.',
       'contact_connect_waiting': 'T-Rider에서 메시지 확인 중입니다',
       'contact_connect_waiting_hint': '보통 몇 분 정도 걸립니다. 이 화면을 유지해 주세요.',
       'contact_connect_step_created': '예약 생성',
@@ -4034,6 +4036,7 @@ class AppLocalizations {
       'contact_connect_choose_channel': '选择 Messenger',
       'contact_connect_after_launch': '发送包含预订参考号的消息后，请点击下方按钮。',
       'contact_connect_confirm_sent': '我已发送消息',
+      'contact_connect_sent_complete_notice': '您的预订已受理，我们已记录您发送消息的确认。如需补充信息，我们会通过您选择的聊天工具与您联系。',
       'contact_connect_waiting': 'T-Rider 正在确认您的消息',
       'contact_connect_waiting_hint': '通常需要几分钟。请保持此页面打开。',
       'contact_connect_step_created': '预订已创建',
@@ -5026,6 +5029,7 @@ class AppLocalizations {
       'contact_connect_choose_channel': 'Messenger を選択',
       'contact_connect_after_launch': '予約参照番号を含むメッセージを送信した後、下のボタンを押してください。',
       'contact_connect_confirm_sent': 'メッセージを送信しました',
+      'contact_connect_sent_complete_notice': 'ご予約を受け付けました。メッセージ送信済みとして記録しています。追加のご案内が必要な場合は、お選びのメッセンジャーでご連絡します。',
       'contact_connect_waiting': 'T-Rider がメッセージを確認しています',
       'contact_connect_waiting_hint': '通常数分かかります。この画面を開いたままお待ちください。',
       'contact_connect_step_created': '予約作成',
@@ -6096,6 +6100,7 @@ class AppLocalizations {
       'contact_connect_after_launch':
           'หลังส่งข้อความพร้อมหมายเลขอ้างอิงการจอง ให้แตะปุ่มด้านล่าง',
       'contact_connect_confirm_sent': 'ฉันส่งข้อความแล้ว',
+      'contact_connect_sent_complete_notice': 'ระบบรับการจองและบันทึกว่าคุณส่งข้อความแล้ว หากต้องการข้อมูลเพิ่มเติม เราจะติดต่อผ่านแอปแชตที่คุณเลือก',
       'contact_connect_waiting': 'T-Rider กำลังยืนยันข้อความของคุณ',
       'contact_connect_waiting_hint':
           'โดยปกติใช้เวลาไม่กี่นาที กรุณาเปิดหน้านี้ไว้',
