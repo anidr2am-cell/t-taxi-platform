@@ -68,8 +68,20 @@ function isContactDispatchRetryable(input = {}) {
   return hasContactFlowEvidence(input);
 }
 
+// Contact verification is independent of dispatch once a trip is assigned.
+// Closed/cancelled bookings remain ineligible; verifying never reopens a trip.
+function isContactVerificationStatusAllowed(input = {}) {
+  return [
+    BOOKING_STATUS.OPEN,
+    BOOKING_STATUS.DRIVER_ASSIGNED,
+    BOOKING_STATUS.ON_ROUTE,
+    BOOKING_STATUS.DRIVER_ARRIVED,
+    BOOKING_STATUS.PICKED_UP,
+  ].includes(normalizeBookingStatus(input));
+}
+
 function canVerifyContact(input = {}) {
-  return normalizeBookingStatus(input) === BOOKING_STATUS.OPEN
+  return isContactVerificationStatusAllowed(input)
     && normalizeContactStatus(input) === CONTACT_STATUS.CONFIRM_REQUESTED;
 }
 
@@ -147,6 +159,7 @@ module.exports = {
   hasContactFlowEvidence,
   isContactDispatchRetryable,
   canVerifyContact,
+  isContactVerificationStatusAllowed,
   deriveContactDispatch,
   contactDispatchInputFromBooking,
 };
