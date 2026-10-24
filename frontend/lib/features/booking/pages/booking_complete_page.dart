@@ -275,6 +275,15 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _SuccessHero(l10n: l10n),
+              if (result.contactStatus == 'CONFIRM_REQUESTED') ...[
+                const SizedBox(height: AppTokens.spaceMd),
+                AppUi.surfaceCard(
+                  child: Text(
+                    l10n.t('contact_connect_sent_complete_notice'),
+                    key: const Key('contact-sent-complete-notice'),
+                  ),
+                ),
+              ],
               const SizedBox(height: AppTokens.spaceLg),
               _BookingNumberCard(
                 bookingNumber: result.bookingNumber,
@@ -309,10 +318,11 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                     result.paymentCurrency ?? widget.review?.paymentCurrency,
                 instructions: result.paymentInstructions,
               ),
-              BookingMessengerHandoffSection(
-                bookingNumber: result.bookingNumber,
-                contactChannel: result.contactChannel,
-              ),
+              if (result.contactStatus != 'CONFIRM_REQUESTED')
+                BookingMessengerHandoffSection(
+                  bookingNumber: result.bookingNumber,
+                  contactChannel: result.contactChannel,
+                ),
               BookingSocialLoginSection(
                 authController: widget.authController,
                 claimContext: kakaoReturnContext,
