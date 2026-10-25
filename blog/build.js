@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 import matter from 'gray-matter';
 import { marked } from 'marked';
 
@@ -27,6 +28,8 @@ const CATEGORY_LABELS = {
 const here = path.dirname(fileURLToPath(import.meta.url));
 const postsDir = process.env.BLOG_POSTS_DIR ? path.resolve(process.env.BLOG_POSTS_DIR) : path.join(here, 'posts');
 const distDir = process.env.BLOG_DIST_DIR ? path.resolve(process.env.BLOG_DIST_DIR) : path.join(here, 'dist');
+const attributionBytes = fs.readFileSync(path.join(here, 'assets/marketing-attribution.js'));
+const attributionAsset = `marketing-attribution.${createHash('sha256').update(attributionBytes).digest('hex').slice(0, 12)}.js`;
 
 const escapeHtml = (value = '') => String(value)
   .replaceAll('&', '&amp;')
@@ -120,6 +123,7 @@ function page({ title, description, canonical, lang = 'ko', body, image, jsonLd 
   <meta name="twitter:image" content="${escapeHtml(ogImage)}">
   <link rel="icon" href="/favicon.png">
   <link rel="stylesheet" href="/blog/assets/blog.css">
+  <script defer src="/blog/assets/${attributionAsset}"></script>
   ${jsonLd.map((item) => `<script type="application/ld+json">${escapeJson(item)}</script>`).join('\n  ')}
 </head>
 <body>
@@ -194,6 +198,7 @@ function build() {
   fs.rmSync(distDir, { recursive: true, force: true });
   fs.mkdirSync(distDir, { recursive: true });
   fs.cpSync(path.join(here, 'assets'), path.join(distDir, 'assets'), { recursive: true });
+  fs.writeFileSync(path.join(distDir, 'assets', attributionAsset), attributionBytes);
 
   for (const post of posts) {
     const canonical = `${BLOG_ORIGIN}/blog/${post.slug}`;

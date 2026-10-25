@@ -1,6 +1,7 @@
 import '../../config/ga4_config.dart';
 import '../../features/booking/services/booking_analytics.dart';
 import 'analytics_consent.dart';
+import 'marketing_attribution_provider.dart';
 import 'ga4_bridge_stub.dart'
     if (dart.library.js_interop) 'ga4_bridge_web.dart';
 
@@ -15,7 +16,12 @@ class Ga4BookingAnalyticsSink implements BookingAnalyticsSink {
     if (!consentService.isGranted) return;
 
     final ga4Name = event.name;
-    final params = _mapParams(event.properties);
+    // Resolve at emission time: consent can be granted after the wizard starts.
+    final params = _mapParams({
+      ...event.properties,
+      ...?MarketingAttributionProvider.snapshotForAnalytics()
+          ?.analyticsParams(),
+    });
     Ga4Bridge.event(ga4Name, params);
 
     if (event.name == 'booking_completed') {

@@ -325,6 +325,19 @@ function createBookingHarness({
   return { service, calls, authUser };
 }
 
+test('customer booking persists post attribution in the repository row without changing price', async () => {
+  const {service, calls, authUser} = createBookingHarness();
+  const result = await service.createBooking({...CREATE_INPUT, marketingAttribution: {
+    firstTouch: {source:'facebook', medium:'organic_social', campaign:'202611_golf_planning',
+      content:'feed_20261101', landingPage:'/', referrerHost:'l.facebook.com'},
+    lastTouch: {source:'facebook', medium:'organic_social', campaign:'202611_golf_planning',
+      content:'story_20261101', landingPage:'/'},
+  }}, authUser);
+  assert.equal(calls.booking.metadata.marketing_attribution.first_touch.content, 'feed_20261101');
+  assert.equal(calls.booking.metadata.marketing_attribution.last_touch.content, 'story_20261101');
+  assert.equal(result.data.totalAmount, SERVER_PRICE.totalAmount);
+});
+
 describe('BookingService.createBooking with coupon', () => {
   test('rejects coupon usage for guest bookings', async () => {
     const { service } = createBookingHarness({

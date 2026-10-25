@@ -8,27 +8,21 @@
   if(initialized||read()!=='granted'||!data.analyticsEnabled||!/^G-[A-Z0-9]+$/.test(data.measurementId))return;
   initialized=true;window['ga-disable-'+data.measurementId]=false;window.dataLayer=window.dataLayer||[];window.gtag=window.gtag||function(){window.dataLayer.push(arguments);};
   window.gtag('consent','default',{analytics_storage:'granted',ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied'});
-  window.gtag('js',new Date());window.gtag('config',data.measurementId,{send_page_view:true,anonymize_ip:true,page_location:location.origin+location.pathname,page_referrer:document.referrer?new URL(document.referrer).origin:''});
+  window.gtag('js',new Date());window.gtag('config',data.measurementId,{send_page_view:true,anonymize_ip:true,page_location:location.origin+location.pathname,page_referrer:document.referrer?new URL(document.referrer).origin:'',...window.trideMarketing.campaignParams()});
   const script=document.createElement('script');script.async=true;script.src='https://www.googletagmanager.com/gtag/js?id='+encodeURIComponent(data.measurementId);document.head.append(script);
  }
  function event(name,details){if(read()!=='granted')return;analytics();if(initialized)window.gtag('event',name,{language:data.lang,...details});}
  function save(value){try{localStorage.setItem(key,value);if(value==='denied'){localStorage.removeItem('tride_marketing_first_touch');localStorage.removeItem('tride_marketing_last_touch');}}catch{}banner.hidden=true;window['ga-disable-'+data.measurementId]=value!=='granted';
   if(value==='granted'){captureAttribution();if(initialized)window.gtag('consent','update',{analytics_storage:'granted'});analytics();}else if(initialized)window.gtag('consent','update',{analytics_storage:'denied'});
  }
-  function captureAttribution(){
-  const params=new URLSearchParams(location.search),touch={schema_version:2,landing_page:location.pathname,captured_at:new Date().toISOString(),expires_at:new Date(Date.now()+90*86400000).toISOString()};
-  let hasUtm=false;for(const name of ['source','medium','campaign','content','term']){const v=params.get('utm_'+name);if(v&&/^[a-zA-Z0-9._-]{1,150}$/.test(v)&&!/^\+?[0-9\s()-]{7,20}$/.test(v)){touch[name]=v;hasUtm=true;}}
-  try{const host=document.referrer?new URL(document.referrer).hostname:null;if(host&&/^[a-z0-9.-]{1,255}$/.test(host))touch.referrer_host=host;
-   const old=JSON.parse(localStorage.getItem('tride_marketing_first_touch')||'null');if(!old||Date.parse(old.expires_at)<Date.now())localStorage.setItem('tride_marketing_first_touch',JSON.stringify(touch));if(hasUtm)localStorage.setItem('tride_marketing_last_touch',JSON.stringify(touch));
-  }catch{}
- }
+ function captureAttribution(){window.trideMarketing.capture();}
 
  document.querySelector('#cookie-accept').addEventListener('click',()=>save('granted'));
  document.querySelector('#cookie-deny').addEventListener('click',()=>save('denied'));
  document.querySelector('#consent-settings').addEventListener('click',()=>banner.hidden=false);
  banner.hidden=['granted','denied'].includes(read());if(read()==='granted'){captureAttribution();analytics();}
  document.querySelectorAll('[data-service]').forEach(a=>a.addEventListener('click',()=>{const url=new URL(a.href);url.searchParams.set('entry',crypto.randomUUID());a.href=url.href;event('landing_service_click',{service_type:a.dataset.service});}));
- document.querySelector('#language-select').addEventListener('change',e=>{const lang=e.target.value;if(!['ko','en','th','ja','zh'].includes(lang))return;event('landing_language_change',{destination_language:lang});location.href=lang==='ko'?'/':`/${lang}/`;});
+ document.querySelector('#language-select').addEventListener('change',e=>{const lang=e.target.value;if(!['ko','en','th','ja','zh'].includes(lang))return;event('landing_language_change',{destination_language:lang});location.href=window.trideMarketing.decorateUrl(lang==='ko'?'/':`/${lang}/`);});
  document.querySelector('#support-actions').addEventListener('click',e=>{const a=e.target.closest('[data-channel]');if(a)event('landing_support_click',{channel:a.dataset.channel});});
  document.querySelector('.airport-tabs').addEventListener('click',e=>{
   const button=e.target.closest('[data-airport]');if(!button)return;
