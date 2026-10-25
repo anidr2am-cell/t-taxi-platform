@@ -33,7 +33,10 @@ abstract final class MarketingAttributionSanitizer {
   static String? referrerHost(String? referrer) {
     if (referrer == null || referrer.trim().isEmpty) return null;
     try {
-      final host = Uri.parse(referrer.trim()).host.trim().toLowerCase();
+      final raw = referrer.trim();
+      final host = (raw.contains('://') ? Uri.parse(raw).host : raw)
+          .trim()
+          .toLowerCase();
       if (host.isEmpty || host.length > 255) return null;
       if (_looksLikePii(host)) return null;
       if (!RegExp(r'^[a-z0-9.-]+$').hasMatch(host)) return null;
@@ -86,11 +89,13 @@ class MarketingTouch {
       referrerHost: MarketingAttributionSanitizer.referrerHost(
         json['referrer_host']?.toString() ?? json['referrerHost']?.toString(),
       ),
-      capturedAt: json['captured_at'] as String? ??
+      capturedAt:
+          json['captured_at'] as String? ??
           json['capturedAt'] as String? ??
           DateTime.now().toUtc().toIso8601String(),
       expiresAt: json['expires_at'] as String? ?? json['expiresAt'] as String?,
-      schemaVersion: json['schema_version'] as int? ??
+      schemaVersion:
+          json['schema_version'] as int? ??
           json['schemaVersion'] as int? ??
           marketingAttributionSchemaVersion,
     );
@@ -107,10 +112,13 @@ class MarketingTouch {
   final String? expiresAt;
   final int schemaVersion;
 
-  bool get hasCampaignSignal =>
-      [source, medium, campaign, content, term].any(
-        (value) => value != null && value.isNotEmpty,
-      );
+  bool get hasCampaignSignal => [
+    source,
+    medium,
+    campaign,
+    content,
+    term,
+  ].any((value) => value != null && value.isNotEmpty);
 
   bool get hasAnySignal =>
       hasCampaignSignal ||
@@ -126,29 +134,29 @@ class MarketingTouch {
   }
 
   Map<String, dynamic> toJson() => {
-        'schema_version': schemaVersion,
-        if (source != null) 'source': source,
-        if (medium != null) 'medium': medium,
-        if (campaign != null) 'campaign': campaign,
-        if (content != null) 'content': content,
-        if (term != null) 'term': term,
-        if (landingPage != null) 'landing_page': landingPage,
-        if (referrerHost != null) 'referrer_host': referrerHost,
-        'captured_at': capturedAt,
-        'expires_at': expiresAt,
-      };
+    'schema_version': schemaVersion,
+    if (source != null) 'source': source,
+    if (medium != null) 'medium': medium,
+    if (campaign != null) 'campaign': campaign,
+    if (content != null) 'content': content,
+    if (term != null) 'term': term,
+    if (landingPage != null) 'landing_page': landingPage,
+    if (referrerHost != null) 'referrer_host': referrerHost,
+    'captured_at': capturedAt,
+    'expires_at': expiresAt,
+  };
 
   Map<String, dynamic> toApiJson() => {
-        if (source != null) 'source': source,
-        if (medium != null) 'medium': medium,
-        if (campaign != null) 'campaign': campaign,
-        if (content != null) 'content': content,
-        if (term != null) 'term': term,
-        if (landingPage != null) 'landingPage': landingPage,
-        if (referrerHost != null) 'referrerHost': referrerHost,
-        'capturedAt': capturedAt,
-        if (expiresAt != null) 'expiresAt': expiresAt,
-      };
+    if (source != null) 'source': source,
+    if (medium != null) 'medium': medium,
+    if (campaign != null) 'campaign': campaign,
+    if (content != null) 'content': content,
+    if (term != null) 'term': term,
+    if (landingPage != null) 'landingPage': landingPage,
+    if (referrerHost != null) 'referrerHost': referrerHost,
+    'capturedAt': capturedAt,
+    if (expiresAt != null) 'expiresAt': expiresAt,
+  };
 
   static String? _optionalPath(Object? value) {
     if (value == null) return null;
@@ -166,10 +174,7 @@ class MarketingTouch {
 }
 
 class MarketingAttributionSnapshot {
-  const MarketingAttributionSnapshot({
-    this.firstTouch,
-    this.lastTouch,
-  });
+  const MarketingAttributionSnapshot({this.firstTouch, this.lastTouch});
 
   final MarketingTouch? firstTouch;
   final MarketingTouch? lastTouch;
@@ -177,9 +182,9 @@ class MarketingAttributionSnapshot {
   bool get isEmpty => firstTouch == null && lastTouch == null;
 
   Map<String, dynamic> toApiJson() => {
-        if (firstTouch != null) 'firstTouch': firstTouch!.toApiJson(),
-        if (lastTouch != null) 'lastTouch': lastTouch!.toApiJson(),
-      };
+    if (firstTouch != null) 'firstTouch': firstTouch!.toApiJson(),
+    if (lastTouch != null) 'lastTouch': lastTouch!.toApiJson(),
+  };
 
   Map<String, Object?> analyticsParams() {
     final touch = lastTouch ?? firstTouch;
@@ -199,7 +204,8 @@ abstract class MarketingAttributionStorage {
   void remove(String key);
 }
 
-class InMemoryMarketingAttributionStorage implements MarketingAttributionStorage {
+class InMemoryMarketingAttributionStorage
+    implements MarketingAttributionStorage {
   final Map<String, String> _values = {};
 
   @override
@@ -255,6 +261,7 @@ class MarketingAttributionService {
     required String? landingPage,
     required String? referrerHost,
     required DateTime now,
+    bool sameSiteNavigation = false,
   }) {
     final capturedAt = now.toUtc().toIso8601String();
     final expiresAt = _expiresAt(now);
@@ -278,7 +285,8 @@ class MarketingAttributionService {
       if (firstTouch == null) {
         firstTouch = touch;
       }
-      if (touch.hasCampaignSignal) {
+      if (touch.hasCampaignSignal &&
+          (!sameSiteNavigation || lastTouch == null)) {
         lastTouch = touch;
       }
     } else if (firstTouch == null && landingPage != null) {
@@ -303,9 +311,18 @@ class MarketingAttributionService {
   }) {
     final utmParams = _readUtm(uri);
     final landingPage = MarketingAttributionSanitizer.landingPath(uri);
-    final referrerHost = MarketingAttributionSanitizer.referrerHost(
+    final rawReferrerHost = MarketingAttributionSanitizer.referrerHost(
       documentReferrer,
     );
+    final referrerHost =
+        rawReferrerHost == uri.host ||
+            const [
+              'kauth.kakao.com',
+              'access.line.me',
+              'accounts.google.com',
+            ].contains(rawReferrerHost)
+        ? null
+        : rawReferrerHost;
     final hasUtm = utmParams.values.any((value) => value != null);
 
     if (!hasUtm && referrerHost == null && landingPage == null) {
@@ -336,7 +353,11 @@ class MarketingAttributionService {
         return null;
       }
       final touch = MarketingTouch.fromJson(decoded);
-      if (!touch.hasAnySignal || touch.isExpiredAt(now)) {
+      if (!touch.hasAnySignal ||
+          touch.isExpiredAt(now) ||
+          RegExp(
+            r'^/(admin|driver|auth|account|my-bookings)(/|$)',
+          ).hasMatch(touch.landingPage ?? '')) {
         _storage.remove(key);
         return null;
       }
@@ -402,6 +423,11 @@ class MarketingAttributionCoordinator {
     required bool analyticsDenied,
     DateTime? now,
   }) {
+    // Staff/account/OAuth routes are not customer marketing touch points.
+    if (RegExp(
+      r'^/(admin|driver|auth|account|my-bookings)(/|$)',
+    ).hasMatch(uri.path))
+      return;
     _lastLandingUri = uri;
     _lastReferrer = documentReferrer;
     final effectiveNow = now ?? DateTime.now().toUtc();
@@ -425,8 +451,9 @@ class MarketingAttributionCoordinator {
         existing: _service.readSnapshot(now: effectiveNow),
         incomingTouch: incoming,
         landingPage: landingPage,
-        referrerHost: referrerHost,
+        referrerHost: incoming?.referrerHost,
         now: effectiveNow,
+        sameSiteNavigation: referrerHost == uri.host,
       );
       _service.applySnapshot(merged, now: effectiveNow);
       _pendingSnapshot = null;
@@ -437,15 +464,25 @@ class MarketingAttributionCoordinator {
       existing: _pendingSnapshot,
       incomingTouch: incoming,
       landingPage: landingPage,
-      referrerHost: referrerHost,
+      referrerHost: incoming?.referrerHost,
       now: effectiveNow,
+      sameSiteNavigation: referrerHost == uri.host,
     );
   }
 
   void onAnalyticsGranted({DateTime? now}) {
     final effectiveNow = now ?? DateTime.now().toUtc();
     if (_pendingSnapshot != null && !_pendingSnapshot!.isEmpty) {
-      _service.applySnapshot(_pendingSnapshot!, now: effectiveNow);
+      // Keep a consented static-page first touch when Flutter had no consent
+      // access at bootstrap (e.g. storage was temporarily unavailable).
+      final stored = _service.readSnapshot(now: effectiveNow);
+      _service.applySnapshot(
+        MarketingAttributionSnapshot(
+          firstTouch: stored.firstTouch ?? _pendingSnapshot!.firstTouch,
+          lastTouch: _pendingSnapshot!.lastTouch ?? stored.lastTouch,
+        ),
+        now: effectiveNow,
+      );
       _pendingSnapshot = null;
     } else if (_lastLandingUri != null) {
       captureLanding(

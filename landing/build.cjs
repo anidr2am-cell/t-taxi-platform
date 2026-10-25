@@ -9,7 +9,7 @@ const route=lang=>lang==='ko'?'/':`/${lang}/`;
 const money=n=>n.toLocaleString('en-US');
 fs.mkdirSync(path.join(dist,'landing-assets'),{recursive:true});
 function asset(name){const bytes=fs.readFileSync(path.join(root,'assets',name)),ext=path.extname(name),base=path.basename(name,ext),hash=crypto.createHash('sha256').update(bytes).digest('hex').slice(0,12),out=`${base}.${hash}${ext}`;fs.writeFileSync(path.join(dist,'landing-assets',out),bytes);return '/landing-assets/'+out;}
-const assets={CSS:asset('landing.css'),JS:asset('landing.js'),LOGO:asset('logo.webp'),SHARE:asset('share.png')};
+const assets={CSS:asset('landing.css'),JS:asset('landing.js'),ATTRIBUTION:asset('../../blog/assets/marketing-attribution.js'),LOGO:asset('logo.webp'),SHARE:asset('share.png')};
 const rows=snapshot.rows.filter(r=>!r.serviceTypeCode||r.serviceTypeCode==='AIRPORT_PICKUP').map(r=>({...r,airport:r.airport||r.origin}));
 const price=rows.find(r=>r.airport==='BKK'&&r.destination==='PATTAYA')?.prices.SEDAN;
 if(typeof price!=='number'||price<=0)throw Error('BKK → Pattaya sedan fare required');
