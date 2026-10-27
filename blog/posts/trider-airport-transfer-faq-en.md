@@ -6,7 +6,11 @@ lang: en
 category: faq
 translationKey: trider-airport-transfer-faq
 date: 2026-10-01
-updated: 2026-10-14
+updated: 2026-10-27
+related:
+  - thailand-airport-taxi-booking-guide-en
+  - suvarnabhumi-airport-pickup-guide-en
+  - pattaya-to-airport-transfer-en
 faq:
   - question: Which payment methods can I use?
     answer: No deposit is required. Pay cash to the driver after arriving at your destination, or contact the administrator for bank transfer and card payment.
@@ -31,6 +35,8 @@ faq:
 ---
 
 Here are clear answers to ten common questions about booking a Bangkok airport transfer. TRider operates between Suvarnabhumi (BKK) and Don Mueang (DMK) airports, Bangkok and Pattaya.
+
+Start with the airport code on your ticket: [Suvarnabhumi to Pattaya](/blog/suvarnabhumi-to-pattaya-en) and [Don Mueang to Pattaya](/blog/don-mueang-to-pattaya-en) have separate route guides. For the flight, local arrival date, hotel address and luggage details to prepare, use the [Thailand airport transfer booking checklist](/blog/thailand-airport-taxi-booking-guide-en).
 
 ## 1. Which payment methods can I use?
 
@@ -68,6 +74,8 @@ Check both your group size and the number of suitcases or golf bags before choos
 
 Meet the driver at **Gate 7**. Detailed meeting instructions are available after booking.
 
+Read the [Suvarnabhumi airport pickup guide](/blog/suvarnabhumi-airport-pickup-guide-en) before arrival. This meeting point applies to BKK; follow the instructions issued for your own booking if you arrive at Don Mueang.
+
 ## 8. Can I request a name board?
 
 A name board is available as a paid optional service.
@@ -79,3 +87,5 @@ You can see a photo of the assigned vehicle in advance. The driver also uses a d
 ## 10. When can I book?
 
 Bookings and customer support are available 24 hours a day. The booking screen supports Korean, English, Chinese, Japanese and Thai.
+
+For your return journey, see [Pattaya to Suvarnabhumi or Don Mueang Airport](/blog/pattaya-to-airport-transfer-en) and check the departing airport separately. When you are ready, [start an English airport transfer booking](/booking?lang=en).
