@@ -5,8 +5,12 @@ slug: suvarnabhumi-airport-pickup-guide-ja
 lang: ja
 category: airport
 translationKey: suvarnabhumi-airport-pickup-guide
+related:
+  - don-mueang-to-pattaya-ja
+  - pattaya-to-airport-transfer-ja
+  - thailand-airport-taxi-booking-guide-ja
 date: 2026-10-01
-updated: 2026-10-14
+updated: 2026-10-28
 ---
 
 スワンナプーム国際空港（BKK）の送迎を予約したら、到着前に待ち合わせ場所と配車された車両をご確認ください。TRiderでは**7番ゲート**でドライバーと待ち合わせます。詳しい案内は予約後に確認できます。
@@ -27,7 +31,7 @@ updated: 2026-10-14
 
 ## フライトが遅延した場合
 
-フライトが遅延した場合は、実際の到着時刻に合わせてお迎えします。 高速道路料金・空港駐車場代・フライト遅延時の待機が料金に含まれ、追加料金はありません。到着時刻が変わった場合も、予約後の案内をご確認ください。
+フライトが遅延した場合は、実際の到着時刻に合わせてお迎えします。 対象空港送迎の高速道路料金と空港駐車場代は料金に含まれます。実際の住所による距離加算や有料オプションは、予約時の最終見積額で確認してください。到着時刻が変わった場合も、予約後の案内をご確認ください。
 
 ## 深夜到着の追加料金
 
@@ -50,3 +54,10 @@ updated: 2026-10-14
 - ネームボードが必要な場合は別途申請
 
 予約画面は韓国語、英語、中国語、日本語、タイ語に対応しています。
+
+
+## 関連する移動案内
+
+[ドンムアン空港からパタヤ](/blog/don-mueang-to-pattaya-ja)、[パタヤから空港への送迎](/blog/pattaya-to-airport-transfer-ja)、[タイの空港送迎予約チェックリスト](/blog/thailand-airport-taxi-booking-guide-ja)もご確認ください。
+
+空港送迎は[TRiderの日本語予約画面](https://trider.taxi/booking?lang=ja)から24時間予約できます。人数、荷物、ホテル住所を入力して最終料金をご確認ください。

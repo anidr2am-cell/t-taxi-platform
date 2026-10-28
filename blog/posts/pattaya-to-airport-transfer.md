@@ -6,7 +6,7 @@ lang: ko
 category: airport
 translationKey: pattaya-to-airport-transfer
 date: 2026-10-08
-updated: 2026-10-14
+updated: 2026-10-28
 related:
   - suvarnabhumi-to-pattaya
   - don-mueang-to-pattaya
@@ -23,7 +23,7 @@ related:
 
 ## 파타야 공항 샌딩 정찰제 요금
 
-차량 1대 기준 정찰제 요금입니다. 고속도로 통행료·공항 주차비·항공편 지연 대기가 요금에 포함되어 추가요금이 없습니다. 심야 할증은 없습니다.
+차량 1대 기준 정찰제 요금입니다. 공항 노선의 기준 요금에는 고속도로 통행료와 공항 주차비가 포함됩니다. 실제 주소에 따른 거리 추가요금이나 별도 신청 서비스는 최종 예약 금액에서 확인하세요. 심야 할증은 없습니다.
 
 | 구간 | 세단 | SUV | 밴 |
 | --- | ---: | ---: | ---: |

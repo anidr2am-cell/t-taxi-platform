@@ -8,14 +8,18 @@ import { marked } from 'marked';
 const BLOG_ORIGIN = 'https://trider.taxi';
 const AUTHOR = 'TRider';
 const CATEGORIES = ['airport', 'golf', 'travel', 'faq'];
-const LANGUAGES = ['ko', 'en', 'ja', 'zh', 'th'];
-const HREFLANG = { ko: 'ko', en: 'en', ja: 'ja', zh: 'zh-Hans', th: 'th' };
+const LANGUAGES = ['ko', 'en', 'ja', 'zh', 'ru', 'th'];
+const HREFLANG = { ko: 'ko', en: 'en', ja: 'ja', zh: 'zh-Hans', ru: 'ru', th: 'th' };
+const LANGUAGE_NAMES = { ko: '한국어', en: 'English', ja: '日本語', zh: '中文', ru: 'Русский', th: 'ไทย' };
+// The booking application does not support Russian. Keep that transition explicit.
+const bookingLanguage = (lang) => lang === 'ru' ? 'en' : lang;
 const DEFAULT_OG_IMAGE = `${BLOG_ORIGIN}/blog/assets/og-default.png`;
 const UI = {
   ko: { blog: '블로그', title: 'TRider 블로그', intro: '태국 공항 이동과 여행에 필요한 정보를 확인하세요.', updated: '최종 업데이트', related: '관련 글', categories: '카테고리', all: '전체', cta: '✈️ 정찰제 공항픽업 · 24시간 예약', book: '지금 예약하기', support: '카카오톡 상담', supportUrl: 'https://open.kakao.com/o/suG4krMi' },
   en: { blog: 'Blog', title: 'TRider Blog', intro: 'Practical guides for airport transfers and travel in Thailand.', updated: 'Last updated', related: 'Related articles', categories: 'Categories', all: 'All posts', cta: '✈️ Fixed-price airport transfers · Book 24/7', book: 'Book now', support: 'WhatsApp', supportUrl: 'https://wa.me/66815693445' },
   ja: { blog: 'ブログ', title: 'TRiderブログ', intro: 'タイの空港送迎と旅行に役立つ情報をご案内します。', updated: '最終更新', related: '関連記事', categories: 'カテゴリー', all: 'すべての記事', cta: '✈️ 定額の空港送迎・24時間予約', book: '今すぐ予約', support: 'LINEで相談', supportUrl: 'https://lin.ee/55A9phq' },
   zh: { blog: '博客', title: 'TRider博客', intro: '查看泰国机场接送和旅行实用信息。', updated: '最后更新', related: '相关文章', categories: '分类', all: '全部文章', cta: '✈️ 固定价格机场接送 · 24小时预约', book: '立即预约', support: 'WhatsApp咨询', supportUrl: 'https://wa.me/66815693445' },
+  ru: { blog: 'Блог', title: 'Блог TRider', intro: 'Практические советы о трансферах из аэропортов и поездках по Таиланду.', updated: 'Обновлено', related: 'Читайте также', categories: 'Категории', all: 'Все статьи', cta: '✈️ Трансферы из аэропорта · Онлайн-бронирование круглосуточно', book: 'Забронировать на английском', support: 'WhatsApp', supportUrl: 'https://wa.me/66815693445' },
   th: { blog: 'บล็อก', title: 'บล็อก TRider', intro: 'ข้อมูลการเดินทางและบริการรับส่งสนามบินในประเทศไทย', updated: 'อัปเดตล่าสุด', related: 'บทความที่เกี่ยวข้อง', categories: 'หมวดหมู่', all: 'บทความทั้งหมด', cta: '✈️ รถรับส่งสนามบินราคาเหมาจ่าย · จองได้ 24 ชั่วโมง', book: 'จองเลย', support: 'WhatsApp', supportUrl: 'https://wa.me/66815693445' },
 };
 const CATEGORY_LABELS = {
@@ -23,6 +27,7 @@ const CATEGORY_LABELS = {
   en: { airport: 'Airport', golf: 'Golf', travel: 'Travel', faq: 'FAQ' },
   ja: { airport: '空港', golf: 'ゴルフ', travel: '旅行', faq: 'よくある質問' },
   zh: { airport: '机场', golf: '高尔夫', travel: '旅行', faq: '常见问题' },
+  ru: { airport: 'Аэропорты', golf: 'Гольф', travel: 'Путешествия', faq: 'Вопросы и ответы' },
   th: { airport: 'สนามบิน', golf: 'กอล์ฟ', travel: 'ท่องเที่ยว', faq: 'คำถามที่พบบ่อย' },
 };
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -75,7 +80,7 @@ function localizeBookingLinks(html, lang) {
     catch { return attribute; }
     if (url.origin !== BLOG_ORIGIN || !['/', '/booking'].includes(url.pathname)) return attribute;
     url.pathname = '/booking';
-    url.searchParams.set('lang', lang);
+    url.searchParams.set('lang', bookingLanguage(lang));
     return `href="${escapeHtml(url.pathname + url.search + url.hash)}"`;
   });
 }
@@ -100,7 +105,7 @@ function readPosts() {
     .sort((a, b) => b.date.localeCompare(a.date));
 }
 
-function page({ title, description, canonical, lang = 'ko', body, image, jsonLd = [], alternates = '', bookingHref = `/booking?lang=${lang}` }) {
+function page({ title, description, canonical, lang = 'ko', body, image, jsonLd = [], alternates = '', bookingHref = `/booking?lang=${bookingLanguage(lang)}` }) {
   const ogImage = image ? new URL(image, BLOG_ORIGIN).href : DEFAULT_OG_IMAGE;
   return `<!doctype html>
 <html lang="${escapeHtml(lang)}">
@@ -128,6 +133,7 @@ function page({ title, description, canonical, lang = 'ko', body, image, jsonLd 
 </head>
 <body>
   <header class="site-header"><div class="header-inner"><a class="brand" href="${listPath(lang)}">TRider</a><a class="book-button" href="${escapeHtml(bookingHref)}">${UI[lang].book}</a></div></header>
+  ${lang === 'ru' ? '<p class="booking-language-note" lang="ru">Статьи доступны на русском. Форма бронирования откроется на английском; обслуживание на русском не гарантируется.</p>' : ''}
   ${body}
   <footer>© TRider · Thailand transfer guide</footer>
 </body>
@@ -153,10 +159,9 @@ function alternateLinks(posts) {
 
 function languageSwitcher(posts, currentLang) {
   if (posts.length < 2) return '';
-  const names = { ko: '한국어', en: 'English', ja: '日本語', zh: '中文', th: 'ไทย' };
   return `<nav class="language-switcher" aria-label="Translations">${posts.map((post) => post.lang === currentLang
-    ? `<strong lang="${HREFLANG[post.lang]}">${names[post.lang]}</strong>`
-    : `<a lang="${HREFLANG[post.lang]}" hreflang="${HREFLANG[post.lang]}" href="/blog/${post.slug}">${names[post.lang]}</a>`).join('')}</nav>`;
+    ? `<strong lang="${HREFLANG[post.lang]}">${LANGUAGE_NAMES[post.lang]}</strong>`
+    : `<a lang="${HREFLANG[post.lang]}" hreflang="${HREFLANG[post.lang]}" href="/blog/${post.slug}">${LANGUAGE_NAMES[post.lang]}</a>`).join('')}</nav>`;
 }
 
 function relatedPosts(post, posts) {
@@ -233,7 +238,7 @@ function build() {
     const cover = post.cover
       ? `<img class="cover" src="${escapeHtml(post.cover)}" alt="" loading="lazy" decoding="async" width="${Number(post.coverWidth)}" height="${Number(post.coverHeight)}">`
       : '';
-    const bookingHref = post.bookingService ? `/booking?service=${post.bookingService}&lang=${post.lang}` : `/booking?lang=${post.lang}`;
+    const bookingHref = post.bookingService ? `/booking?service=${post.bookingService}&lang=${bookingLanguage(post.lang)}` : `/booking?lang=${bookingLanguage(post.lang)}`;
     const body = `<main><article class="article"><nav><a href="${listPath(post.lang)}">${ui.blog}</a> / <a href="${categoryPath(post.lang, post.category)}">${CATEGORY_LABELS[post.lang][post.category]}</a></nav>${languageSwitcher(translations, post.lang)}<h1>${escapeHtml(post.title)}</h1><p class="updated">${ui.updated}: <time datetime="${post.updated}">${post.updated}</time></p>${cover}<div class="content">${localizeBookingLinks(marked.parse(post.content), post.lang)}</div>${relatedBlock(post, posts)}<aside class="cta"><strong>${ui.cta}</strong><div><a class="cta-primary" href="${escapeHtml(bookingHref)}">${ui.book}</a><a class="cta-secondary" href="${ui.supportUrl}" rel="noopener noreferrer">${ui.support}</a></div></aside></article></main>`;
     write(path.join(post.slug, 'index.html'), page({
       title: `${post.title} | TRider`, description: post.description,
@@ -245,7 +250,7 @@ function build() {
   for (const lang of LANGUAGES.filter((item) => posts.some((post) => post.lang === item))) {
     const ui = UI[lang];
     const languagePosts = posts.filter((post) => post.lang === lang);
-    const filters = LANGUAGES.filter((item) => posts.some((post) => post.lang === item)).map((item) => `<a href="${listPath(item)}" lang="${HREFLANG[item]}">${{ ko: '한국어', en: 'English', ja: '日本語', zh: '中文', th: 'ไทย' }[item]}</a>`).join('');
+    const filters = LANGUAGES.filter((item) => posts.some((post) => post.lang === item)).map((item) => `<a href="${listPath(item)}" lang="${HREFLANG[item]}">${LANGUAGE_NAMES[item]}</a>`).join('');
     const listBody = `<main><section class="hero"><p class="eyebrow">Thailand travel guide</p><h1>${ui.title}</h1><p>${ui.intro}</p><nav class="language-filters" aria-label="Languages">${filters}</nav></section><section class="post-list">${languagePosts.map(postCard).join('')}</section></main>`;
     const listRelative = lang === 'ko' ? 'index.html' : path.join('lang', lang, 'index.html');
     const listCanonical = `${BLOG_ORIGIN}${listPath(lang)}`;
@@ -254,7 +259,7 @@ function build() {
     for (const category of CATEGORIES) {
       const categoryPosts = languagePosts.filter((post) => post.category === category);
       const label = CATEGORY_LABELS[lang][category];
-      const empty = { ko: '등록된 글이 없습니다.', en: 'No articles yet.', ja: '記事はまだありません。', zh: '暂无文章。', th: 'ยังไม่มีบทความ' }[lang];
+      const empty = { ko: '등록된 글이 없습니다.', en: 'No articles yet.', ja: '記事はまだありません。', zh: '暂无文章。', ru: 'Статей пока нет.', th: 'ยังไม่มีบทความ' }[lang];
       const body = `<main><section class="hero"><p class="eyebrow">${ui.categories}</p><h1>${escapeHtml(label)}</h1><p><a href="${listPath(lang)}">${ui.all}</a></p></section><section class="post-list">${categoryPosts.length ? categoryPosts.map(postCard).join('') : `<p>${empty}</p>`}</section></main>`;
       const relative = lang === 'ko' ? path.join('category', category, 'index.html') : path.join('lang', lang, 'category', category, 'index.html');
       write(relative, page({ title: `${label} | ${ui.title}`, description: `${ui.title} · ${label}`, canonical: `${BLOG_ORIGIN}${categoryPath(lang, category)}`, lang, body }));

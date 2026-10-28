@@ -1,51 +1,42 @@
 ---
-title: "TRounding Pattaya Golf Join Lounge: 5% Rewards and Equal Cash/Card Prices"
-description: Check golf fee inclusions and separate expenses in Pattaya, plus TRounding’s 5% rewards on all products and equal cash and card prices.
+title: 'Buddy Golf Pattaya: joining a round and arranging your transfer'
+description: >-
+  Buddy Golf, formerly TRounding, focuses on Korean golf travellers. Check
+  dates, playing partners and tee times separately from TRider vehicle
+  transfers.
 slug: trounding-golf-join-bar-benefits-en
 lang: en
 category: golf
 translationKey: trounding-golf-join-bar-benefits
 date: 2026-10-07
-updated: 2026-10-19
+updated: 2026-10-28
 related:
   - pattaya-golf-price-match-guarantee-en
   - burapha-cc-green-fee-en
 ---
 
-Planning a Pattaya golf trip solo or with a few friends means sorting out both playing partners and transport. **Pattaya golf join bar** TRounding helps solo visitors, pairs and groups form playing groups with Korean golf partners. Arranging your golf products and transfers separately keeps the plans clear.
+Buddy Golf is the new name for TRounding. Its Pattaya golf travel focus is Korean travellers. If you are travelling alone or with a small group, arrange playing partners and transport as separate parts of your trip.
 
-## Form a group of 4 at a Pattaya golf join bar
+## Start with your date and course
 
-Golf courses in Thailand generally use groups of 4. If your party does not make up a full group, **Pattaya golf join bar** TRounding is a place to team up with Korean golf partners. You can visit alone, as a pair or with a larger party.
+Prepare the preferred date, course, tee time and player count before asking about joining a round. Matching players and securing tee times depend on actual availability. An enquiry alone does not confirm a place.
 
-> Solo or together, Pattaya golf is always TRounding
+## Understand the audience and language
 
-For the golf bar's location and visiting information, please enquire only through [TRounding Naver Band](https://band.us/@trounding) chat.
+Buddy Golf primarily serves Korean golf travellers. Reading this English guide does not mean English-speaking playing partners or staff are guaranteed. Confirm communication options and participation requirements through its current official contact route.
 
-## Earn 5% rewards on every product
+## Confirm golf costs and inclusions
 
-Every product purchased through **Pattaya golf join bar** TRounding earns **5% of the payment amount in rewards**.
+Ask whether green, caddie and cart fees are included, and check tips and transport separately. Do not assume former mileage offers or old prices remain available. Confirm payment and cancellation terms before reserving the golf product.
 
-Ask through Naver Band chat about how to use your rewards. The administrator will explain the current process; no additional redemption steps or conditions are set out here.
+## Arrange transport with TRider
 
-## The same price for cash and card
+TRider provides airport transfers and golf-course transport from Pattaya. The round-trip vehicle arrangement includes driver waiting during the round. Enter the actual pickup address, course, holes and schedule to check the final quote.
 
-Product prices are the same whether you pay by cash or card. With no additional card surcharge, you can choose the payment method that suits your trip.
+## Count golf bags as well as passengers
 
-When arranging your **Pattaya golf join bar** visit, there is no need to recalculate prices based on payment method. You can ask about golf products, pairing and payment together through Naver Band chat.
+Prepare the number and size of suitcases and golf bags for the whole group. You can divide a shared vehicle's price among its passengers, but that price does not include green or caddie fees. Vehicle suitability depends on the actual luggage combination.
 
-## Airport and golf course transfers with TRider
+## Keep the bookings distinct
 
-Fixed fares from Suvarnabhumi Airport to Pattaya, including tolls, are THB 1,000 for a sedan, THB 1,300 for an SUV and THB 1,700 for a van. From Don Mueang Airport to Pattaya, fares are THB 1,400 for a sedan, THB 1,600 for an SUV and THB 2,200 for a van.
-
-Transfers between Pattaya and golf courses include the return journey and driver waiting during the round. Enter your passenger and luggage details to receive a suitable vehicle recommendation. When travelling together, only the vehicle transfer cost can be shared.
-
-Green fees, caddie fees and cart fees stay the same per person regardless of party size. Only the transfer cost is shared between passengers.
-
-## Arrange golf pairing and book your transfer
-
-For pairing at **Pattaya golf join bar** TRounding, golf products and rewards enquiries, contact [TRounding Naver Band](https://band.us/@trounding) chat.
-
-Airport and golf course transfers can be booked on the [TRider booking page](https://trider.taxi/).
-
-> The golf join bar you'll want to come back to — TRounding
+Confirm Buddy Golf's current official enquiry channel separately. The former TRounding BAND address is not published as its new contact. The [golf cost checklist](/blog/pattaya-golf-price-match-guarantee-en) and [Burapha CC guide](/blog/burapha-cc-green-fee-en) can help you plan. You can book vehicle transport around the clock on the [TRider booking page](https://trider.taxi/); this does not confirm a golf tee time.

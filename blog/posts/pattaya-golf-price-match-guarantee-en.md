@@ -1,37 +1,41 @@
 ---
-title: "Pattaya Golf Costs: Inclusions, 5% Rewards and Equal Cash/Card Prices"
-description: Check golf fee inclusions and separate expenses in Pattaya, plus TRounding’s 5% rewards on all products and equal cash and card prices.
+title: 'Pattaya golf costs: compare inclusions and separate transfer charges'
+description: >-
+  Compare Pattaya golf quotes by date, tee time and inclusions. Separate green,
+  caddie and cart fees from transport before booking your trip.
 slug: pattaya-golf-price-match-guarantee-en
 lang: en
 category: golf
 translationKey: pattaya-golf-price-match-guarantee
 date: 2026-10-07
-updated: 2026-10-19
+updated: 2026-10-28
 related:
   - burapha-cc-green-fee-en
   - trounding-golf-join-bar-benefits-en
 ---
 
-When budgeting for golf in Pattaya, compare both the advertised fee and what it includes. Check TRounding golf products separately from T-Rider transport.
+Pattaya golf costs are easier to compare when the date and inclusions match. Buddy Golf, formerly TRounding, handles Korean-focused golf travel enquiries; TRider provides vehicle transfers. The two services are not interchangeable bookings.
 
-## What the golf fee includes
+## Compare the same golf arrangements
 
-Golf fees in TRounding’s monthly schedule include the green fee, caddie fee and cart fee. Confirm your preferred date, course, tee time and booking availability. Prices can vary by date and product.
+Check the course, date, tee time and number of holes. Similar package names do not establish identical inclusions or availability. Use a current quote for the date you intend to play rather than an older article's advertised rate.
 
-## Separate caddie tips and return transport
+## Check each included cost
 
-Caddie tips are usually THB 400 and are not included in the golf fee. Return transport is also charged separately and varies by course. Check all separate expenses before booking.
+Confirm the green fee, caddie fee and cart fee separately. Ask whether caddie tips, personal expenses and transfers are extra. Do not deduct old or unverified loyalty benefits from your budget.
 
-## 5% rewards on every product
+## Reserve golf and transport separately
 
-All TRounding products earn 5% of the payment amount in rewards. Ask about how rewards are credited and redeemed when booking.
+A TRider vehicle booking is not a golf admission ticket or a confirmed tee time. Once your round is arranged, enter the pickup location, schedule, passengers and luggage to select transport.
 
-## Equal cash and card prices
+## Share vehicle costs without mixing golf fees
 
-TRounding product prices are the same for cash and card payments. Choose your payment method without a difference in the product price.
+Travellers using the same vehicle can divide its price among the actual passengers. Green fees and caddie fees do not become shared vehicle charges. Check the combined golf bags and suitcases rather than assuming every luggage arrangement fits.
 
-## Golf pairing and transfers
+## Confirm payment and cancellation for each service
 
-If travelling solo or with a small group, provide your preferred dates and number of players to check pairing and tee-time availability.
+Ask about the golf product's own payment and cancellation terms. Airport-transfer cancellation terms do not automatically apply to a course booking. Keep a record of the date, inclusions and final amount before confirming.
 
-For golf products and rewards, contact [TRounding Naver Band](https://band.us/@trounding) chat. Book transfers through [T-Rider](https://trider.taxi/).
+## Prepare a clear golf budget
+
+Choose a date and course, then add the separately confirmed round and transport costs. Confirm Buddy Golf's current official enquiry channel; the old BAND address is not used as its new contact. Read the [Burapha CC planning guide](/blog/burapha-cc-green-fee-en) and use the [TRider booking page](https://trider.taxi/) for vehicle transfers.

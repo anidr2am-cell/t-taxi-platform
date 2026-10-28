@@ -25,7 +25,7 @@ test('all blog headers, article CTAs and inline booking links preserve page lang
  for(const post of posts){
   const html=read(blog,post.slug),links=[...html.matchAll(/href="([^"#]+)"/g)].map(m=>new URL(m[1].replaceAll('&amp;','&'),'https://trider.taxi'));
   const booking=links.filter(u=>u.origin==='https://trider.taxi'&&['/','/booking'].includes(u.pathname));
-  assert(booking.length>=2,post.slug);for(const url of booking){assert.equal(url.pathname,'/booking',post.slug);assert.equal(url.searchParams.get('lang'),post.lang,post.slug);}
+  assert(booking.length>=2,post.slug);for(const url of booking){assert.equal(url.pathname,'/booking',post.slug);assert.equal(url.searchParams.get('lang'),post.lang==='ru'?'en':post.lang,post.slug);}
  }
  for(const lang of ['en','ja','zh']) assert.ok(read(blog,`lang/${lang}`).includes(`/booking?lang=${lang}`));
 });
@@ -34,7 +34,7 @@ test('guarantees disappear from published body, list, related cards, titles, met
   // The published URL/translation identity is intentionally unchanged.
   const html=fs.readFileSync(p,'utf8').replaceAll(/pattaya-golf-price-match-guarantee(?:-(?:en|ja|zh))?/g,'legacy-golf-guide');assert.doesNotMatch(html,forbidden,p);
  }}}audit(blog);
- for(const suffix of ['','-en','-ja','-zh']){const slug='pattaya-golf-price-match-guarantee'+suffix,html=read(blog,slug);assert.ok(html.includes('https://trider.taxi/blog/'+slug));assert.match(html,/"@type":"Article"/);assert.match(html,/2026-10-19/);}
+ for(const suffix of ['','-en','-ja','-zh','-ru']){const slug='pattaya-golf-price-match-guarantee'+suffix,html=read(blog,slug);assert.ok(html.includes('https://trider.taxi/blog/'+slug));assert.match(html,/"@type":"Article"/);assert.match(html,/2026-10-28/);}
  const sitemap=fs.readFileSync(path.join(blog,'sitemap-blog.xml'),'utf8');for(const post of posts)assert.ok(sitemap.includes('/blog/'+post.slug+'</loc>'),post.slug);
 });
 test.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
@@ -47,7 +47,8 @@ test('Pattaya return-transfer article alone presets English airport drop-off in 
  assert.ok(html.includes('>Book your airport drop-off in English</a>'));
  for(const post of posts.filter(p=>p.slug!==slug)){
   const page=read(blog,post.slug);
-  assert.ok(page.includes('class="book-button" href="/booking?lang='+post.lang+'"'),post.slug);
-  assert.ok(page.includes('class="cta-primary" href="/booking?lang='+post.lang+'"'),post.slug);
+  const bookingLang=post.lang==='ru'?'en':post.lang;
+  assert.ok(page.includes('class="book-button" href="/booking?lang='+bookingLang+'"'),post.slug);
+  assert.ok(page.includes('class="cta-primary" href="/booking?lang='+bookingLang+'"'),post.slug);
  }
 });
