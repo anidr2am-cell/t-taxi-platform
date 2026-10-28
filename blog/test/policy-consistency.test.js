@@ -23,6 +23,13 @@ test('all published languages omit unlimited waiting, unrestricted cancellation 
   }
 });
 
+test('golf guides provide the owner-approved shared consultation contact',()=>{
+  for(const post of posts.filter(p=>p.data.category==='golf')){
+    assert.ok(post.content.includes('https://wa.me/66815693445'),post.name);
+    assert.doesNotMatch(post.content,/골프.{0,12}상담과.{0,12}차량.{0,12}별개|tour\/join consultation.*separate|相談と.*予約とは別|咨询与.*分别确认/i,post.name);
+  }
+});
+
 test('changed FAQ policy answers also appear in the visible article in every existing language', () => {
   const faqs = posts.filter(p => p.data.translationKey === 'trider-airport-transfer-faq');
   assert.deepEqual(faqs.map(p => p.data.lang).sort(), ['en', 'ja', 'ko', 'ru', 'zh']);

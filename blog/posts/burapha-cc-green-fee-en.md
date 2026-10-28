@@ -14,7 +14,7 @@ related:
   - trounding-golf-join-bar-benefits-en
 ---
 
-For a Burapha CC golf trip, confirm the round and the vehicle transfer separately. Green fees depend on the date, tee time and package inclusions. A rate published for a previous season is not a confirmed quote for a new booking.
+For a Burapha CC golf trip, ask us about golf dates, joining a round and vehicle transfers together. Green fees depend on the date, tee time and package inclusions. A rate published for a previous season is not a confirmed quote for a new booking.
 
 ## Confirm your date and tee time
 
@@ -40,10 +40,10 @@ Enter your actual pickup address and schedule to confirm the final vehicle quote
 
 If four people share the THB 2,300 van transfer for an 18-hole round, the transport share is THB 575 each. This arithmetic does not guarantee that every luggage combination fits. Provide the number and size of golf bags and suitcases before selecting a vehicle.
 
-## Golf enquiries and vehicle bookings are separate
+## Discuss golf dates, joining a round and transfers together
 
-Buddy Golf, formerly TRounding, focuses on Korean golf travellers in Pattaya. Confirm its current official contact route and tee-time availability separately; the former BAND link is not presented as its new contact. A TRider transfer booking does not reserve a golf round.
+Buddy Golf, formerly TRounding, focuses on Korean golf travellers in Pattaya. Send your preferred date, course, player count and accommodation through [WhatsApp](https://wa.me/66815693445). Ask us about golf dates, joining a round and vehicle transfers together; after checking tee-time and playing-partner availability, we can help coordinate your round and pickup schedule.
 
 ## Final checks before booking
 
-Confirm the date, tee time, inclusions, separate costs and hotel pickup address. Read the [golf cost checklist](/blog/pattaya-golf-price-match-guarantee-en) and book your vehicle on the [TRider booking page](https://trider.taxi/) whenever you are ready.
+Confirm the date, tee time, inclusions, separate costs and hotel pickup address. Read the [golf cost checklist](/blog/pattaya-golf-price-match-guarantee-en), discuss your round and transfer through [WhatsApp](https://wa.me/66815693445), and book the agreed vehicle on the [TRider booking page](https://trider.taxi/) whenever you are ready.

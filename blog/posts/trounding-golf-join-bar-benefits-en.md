@@ -1,9 +1,6 @@
 ---
 title: 'Buddy Golf Pattaya: joining a round and arranging your transfer'
-description: >-
-  Buddy Golf, formerly TRounding, focuses on Korean golf travellers. Check
-  dates, playing partners and tee times separately from TRider vehicle
-  transfers.
+description: "Plan Pattaya golf with Buddy Golf: ask about dates, playing partners, tee times and TRider vehicle transfers together through WhatsApp."
 slug: trounding-golf-join-bar-benefits-en
 lang: en
 category: golf
@@ -15,7 +12,7 @@ related:
   - burapha-cc-green-fee-en
 ---
 
-Buddy Golf is the new name for TRounding. Its Pattaya golf travel focus is Korean travellers. If you are travelling alone or with a small group, arrange playing partners and transport as separate parts of your trip.
+Buddy Golf is the new name for TRounding. Its Pattaya golf travel focus is Korean travellers. Whether you travel alone or with a small group, ask us about golf dates, joining a round and vehicle transfers together.
 
 ## Start with your date and course
 
@@ -23,7 +20,7 @@ Prepare the preferred date, course, tee time and player count before asking abou
 
 ## Understand the audience and language
 
-Buddy Golf primarily serves Korean golf travellers. Reading this English guide does not mean English-speaking playing partners or staff are guaranteed. Confirm communication options and participation requirements through its current official contact route.
+Buddy Golf primarily serves Korean golf travellers. Reading this English guide does not mean English-speaking playing partners or staff are guaranteed. Ask about communication options and participation requirements through [WhatsApp](https://wa.me/66815693445), along with your preferred golf dates and transfer plans.
 
 ## Confirm golf costs and inclusions
 
@@ -37,6 +34,6 @@ TRider provides airport transfers and golf-course transport from Pattaya. The ro
 
 Prepare the number and size of suitcases and golf bags for the whole group. You can divide a shared vehicle's price among its passengers, but that price does not include green or caddie fees. Vehicle suitability depends on the actual luggage combination.
 
-## Keep the bookings distinct
+## One conversation for golf, joining and transport
 
-Confirm Buddy Golf's current official enquiry channel separately. The former TRounding BAND address is not published as its new contact. The [golf cost checklist](/blog/pattaya-golf-price-match-guarantee-en) and [Burapha CC guide](/blog/burapha-cc-green-fee-en) can help you plan. You can book vehicle transport around the clock on the [TRider booking page](https://trider.taxi/); this does not confirm a golf tee time.
+Send your date, preferred course, player count and accommodation through [WhatsApp](https://wa.me/66815693445). We can check tee-time and playing-partner availability, then help coordinate the round and pickup schedule together. The [golf cost checklist](/blog/pattaya-golf-price-match-guarantee-en) and [Burapha CC guide](/blog/burapha-cc-green-fee-en) can help you plan. Book your agreed vehicle arrangements around the clock on the [TRider booking page](https://trider.taxi/).

@@ -63,4 +63,4 @@ Royal Lakeside、Bangpakong Riverside。
 - 实际人数、球包、行李箱与较大物品。
 - 是否另有停靠或其他行程。
 
-开球时间和球场预订请先单独确认；TRider交通预约不等于已经订妥球位或拼组。在[TRider预约页面](https://trider.taxi/)可全天24小时用中文填写芭提雅高尔夫球场接送行程，核对车辆与最终费用后再确认。
+TRider与Buddy Golf可通过[WhatsApp一并咨询](https://wa.me/66815693445)高尔夫行程、拼组及车辆接送，确认实际开球时间、球场安排和酒店往返需求。在[TRider预约页面](https://trider.taxi/)可全天24小时用中文填写芭提雅高尔夫球场接送行程，核对车辆与最终费用后再确认。
