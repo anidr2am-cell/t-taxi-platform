@@ -9697,7 +9697,56 @@ class AppLocalizations {
     "admin_region_shared": "การแก้ไขราคาที่ใช้ร่วมกันจะมีผลกับทุกพื้นที่ที่เชื่อมโยงกัน"
   }
 };
+  static const _driverApplicationInputTranslations = {
+    'en': {
+      "driver_apply_check_fields":
+          "Check the highlighted fields and try again.",
+      "driver_apply_invalid_field": "Check this field and try again.",
+      "driver_apply_country_code_hint":
+          "Select the calling code only (Thailand: +66). Enter your phone number in the phone field.",
+      "driver_apply_country_code_invalid":
+          "Use + followed by 1–3 digits, e.g. +66. Do not enter a full phone number here.",
+      "driver_apply_country_code_other": "Other calling code",
+    },
+    'ko': {
+      "driver_apply_check_fields": "표시된 입력 항목을 확인한 뒤 다시 제출해 주세요.",
+      "driver_apply_invalid_field": "이 항목을 확인해 주세요.",
+      "driver_apply_country_code_hint":
+          "국가번호만 선택하세요(태국: +66). 전화번호는 전화번호 칸에 입력하세요.",
+      "driver_apply_country_code_invalid":
+          "+66처럼 +와 숫자 1~3자리만 입력하세요. 전체 전화번호를 넣지 마세요.",
+      "driver_apply_country_code_other": "기타 국가번호",
+    },
+    'th': {
+      "driver_apply_check_fields":
+          "กรุณาตรวจสอบช่องที่แสดงข้อผิดพลาดแล้วส่งอีกครั้ง",
+      "driver_apply_invalid_field": "กรุณาตรวจสอบข้อมูลในช่องนี้",
+      "driver_apply_country_code_hint":
+          "เลือกรหัสประเทศเท่านั้น (ประเทศไทย: +66) และกรอกเบอร์โทรในช่องเบอร์โทรศัพท์",
+      "driver_apply_country_code_invalid":
+          "กรอกเครื่องหมาย + ตามด้วยตัวเลข 1–3 หลัก เช่น +66 ไม่ต้องกรอกเบอร์โทรเต็มในช่องนี้",
+      "driver_apply_country_code_other": "รหัสประเทศอื่น",
+    },
+    'ja': {
+      "driver_apply_check_fields": "表示された入力項目を確認して、再送信してください。",
+      "driver_apply_invalid_field": "この入力項目を確認してください。",
+      "driver_apply_country_code_hint":
+          "国番号のみ選択してください（タイ：+66）。電話番号は電話番号欄に入力してください。",
+      "driver_apply_country_code_invalid":
+          "+66のように、+と1〜3桁の数字を入力してください。電話番号全体は入力しないでください。",
+      "driver_apply_country_code_other": "その他の国番号",
+    },
+    'zh': {
+      "driver_apply_check_fields": "请检查标出的输入项后重新提交。",
+      "driver_apply_invalid_field": "请检查此项内容。",
+      "driver_apply_country_code_hint": "请选择国家区号（泰国：+66），完整电话号码请填写在电话号码栏。",
+      "driver_apply_country_code_invalid": "请输入+和1至3位数字，例如+66。请勿在此填写完整电话号码。",
+      "driver_apply_country_code_other": "其他国家区号",
+    },
+  };
   String t(String key) {
+    final applicationInput = _driverApplicationInputTranslations[languageCode]?[key];
+    if (applicationInput != null) return applicationInput;
     final regionExtra = _regionUiExtra[languageCode]?[key];
     if (regionExtra != null) return regionExtra;
     final regionText = _regionFareTranslations[languageCode]?[key];
