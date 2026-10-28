@@ -6,7 +6,7 @@ lang: ko
 category: travel
 translationKey: thailand-airport-taxi-fare-tips
 date: 2026-10-01
-updated: 2026-10-14
+updated: 2026-10-28
 related:
   - suvarnabhumi-to-pattaya
   - trider-airport-transfer-faq
@@ -45,7 +45,7 @@ TRider의 수완나품 공항(BKK) 출발 정찰제 요금은 다음과 같습�
 | BKK → 파타야 | 1,000바트 | 1,300바트 | 1,700바트 |
 | BKK → 방콕 시내 | 500바트 | 600바트 | 1,000바트 |
 
-고속도로 통행료·공항 주차비·항공편 지연 대기가 요금에 포함되어 추가요금이 없습니다. 심야 할증은 없습니다.
+공항 노선의 기준 요금에는 고속도로 통행료와 공항 주차비가 포함됩니다. 실제 주소에 따른 거리 추가요금이나 별도 신청 서비스는 최종 예약 금액에서 확인하세요. 심야 할증은 없습니다.
 
 ## 항공편 지연과 결제·취소 확인
 

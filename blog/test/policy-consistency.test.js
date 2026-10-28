@@ -25,7 +25,7 @@ test('all published languages omit unlimited waiting, unrestricted cancellation 
 
 test('changed FAQ policy answers also appear in the visible article in every existing language', () => {
   const faqs = posts.filter(p => p.data.translationKey === 'trider-airport-transfer-faq');
-  assert.deepEqual(faqs.map(p => p.data.lang).sort(), ['en', 'ja', 'ko', 'zh']);
+  assert.deepEqual(faqs.map(p => p.data.lang).sort(), ['en', 'ja', 'ko', 'ru', 'zh']);
   for (const post of faqs) {
     for (const i of [0, 1, 2, 4, 5, 9]) {
       assert.ok(post.content.includes(post.data.faq[i].answer), `${post.name}: FAQ ${i + 1}`);
@@ -34,17 +34,17 @@ test('changed FAQ policy answers also appear in the visible article in every exi
   }
 });
 
-test('golf copy retains confirmed benefits without price guarantees or unconfirmed expiry promises', () => {
+test('golf copy omits unverified benefits, former contact links and price guarantees', () => {
   const golf = posts.filter(p => p.data.category === 'golf');
   for (const post of golf) {
-    const publicCopy = [post.data.title, post.data.description, post.content].join('\n');
+    // Retained legacy URL paths are identifiers, not a price promise in visible copy.
+    const publicCopy = [post.data.title, post.data.description, post.content.replace(/\]\([^)]+\)/g, ']')].join('\n');
     assert.doesNotMatch(publicCopy, /최저가|차액\s*환불|price[ -]match|price matching|refunds? the difference|価格保証|差額.{0,4}返金|价格保障|退还差价/i, post.name);
     assert.doesNotMatch(publicCopy, /무기한|유효기간.{0,6}없|no expiry|never expir|無期限|有効期限はありません|永久有效|没有有效期限制/i, post.name);
     assert.doesNotMatch(publicCopy, /11월\s*1일.{0,12}오픈|오픈.{0,12}11월\s*1일|opening.{0,12}November 1/i, post.name);
   }
   for (const post of golf.filter(p => /^(pattaya-golf-price-match-guarantee|trounding-golf-join-bar-benefits|burapha-cc-green-fee)/.test(p.name))) {
-    assert.match(post.content, /5%/, post.name);
-    assert.match(post.content, /현금|cash|現金|现金/i, post.name);
-    assert.match(post.content, /카드|card|カード|银行卡/i, post.name);
+    assert.doesNotMatch(post.content, /5\s*%|band\.us\/@trounding/, post.name);
+    assert.match(post.content, /버디골프|Buddy Golf/, post.name);
   }
 });
