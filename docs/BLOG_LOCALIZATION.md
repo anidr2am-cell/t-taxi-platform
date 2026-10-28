@@ -16,7 +16,9 @@ Russian blog pages must use `lang=en` on all booking links. They do not promise
 Russian-speaking support. No reservation application change is part of this work.
 
 Airport arrival/return, booking preparation, fare checks and FAQ articles link
-to one another in the same language. Golf transport articles are separate from
+to one another in the same language. The three requested language indexes lead
+with BKK arrivals, DMK arrivals and Pattaya return transfers, followed by booking
+and FAQ guidance before golf planning. Golf transport articles are separate from
 Buddy Golf's Korean-focused tour/join consultation. The website's generated CTA
 books a TRider vehicle; it does not reserve a tee time or a golf package.
 

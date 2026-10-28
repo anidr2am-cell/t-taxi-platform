@@ -51,4 +51,11 @@ test('Russian pages have Russian navigation and an explicit English booking tran
  assert.ok(sitemap.includes('hreflang="ru"'));
  assert.ok(sitemap.includes('<loc>https://trider.taxi/blog/lang/ru/</loc>'));
 });
+test('new-language indexes lead with arrival and return transfer guides',()=>{
+ for(const lang of ['zh','ja','ru']){
+  const html=read(`lang/${lang}`);
+  const cards=[...html.matchAll(/<article class="post-card">[\s\S]*?<h2><a href="\/blog\/([^"#]+)"/g)].map(m=>m[1]);
+  assert.deepEqual(cards.slice(0,3),['suvarnabhumi-to-pattaya','don-mueang-to-pattaya','pattaya-to-airport-transfer'].map(s=>s+'-'+lang));
+ }
+});
 test.after(()=>fs.rmSync(out,{recursive:true,force:true}));

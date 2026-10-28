@@ -250,6 +250,12 @@ function build() {
   for (const lang of LANGUAGES.filter((item) => posts.some((post) => post.lang === item))) {
     const ui = UI[lang];
     const languagePosts = posts.filter((post) => post.lang === lang);
+    // Lead new-market indexes with arrival/return and booking intent, then golf planning.
+    if (['zh', 'ja', 'ru'].includes(lang)) {
+      const topics = ['suvarnabhumi-to-pattaya', 'don-mueang-to-pattaya', 'pattaya-to-airport-transfer', 'thailand-airport-taxi-booking-guide', 'trider-airport-transfer-faq', 'suvarnabhumi-airport-pickup-guide', 'suvarnabhumi-to-bangkok-city', 'thailand-airport-taxi-fare-tips'];
+      const priority = post => { const index = topics.indexOf(post.translationKey); return index < 0 ? topics.length : index; };
+      languagePosts.sort((a, b) => priority(a) - priority(b));
+    }
     const filters = LANGUAGES.filter((item) => posts.some((post) => post.lang === item)).map((item) => `<a href="${listPath(item)}" lang="${HREFLANG[item]}">${LANGUAGE_NAMES[item]}</a>`).join('');
     const listBody = `<main><section class="hero"><p class="eyebrow">Thailand travel guide</p><h1>${ui.title}</h1><p>${ui.intro}</p><nav class="language-filters" aria-label="Languages">${filters}</nav></section><section class="post-list">${languagePosts.map(postCard).join('')}</section></main>`;
     const listRelative = lang === 'ko' ? 'index.html' : path.join('lang', lang, 'index.html');
