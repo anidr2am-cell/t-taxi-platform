@@ -14,7 +14,7 @@ related:
   - trounding-golf-join-bar-benefits-en
 ---
 
-Pattaya golf costs are easier to compare when the date and inclusions match. Buddy Golf, formerly TRounding, handles Korean-focused golf travel enquiries; TRider provides vehicle transfers. The two services are not interchangeable bookings.
+Pattaya golf costs are easier to compare when the date and inclusions match. Buddy Golf, formerly TRounding, focuses on Korean golf travellers, and our team can help you discuss golf dates, joining a round and TRider vehicle transfers together.
 
 ## Compare the same golf arrangements
 
@@ -24,9 +24,9 @@ Check the course, date, tee time and number of holes. Similar package names do n
 
 Confirm the green fee, caddie fee and cart fee separately. Ask whether caddie tips, personal expenses and transfers are extra. Do not deduct old or unverified loyalty benefits from your budget.
 
-## Reserve golf and transport separately
+## Plan your round and transfer in one conversation
 
-A TRider vehicle booking is not a golf admission ticket or a confirmed tee time. Once your round is arranged, enter the pickup location, schedule, passengers and luggage to select transport.
+Send your preferred course, date, playing-partner request, accommodation, passengers and luggage through [WhatsApp](https://wa.me/66815693445). We can check tee-time and joining availability, then help coordinate a suitable pickup schedule and vehicle for your round.
 
 ## Share vehicle costs without mixing golf fees
 
@@ -38,4 +38,4 @@ Ask about the golf product's own payment and cancellation terms. Airport-transfe
 
 ## Prepare a clear golf budget
 
-Choose a date and course, then add the separately confirmed round and transport costs. Confirm Buddy Golf's current official enquiry channel; the old BAND address is not used as its new contact. Read the [Burapha CC planning guide](/blog/burapha-cc-green-fee-en) and use the [TRider booking page](https://trider.taxi/) for vehicle transfers.
+Choose a date and course, then add the confirmed round and transport costs. Ask us about golf dates, joining a round and vehicle transfers together through [WhatsApp](https://wa.me/66815693445). Read the [Burapha CC planning guide](/blog/burapha-cc-green-fee-en) and use the [TRider booking page](https://trider.taxi/) for your agreed vehicle arrangements.

@@ -31,7 +31,7 @@ faq:
   - question: "能提前查看安排的车辆吗？"
     answer: "车辆安排后可以提前查看该车照片，实际分配情况以预订查询中的信息为准。"
   - question: "什么时候可以在线预订？"
-    answer: "在线预订全天24小时开放，页面支持中文；接送、球位和球旅套餐应分别确认。"
+    answer: "在线预订全天24小时开放，页面支持中文。高尔夫行程、拼组及车辆接送可通过TRider与Buddy Golf一并咨询。"
 ---
 
 第一次预订泰国机场接送时，先弄清付款、取消、路线和会合方式，比只记住一个参考价格更实用。以下以TRider的曼谷与芭提雅机场接送为基础，BKK素万那普与DMK廊曼应分别选择。
@@ -86,6 +86,8 @@ faq:
 
 ## 10. 什么时候可以在线预订？
 
-在线预订全天24小时开放，页面支持中文；接送、球位和球旅套餐应分别确认。
+在线预订全天24小时开放，页面支持中文。高尔夫行程、拼组及车辆接送可通过TRider与Buddy Golf一并咨询。
+
+如需一起安排球局与接送，可使用[WhatsApp统一咨询](https://wa.me/66815693445)，确认实际开球时间与行程。
 
 准备路线时，可继续阅读[素万那普到芭提雅](/blog/suvarnabhumi-to-pattaya-zh)、[廊曼到芭提雅](/blog/don-mueang-to-pattaya-zh)、[机场接机说明](/blog/suvarnabhumi-airport-pickup-guide-zh)与[芭提雅返程送机](/blog/pattaya-to-airport-transfer-zh)。在[TRider预约页面](https://trider.taxi/)可全天24小时用中文填写实际行程，确认车辆和最终费用后预约。

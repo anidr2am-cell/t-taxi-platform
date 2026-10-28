@@ -18,9 +18,11 @@ Russian-speaking support. No reservation application change is part of this work
 Airport arrival/return, booking preparation, fare checks and FAQ articles link
 to one another in the same language. The three requested language indexes lead
 with BKK arrivals, DMK arrivals and Pattaya return transfers, followed by booking
-and FAQ guidance before golf planning. Golf transport articles are separate from
-Buddy Golf's Korean-focused tour/join consultation. The website's generated CTA
-books a TRider vehicle; it does not reserve a tee time or a golf package.
+and FAQ guidance before golf planning. Readers can ask about Buddy Golf dates,
+joining a round and TRider vehicle transfers together through the existing
+company WhatsApp channel. Confirm available tee times and the complete itinerary
+with the team. Budget guides still distinguish per-player golf costs from
+per-vehicle transport costs.
 
 ## Facts and ongoing maintenance
 
@@ -30,7 +32,8 @@ service can affect the final quote. Recheck prices before subsequent edits.
 
 Unverified historical green fees, mileage benefits and the former TRounding BAND
 contact were removed from the related guides in every existing translation.
-Buddy Golf's new contact remains unprovided. Existing URLs and translation keys
+The new BAND address remains unprovided; the existing company WhatsApp is the
+shared consultation route approved by the owner on 2026-10-28. Existing URLs and translation keys
 remain stable; do not rename them merely to update the display brand.
 
 `blog:build` generates self canonicals, reciprocal language alternates, Article

@@ -1,6 +1,6 @@
 ---
-title: "芭提雅Buddy Golf拼组指南：球旅咨询与TRider接送分别安排"
-description: "了解Buddy Golf（原TRounding）的韩国旅客球旅与拼组定位，确认日期、语言、球费包含项及开球，再分别准备机场和球场接送。"
+title: "芭提雅Buddy Golf拼组指南：高尔夫行程与接送统一咨询"
+description: "了解Buddy Golf（原TRounding）的球旅与拼组咨询，向TRider与Buddy Golf一并说明日期、球场、人数和接送需求，确认开球安排及费用。"
 slug: trounding-golf-join-bar-benefits-zh
 lang: zh
 category: golf
@@ -13,7 +13,7 @@ related:
   - burapha-cc-green-fee-zh
 ---
 
-在芭提雅安排高尔夫旅行时，拼组、球位和交通是相互关联但需要分别确认的事项。**Buddy Golf（버디골프）**是原TRounding的新名称，重点面向韩国高尔夫旅客提供球旅与拼组咨询。本文帮助中文读者了解准备方法，不表示提供中文陪打、导游或保证拼组成功。
+在芭提雅安排高尔夫旅行时，可以把拼组、球位和交通一起咨询。**Buddy Golf（버디골프）**是原TRounding的新名称，重点面向韩国高尔夫旅客。TRider与Buddy Golf可一并沟通高尔夫行程、拼组及车辆接送，按实际可安排内容确认行程。
 
 ## 拼组咨询先提供哪些内容？
 
@@ -39,10 +39,10 @@ TRider提供曼谷机场与芭提雅之间的接送，以及芭提雅与球场�
 
 机场到达段可参考[素万那普到芭提雅](/blog/suvarnabhumi-to-pattaya-zh)或[廊曼到芭提雅](/blog/don-mueang-to-pattaya-zh)。不同机场的会合指引与路线费用不能互换。
 
-## 联系与预订分别确认
+## 一个渠道沟通完整行程
 
-Buddy Golf球旅及拼组咨询，请先核对其最新正式联系渠道与语言安排。旧TRounding的BAND链接不用于本指南，也不应把TRider的交通客服或车辆预约当作Buddy Golf球位订单已确认。
+通过[WhatsApp统一咨询](https://wa.me/66815693445)，提供希望日期、球场、人数、沟通语言、酒店位置和球包信息，即可一并核对球局、拼组与接送需求。开球时间、球位和车辆安排请按最终确认内容准备。
 
 推荐先确认球场和开球时间，再填写酒店上车地址、真实人数与球包，最后安排接送。若球局发生变化，应及时核对交通预约是否也需要调整。
 
-在[TRider预约页面](https://trider.taxi/)可全天24小时用中文预约车辆。把Buddy Golf球旅咨询与TRider交通服务分别确认，能让行程中的每项安排更清楚。
+在[TRider预约页面](https://trider.taxi/)可全天24小时用中文预约车辆。也可先通过WhatsApp一并沟通Buddy Golf球旅与TRider交通需求，核对整趟行程和费用后安排预约。
