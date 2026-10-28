@@ -288,15 +288,21 @@ class _FakeDriverApplicationApi extends DriverApplicationApiService {
 }
 
 class _FieldErrorDriverApplicationApi extends _FakeDriverApplicationApi {
+  _FieldErrorDriverApplicationApi({
+    this.errors = const {
+      'vehicleYear': 'กรุณากรอกปีรถเป็นตัวเลข 4 หลัก เช่น 2020',
+    },
+  });
+  final Map<String, String> errors;
   @override
   Future<DriverApplicationReceipt> submitApplication(
     DriverApplicationDraft draft,
   ) async {
-    throw const DriverApplicationApiException(
+    throw DriverApplicationApiException(
       'Validation failed',
       errorCode: 'VALIDATION_ERROR',
       statusCode: 400,
-      fieldErrors: {'vehicleYear': 'กรุณากรอกปีรถเป็นตัวเลข 4 หลัก เช่น 2020'},
+      fieldErrors: errors,
     );
   }
 }
@@ -843,7 +849,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(TextFormField), findsWidgets);
-    expect(find.textContaining('Select', skipOffstage: false), findsNothing);
+    expect(find.text('Select', skipOffstage: false), findsNothing);
   });
 
   testWidgets('driver apply renders unified upload cards for required files', (
@@ -1377,6 +1383,121 @@ void main() {
     );
     expect(find.textContaining('<', skipOffstage: false), findsNothing);
   });
+
+  testWidgets(
+    'country code is selected, defaults to Thailand, and cannot contain a phone number',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await tester.binding.setSurfaceSize(const Size(375, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        _app(DriverApplicationFormPage(api: _FakeDriverApplicationApi())),
+      );
+      await tester.pumpAndSettle();
+      final selector = find.byWidgetPredicate(
+        (w) =>
+            w is DropdownButtonFormField<String> &&
+            w.decoration.helperText != null,
+      );
+      await tester.scrollUntilVisible(
+        selector,
+        180,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(
+        find.descendant(of: selector, matching: find.text('+66')),
+        findsWidgets,
+      );
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is TextFormField && w.controller?.text == '+66',
+        ),
+        findsNothing,
+      );
+      await tester.tap(selector);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('+82').last);
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(of: selector, matching: find.text('+82')),
+        findsWidgets,
+      );
+      expect(tester.takeException(), isNull);
+      tester.widget<DropdownButtonFormField<String>>(selector).onChanged!(
+        'other',
+      );
+      await tester.pumpAndSettle();
+      final custom = find.byKey(
+        const ValueKey('driver-custom-phone-country-code'),
+      );
+      await tester.enterText(custom, '+66123456789');
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextFormField>(custom).controller!.text,
+        '+66123456789',
+      );
+      expect(
+        find.text(
+          AppLocalizations('en').t('driver_apply_country_code_invalid'),
+        ),
+        findsWidgets,
+      );
+      await tester.enterText(custom, '+358');
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          AppLocalizations('en').t('driver_apply_country_code_invalid'),
+        ),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final locale in ['ko', 'en', 'th', 'ja', 'zh']) {
+    testWidgets(
+      'country-code server rejection is localized and scrolls to its field $locale',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        await tester.binding.setSurfaceSize(const Size(375, 900));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(
+          _app(
+            DriverApplicationFormPage(
+              api: _FieldErrorDriverApplicationApi(
+                errors: const {
+                  'phoneCountryCode':
+                      '"phoneCountryCode" length must be less than or equal to 5 characters long',
+                },
+              ),
+              debugSubmitDraft: _draft(),
+            ),
+            locale: locale,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final submit = find.byIcon(Icons.send_outlined);
+        await tester.scrollUntilVisible(
+          submit,
+          300,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.tap(submit);
+        await tester.pumpAndSettle();
+        final error = find.text(
+          AppLocalizations(locale).t('driver_apply_country_code_invalid'),
+        );
+        expect(error, findsOneWidget);
+        expect(
+          tester.getRect(error).overlaps(const Rect.fromLTWH(0, 0, 375, 900)),
+          isTrue,
+        );
+        expect(find.textContaining('length must'), findsNothing);
+        expect(find.textContaining('신청을 제출하지 못했습니다'), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   testWidgets('driver apply shows backend vehicle year field error', (
     tester,

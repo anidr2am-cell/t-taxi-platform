@@ -59,6 +59,7 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
   final _passwordConfirm = TextEditingController();
   final _phone = TextEditingController();
   final _phoneCountryCode = TextEditingController(text: '+66');
+  bool _customPhoneCountryCode = false;
   final _countryCode = TextEditingController(text: 'TH');
   final _licenseNumber = TextEditingController();
   final _licenseCountry = TextEditingController(text: 'TH');
@@ -76,6 +77,28 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
   final _bankAccountHolder = TextEditingController();
   final _lineId = TextEditingController();
   final _fieldKeys = <String, GlobalKey>{
+    for (final name in [
+      'fullName',
+      'phone',
+      'phoneCountryCode',
+      'password',
+      'passwordConfirm',
+      'countryCode',
+      'drivingLicenseNumber',
+      'drivingLicenseCountry',
+      'drivingLicenseExpiryDate',
+      'yearsOfDrivingExperience',
+      'vehicleMake',
+      'vehicleModel',
+      'vehicleColor',
+      'vehiclePlateNumber',
+      'bankName',
+      'bankAccountNumber',
+      'bankAccountHolder',
+      'lineId',
+      'notes',
+    ])
+      name: GlobalKey(),
     'vehicleYear': GlobalKey(),
     'serviceAreas': GlobalKey(),
     'personalDataConsent': GlobalKey(),
@@ -844,6 +867,9 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
   String _submitErrorMessage(Object err) {
     final l10n = context.l10n;
     if (err is DriverApplicationApiException) {
+      if (err.fieldErrors.isNotEmpty) {
+        return l10n.t('driver_apply_check_fields');
+      }
       if (err.statusCode == 413 || err.errorCode == 'FILE_TOO_LARGE') {
         return l10n.t('driver_apply_upload_too_large');
       }
@@ -939,278 +965,286 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
         maxWidth: 860,
         child: Form(
           key: _formKey,
-          child: ListView(
+          // Keep this bounded form mounted so server errors can validate and
+          // scroll to fields above the viewport after submission.
+          child: SingleChildScrollView(
             padding: AppUi.pagePadding(context),
-            children: [
-              _section(
-                title: l10n.t('driver_apply_section_account'),
-                children: [
-                  _text(_fullName, 'driver_apply_full_name'),
-                  _text(
-                    _phone,
-                    'driver_apply_phone',
-                    keyboardType: TextInputType.phone,
-                  ),
-                  _text(
-                    _password,
-                    'driver_apply_password',
-                    obscure: true,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    validator: (value) {
-                      if ((value ?? '').length < 6) {
-                        return l10n.t('driver_apply_password_min');
-                      }
-                      return null;
-                    },
-                  ),
-                  _text(
-                    _passwordConfirm,
-                    'driver_apply_password_confirm',
-                    obscure: true,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    validator: (value) {
-                      if (value != _password.text) {
-                        return l10n.t('driver_apply_password_mismatch');
-                      }
-                      return null;
-                    },
-                  ),
-                  _text(
-                    _phoneCountryCode,
-                    'driver_apply_phone_country_code',
-                    requiredField: false,
-                  ),
-                  _text(_countryCode, 'driver_apply_country'),
-                  DropdownButtonFormField<String>(
-                    initialValue: _locale,
-                    decoration: InputDecoration(
-                      labelText: l10n.t('driver_apply_language'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _section(
+                  title: l10n.t('driver_apply_section_account'),
+                  children: [
+                    _text(_fullName, 'driver_apply_full_name'),
+                    _phoneCountrySelector(),
+                    _text(
+                      _phone,
+                      'driver_apply_phone',
+                      keyboardType: TextInputType.phone,
                     ),
-                    items: AppLocalizations.supportedLanguages
-                        .map(
-                          (code) => DropdownMenuItem(
-                            value: code,
-                            child: Text(
-                              AppLocalizations.languageNames[code] ?? code,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) =>
-                        setState(() => _locale = value ?? 'ko'),
-                  ),
-                ],
-              ),
-              _section(
-                title: l10n.t('driver_apply_section_driver_info'),
-                children: [
-                  _text(_licenseNumber, 'driver_apply_license_number'),
-                  _text(_licenseCountry, 'driver_apply_license_country'),
-                  _text(
-                    _licenseExpiry,
-                    'driver_apply_license_expiry',
-                    hint: '2030-01-01',
-                    validator: _validateLicenseExpiry,
-                    suffixIcon: IconButton(
-                      tooltip: l10n.t('driver_apply_license_expiry_picker'),
-                      icon: const Icon(Icons.calendar_today_outlined),
-                      onPressed: _showLicenseExpiryPicker,
+                    _text(
+                      _password,
+                      'driver_apply_password',
+                      obscure: true,
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      validator: (value) {
+                        if ((value ?? '').length < 6) {
+                          return l10n.t('driver_apply_password_min');
+                        }
+                        return null;
+                      },
                     ),
-                  ),
-                  _text(_bankName, 'driver_apply_bank_name'),
-                  _text(_bankAccountNumber, 'driver_apply_bank_account_number'),
-                  _text(_bankAccountHolder, 'driver_apply_bank_account_holder'),
-                  if (_loadingVehicles)
-                    const LinearProgressIndicator()
-                  else
+                    _text(
+                      _passwordConfirm,
+                      'driver_apply_password_confirm',
+                      obscure: true,
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      validator: (value) {
+                        if (value != _password.text) {
+                          return l10n.t('driver_apply_password_mismatch');
+                        }
+                        return null;
+                      },
+                    ),
+                    _text(_countryCode, 'driver_apply_country'),
                     DropdownButtonFormField<String>(
-                      initialValue: _vehicleTypeCode,
+                      initialValue: _locale,
                       decoration: InputDecoration(
-                        labelText: l10n.t('driver_apply_vehicle_type'),
+                        labelText: l10n.t('driver_apply_language'),
                       ),
-                      items: _vehicleTypes
+                      items: AppLocalizations.supportedLanguages
                           .map(
-                            (type) => DropdownMenuItem(
-                              value: type.code,
-                              child: Text('${type.name} (${type.code})'),
+                            (code) => DropdownMenuItem(
+                              value: code,
+                              child: Text(
+                                AppLocalizations.languageNames[code] ?? code,
+                              ),
                             ),
                           )
                           .toList(),
-                      validator: (_) => _vehicleTypeCode == null
-                          ? l10n.t('driver_apply_vehicle_required')
-                          : null,
                       onChanged: (value) =>
-                          setState(() => _vehicleTypeCode = value),
+                          setState(() => _locale = value ?? 'ko'),
                     ),
-                  _text(
-                    _make,
-                    'driver_apply_vehicle_make',
-                    requiredField: false,
-                  ),
-                  _text(
-                    _model,
-                    'driver_apply_vehicle_model',
-                    requiredField: false,
-                  ),
-                  _text(
-                    _year,
-                    'driver_apply_vehicle_year',
-                    fieldName: 'vehicleYear',
-                    requiredField: false,
-                    keyboardType: TextInputType.number,
-                    maxLength: 4,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    validator: _validateVehicleYear,
-                  ),
-                  _text(
-                    _color,
-                    'driver_apply_vehicle_color',
-                    requiredField: false,
-                  ),
-                  _text(_plate, 'driver_apply_vehicle_plate'),
-                  _text(
-                    _serviceAreas,
-                    'driver_apply_service_areas',
-                    fieldName: 'serviceAreas',
-                    hint: l10n.t('driver_apply_service_areas_hint'),
-                    validator: (value) =>
-                        _serverFieldError('serviceAreas') ?? _required(value),
-                  ),
-                  _text(_lineId, 'driver_apply_line_id'),
-                ],
-              ),
-              _section(
-                title: l10n.t('driver_apply_section_documents'),
-                children: [
-                  _uploadCard(
-                    fieldKey: 'lineQr',
-                    titleKey: 'driver_apply_line_qr',
-                    descriptionKey: 'driver_apply_upload_image_help',
-                    files: _singleFileList(_lineQr),
-                    missing: _lineQr == null,
-                    onSelect: () => _selectSingleFile(
+                  ],
+                ),
+                _section(
+                  title: l10n.t('driver_apply_section_driver_info'),
+                  children: [
+                    _text(_licenseNumber, 'driver_apply_license_number'),
+                    _text(_licenseCountry, 'driver_apply_license_country'),
+                    _text(
+                      _licenseExpiry,
+                      'driver_apply_license_expiry',
+                      hint: '2030-01-01',
+                      validator: _validateLicenseExpiry,
+                      suffixIcon: IconButton(
+                        tooltip: l10n.t('driver_apply_license_expiry_picker'),
+                        icon: const Icon(Icons.calendar_today_outlined),
+                        onPressed: _showLicenseExpiryPicker,
+                      ),
+                    ),
+                    _text(_bankName, 'driver_apply_bank_name'),
+                    _text(
+                      _bankAccountNumber,
+                      'driver_apply_bank_account_number',
+                    ),
+                    _text(
+                      _bankAccountHolder,
+                      'driver_apply_bank_account_holder',
+                    ),
+                    if (_loadingVehicles)
+                      const LinearProgressIndicator()
+                    else
+                      DropdownButtonFormField<String>(
+                        initialValue: _vehicleTypeCode,
+                        decoration: InputDecoration(
+                          labelText: l10n.t('driver_apply_vehicle_type'),
+                        ),
+                        items: _vehicleTypes
+                            .map(
+                              (type) => DropdownMenuItem(
+                                value: type.code,
+                                child: Text('${type.name} (${type.code})'),
+                              ),
+                            )
+                            .toList(),
+                        validator: (_) => _vehicleTypeCode == null
+                            ? l10n.t('driver_apply_vehicle_required')
+                            : null,
+                        onChanged: (value) =>
+                            setState(() => _vehicleTypeCode = value),
+                      ),
+                    _text(
+                      _make,
+                      'driver_apply_vehicle_make',
+                      requiredField: false,
+                    ),
+                    _text(
+                      _model,
+                      'driver_apply_vehicle_model',
+                      requiredField: false,
+                    ),
+                    _text(
+                      _year,
+                      'driver_apply_vehicle_year',
+                      fieldName: 'vehicleYear',
+                      requiredField: false,
+                      keyboardType: TextInputType.number,
+                      maxLength: 4,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      validator: _validateVehicleYear,
+                    ),
+                    _text(
+                      _color,
+                      'driver_apply_vehicle_color',
+                      requiredField: false,
+                    ),
+                    _text(_plate, 'driver_apply_vehicle_plate'),
+                    _text(
+                      _serviceAreas,
+                      'driver_apply_service_areas',
+                      fieldName: 'serviceAreas',
+                      hint: l10n.t('driver_apply_service_areas_hint'),
+                      validator: (value) =>
+                          _serverFieldError('serviceAreas') ?? _required(value),
+                    ),
+                    _text(_lineId, 'driver_apply_line_id'),
+                  ],
+                ),
+                _section(
+                  title: l10n.t('driver_apply_section_documents'),
+                  children: [
+                    _uploadCard(
                       fieldKey: 'lineQr',
-                      imageOnly: true,
-                      onSelected: (file) => _lineQr = file,
+                      titleKey: 'driver_apply_line_qr',
+                      descriptionKey: 'driver_apply_upload_image_help',
+                      files: _singleFileList(_lineQr),
+                      missing: _lineQr == null,
+                      onSelect: () => _selectSingleFile(
+                        fieldKey: 'lineQr',
+                        imageOnly: true,
+                        onSelected: (file) => _lineQr = file,
+                      ),
+                      onRemoveAll: () => _removeFile('lineQr'),
                     ),
-                    onRemoveAll: () => _removeFile('lineQr'),
-                  ),
-                  _uploadCard(
-                    fieldKey: 'vehiclePhotos',
-                    titleKey: 'driver_apply_vehicle_photos',
-                    descriptionKey: 'driver_apply_vehicle_photo_help',
-                    files: _vehiclePhotos,
-                    missing:
-                        _vehiclePhotos.length < 3 || _vehiclePhotos.length > 6,
-                    onSelect: _selectVehiclePhotos,
-                    onRemoveFile: _removeVehiclePhotoAt,
-                    missingKey: 'driver_apply_vehicle_photo_count_error',
-                    selectLabelKey: 'driver_apply_upload_add_photo',
-                    showSelectButton: _vehiclePhotos.length < 6,
-                    disabledSelectLabelKey:
-                        'driver_apply_vehicle_photo_limit_reached',
-                    countText: context.l10n
-                        .t('driver_apply_vehicle_photo_count')
-                        .replaceAll('{count}', '${_vehiclePhotos.length}'),
-                    maxPreviewFiles: 6,
-                  ),
-                  _uploadCard(
-                    fieldKey: 'insuranceCertificate',
-                    titleKey: 'driver_apply_insurance_certificate',
-                    descriptionKey: 'driver_apply_upload_document_help',
-                    files: _singleFileList(_insuranceCertificate),
-                    missing: _insuranceCertificate == null,
-                    onSelect: () => _selectSingleFile(
+                    _uploadCard(
+                      fieldKey: 'vehiclePhotos',
+                      titleKey: 'driver_apply_vehicle_photos',
+                      descriptionKey: 'driver_apply_vehicle_photo_help',
+                      files: _vehiclePhotos,
+                      missing:
+                          _vehiclePhotos.length < 3 ||
+                          _vehiclePhotos.length > 6,
+                      onSelect: _selectVehiclePhotos,
+                      onRemoveFile: _removeVehiclePhotoAt,
+                      missingKey: 'driver_apply_vehicle_photo_count_error',
+                      selectLabelKey: 'driver_apply_upload_add_photo',
+                      showSelectButton: _vehiclePhotos.length < 6,
+                      disabledSelectLabelKey:
+                          'driver_apply_vehicle_photo_limit_reached',
+                      countText: context.l10n
+                          .t('driver_apply_vehicle_photo_count')
+                          .replaceAll('{count}', '${_vehiclePhotos.length}'),
+                      maxPreviewFiles: 6,
+                    ),
+                    _uploadCard(
                       fieldKey: 'insuranceCertificate',
-                      imageOnly: false,
-                      onSelected: (file) => _insuranceCertificate = file,
+                      titleKey: 'driver_apply_insurance_certificate',
+                      descriptionKey: 'driver_apply_upload_document_help',
+                      files: _singleFileList(_insuranceCertificate),
+                      missing: _insuranceCertificate == null,
+                      onSelect: () => _selectSingleFile(
+                        fieldKey: 'insuranceCertificate',
+                        imageOnly: false,
+                        onSelected: (file) => _insuranceCertificate = file,
+                      ),
+                      onRemoveAll: () => _removeFile('insuranceCertificate'),
                     ),
-                    onRemoveAll: () => _removeFile('insuranceCertificate'),
-                  ),
-                  _uploadCard(
-                    fieldKey: 'vehicleRegistration',
-                    titleKey: 'driver_apply_vehicle_registration',
-                    descriptionKey: 'driver_apply_upload_document_help',
-                    files: _singleFileList(_vehicleRegistration),
-                    missing: _vehicleRegistration == null,
-                    onSelect: () => _selectSingleFile(
+                    _uploadCard(
                       fieldKey: 'vehicleRegistration',
-                      imageOnly: false,
-                      onSelected: (file) => _vehicleRegistration = file,
+                      titleKey: 'driver_apply_vehicle_registration',
+                      descriptionKey: 'driver_apply_upload_document_help',
+                      files: _singleFileList(_vehicleRegistration),
+                      missing: _vehicleRegistration == null,
+                      onSelect: () => _selectSingleFile(
+                        fieldKey: 'vehicleRegistration',
+                        imageOnly: false,
+                        onSelected: (file) => _vehicleRegistration = file,
+                      ),
+                      onRemoveAll: () => _removeFile('vehicleRegistration'),
                     ),
-                    onRemoveAll: () => _removeFile('vehicleRegistration'),
-                  ),
-                  _uploadCard(
-                    fieldKey: 'taxCertificate',
-                    titleKey: 'driver_apply_tax_certificate',
-                    descriptionKey: 'driver_apply_upload_document_help',
-                    files: _singleFileList(_taxCertificate),
-                    missing: _taxCertificate == null,
-                    onSelect: () => _selectSingleFile(
+                    _uploadCard(
                       fieldKey: 'taxCertificate',
-                      imageOnly: false,
-                      onSelected: (file) => _taxCertificate = file,
+                      titleKey: 'driver_apply_tax_certificate',
+                      descriptionKey: 'driver_apply_upload_document_help',
+                      files: _singleFileList(_taxCertificate),
+                      missing: _taxCertificate == null,
+                      onSelect: () => _selectSingleFile(
+                        fieldKey: 'taxCertificate',
+                        imageOnly: false,
+                        onSelected: (file) => _taxCertificate = file,
+                      ),
+                      onRemoveAll: () => _removeFile('taxCertificate'),
                     ),
-                    onRemoveAll: () => _removeFile('taxCertificate'),
-                  ),
-                  _uploadSizeSummary(),
-                  CheckboxListTile(
-                    key: _fieldKeys['personalDataConsent'],
-                    value: _personalConsent,
-                    onChanged: (value) =>
-                        setState(() => _personalConsent = value ?? false),
-                    title: Text(l10n.t('driver_apply_personal_consent')),
-                    controlAffinity: ListTileControlAffinity.leading,
-                  ),
-                  if (_fieldErrors['personalDataConsent'] != null)
+                    _uploadSizeSummary(),
+                    CheckboxListTile(
+                      key: _fieldKeys['personalDataConsent'],
+                      value: _personalConsent,
+                      onChanged: (value) =>
+                          setState(() => _personalConsent = value ?? false),
+                      title: Text(l10n.t('driver_apply_personal_consent')),
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+                    if (_fieldErrors['personalDataConsent'] != null)
+                      Text(
+                        _fieldErrors['personalDataConsent']!,
+                        style: const TextStyle(color: AppTokens.error),
+                      ),
+                    CheckboxListTile(
+                      key: _fieldKeys['driverTermsConsent'],
+                      value: _termsConsent,
+                      onChanged: (value) =>
+                          setState(() => _termsConsent = value ?? false),
+                      title: Text(l10n.t('driver_apply_terms_consent')),
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+                    if (_fieldErrors['driverTermsConsent'] != null)
+                      Text(
+                        _fieldErrors['driverTermsConsent']!,
+                        style: const TextStyle(color: AppTokens.error),
+                      ),
                     Text(
-                      _fieldErrors['personalDataConsent']!,
+                      l10n.t('driver_apply_false_info_notice'),
+                      style: const TextStyle(color: AppTokens.textSecondary),
+                    ),
+                  ],
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: AppTokens.spaceSm),
+                  AppUi.surfaceCard(
+                    backgroundColor: AppTokens.errorLight,
+                    child: Text(
+                      _error!,
                       style: const TextStyle(color: AppTokens.error),
                     ),
-                  CheckboxListTile(
-                    key: _fieldKeys['driverTermsConsent'],
-                    value: _termsConsent,
-                    onChanged: (value) =>
-                        setState(() => _termsConsent = value ?? false),
-                    title: Text(l10n.t('driver_apply_terms_consent')),
-                    controlAffinity: ListTileControlAffinity.leading,
-                  ),
-                  if (_fieldErrors['driverTermsConsent'] != null)
-                    Text(
-                      _fieldErrors['driverTermsConsent']!,
-                      style: const TextStyle(color: AppTokens.error),
-                    ),
-                  Text(
-                    l10n.t('driver_apply_false_info_notice'),
-                    style: const TextStyle(color: AppTokens.textSecondary),
                   ),
                 ],
-              ),
-              if (_error != null) ...[
-                const SizedBox(height: AppTokens.spaceSm),
-                AppUi.surfaceCard(
-                  backgroundColor: AppTokens.errorLight,
-                  child: Text(
-                    _error!,
-                    style: const TextStyle(color: AppTokens.error),
+                const SizedBox(height: AppTokens.spaceMd),
+                AppUi.primaryButton(
+                  label: l10n.t(
+                    _isResubmit
+                        ? 'driver_apply_resubmit'
+                        : 'driver_apply_signup_submit',
                   ),
+                  icon: Icons.send_outlined,
+                  loading: _submitting,
+                  onPressed:
+                      _submitting || _loadingVehicles || _pickingFileKey != null
+                      ? null
+                      : _submit,
                 ),
               ],
-              const SizedBox(height: AppTokens.spaceMd),
-              AppUi.primaryButton(
-                label: l10n.t(
-                  _isResubmit
-                      ? 'driver_apply_resubmit'
-                      : 'driver_apply_signup_submit',
-                ),
-                icon: Icons.send_outlined,
-                loading: _submitting,
-                onPressed:
-                    _submitting || _loadingVehicles || _pickingFileKey != null
-                    ? null
-                    : _submit,
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -1314,6 +1348,103 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
     );
   }
 
+  String? _localizedFieldError(String field) {
+    if (!_fieldErrors.containsKey(field)) return null;
+    if (field == 'phoneCountryCode') {
+      return context.l10n.t('driver_apply_country_code_invalid');
+    }
+    // Keep the existing, explicit vehicle-year guidance; never show raw Joi errors.
+    if (field == 'vehicleYear') return _validateVehicleYear(null);
+    return context.l10n.t('driver_apply_invalid_field');
+  }
+
+  Widget _phoneCountrySelector() {
+    const codes = [
+      '+66',
+      '+82',
+      '+81',
+      '+86',
+      '+1',
+      '+44',
+      '+60',
+      '+65',
+      '+84',
+      '+95',
+      '+855',
+      '+856',
+      '+91',
+      '+7',
+      '+61',
+      '+49',
+      '+33',
+      '+852',
+      '+886',
+      '+62',
+      '+63',
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DropdownButtonFormField<String>(
+          key: _fieldKeys['phoneCountryCode'],
+          initialValue: _customPhoneCountryCode
+              ? 'other'
+              : _phoneCountryCode.text,
+          isExpanded: true,
+          decoration: InputDecoration(
+            labelText: context.l10n.t('driver_apply_phone_country_code'),
+            helperText: context.l10n.t('driver_apply_country_code_hint'),
+            helperMaxLines: 3,
+            errorMaxLines: 3,
+          ),
+          items: [
+            for (final code in codes)
+              DropdownMenuItem(value: code, child: Text(code)),
+            DropdownMenuItem(
+              value: 'other',
+              child: Text(context.l10n.t('driver_apply_country_code_other')),
+            ),
+          ],
+          onChanged: (value) {
+            if (value == null) return;
+            setState(() {
+              _customPhoneCountryCode = value == 'other';
+              _phoneCountryCode.text = _customPhoneCountryCode ? '+' : value;
+              _fieldErrors = {..._fieldErrors}..remove('phoneCountryCode');
+            });
+          },
+          validator: (_) => _localizedFieldError('phoneCountryCode'),
+        ),
+        if (_customPhoneCountryCode) ...[
+          const SizedBox(height: AppTokens.spaceSm),
+          TextFormField(
+            key: const ValueKey('driver-custom-phone-country-code'),
+            controller: _phoneCountryCode,
+            onChanged: (_) => setState(() {
+              _fieldErrors = {..._fieldErrors}..remove('phoneCountryCode');
+            }),
+            keyboardType: TextInputType.phone,
+            maxLength: 4,
+            maxLengthEnforcement: MaxLengthEnforcement.none,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[+0-9]')),
+            ],
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            decoration: InputDecoration(
+              labelText: context.l10n.t('driver_apply_phone_country_code'),
+              hintText: '+66',
+              errorMaxLines: 3,
+            ),
+            validator: (value) =>
+                RegExp(r'^\+[1-9]\d{0,2}$').hasMatch(value ?? '')
+                ? null
+                : context.l10n.t('driver_apply_country_code_invalid'),
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _text(
     TextEditingController controller,
     String labelKey, {
@@ -1328,8 +1459,30 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
     AutovalidateMode? autovalidateMode,
     Widget? suffixIcon,
   }) {
+    final name =
+        fieldName ??
+        <TextEditingController, String>{
+          _fullName: 'fullName',
+          _phone: 'phone',
+          _password: 'password',
+          _passwordConfirm: 'passwordConfirm',
+          _countryCode: 'countryCode',
+          _licenseNumber: 'drivingLicenseNumber',
+          _licenseCountry: 'drivingLicenseCountry',
+          _licenseExpiry: 'drivingLicenseExpiryDate',
+          _experience: 'yearsOfDrivingExperience',
+          _make: 'vehicleMake',
+          _model: 'vehicleModel',
+          _color: 'vehicleColor',
+          _plate: 'vehiclePlateNumber',
+          _bankName: 'bankName',
+          _bankAccountNumber: 'bankAccountNumber',
+          _bankAccountHolder: 'bankAccountHolder',
+          _lineId: 'lineId',
+          _notes: 'notes',
+        }[controller];
     return TextFormField(
-      key: fieldName == null ? null : _fieldKeys[fieldName],
+      key: _fieldKeys[name],
       controller: controller,
       obscureText: obscure,
       keyboardType: keyboardType,
@@ -1341,9 +1494,20 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
             ? '${context.l10n.t(labelKey)} *'
             : context.l10n.t(labelKey),
         hintText: hint,
+        errorMaxLines: 3,
         suffixIcon: suffixIcon,
       ),
-      validator: validator ?? (requiredField ? _required : null),
+      onChanged: (_) {
+        if (name != null && _fieldErrors.containsKey(name)) {
+          setState(() => _fieldErrors = {..._fieldErrors}..remove(name));
+        }
+      },
+      validator: (value) {
+        final serverError = name == null ? null : _localizedFieldError(name);
+        return serverError ??
+            validator?.call(value) ??
+            (requiredField ? _required(value) : null);
+      },
     );
   }
 }
