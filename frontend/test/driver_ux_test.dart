@@ -212,9 +212,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: _driverTestLogin(
-          api: _FakeLoginApi(initialToken: 'tok'),
-        ),
+        home: _driverTestLogin(api: _FakeLoginApi(initialToken: 'tok')),
       ),
     );
     await tester.pumpAndSettle();
@@ -530,7 +528,8 @@ void main() {
       find.widgetWithIcon(OutlinedButton, Icons.power_settings_new),
     );
     expect(button.onPressed, isNull);
-    expect(find.textContaining('운행 중'), findsWidgets);
+    expect(find.textContaining('온라인'), findsWidgets);
+    expect(find.textContaining('운행 중'), findsNothing);
   });
 
   testWidgets('driver shell status control shows API error', (tester) async {
@@ -645,6 +644,84 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('콜 수신 상태'), findsOneWidget);
     expect(find.textContaining('새 예약 콜을 받을 수 있습니다'), findsOneWidget);
+  });
+
+  for (final reason in [
+    DriverCallEligibilityReason.ready,
+    DriverCallEligibilityReason.unpaidSettlement,
+    DriverCallEligibilityReason.accountRestricted,
+    DriverCallEligibilityReason.offline,
+    DriverCallEligibilityReason.unknownRestriction,
+  ]) {
+    testWidgets('assigned booking respects server eligibility $reason at 375px', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(375, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final ready = reason == DriverCallEligibilityReason.ready;
+      final api = _ShellStatusApi(
+        status: DriverStatus(
+          driverId: 7,
+          active: true,
+          online: reason != DriverCallEligibilityReason.offline,
+          status: 'AVAILABLE',
+          hasActiveJob: true,
+          callEligibility: DriverCallEligibility(
+            canReceiveCalls: ready,
+            reasonCode: reason,
+          ),
+        ),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: DriverStatusControl(api: api)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('운행 중'), findsNothing);
+      if (ready) {
+        expect(find.textContaining('시간이 겹치지 않는 콜을 받을 수 있습니다'), findsOneWidget);
+        expect(find.textContaining('เวลาไม่ทับซ้อนกัน'), findsOneWidget);
+        expect(find.textContaining('새 콜 수신 불가'), findsNothing);
+        // Existing restriction on going offline with an assignment is unchanged.
+        expect(
+          tester.widget<OutlinedButton>(find.byType(OutlinedButton)).onPressed,
+          isNull,
+        );
+        await tester.tap(find.textContaining('시간이 겹치지 않는 콜을 받을 수 있습니다'));
+        await tester.pumpAndSettle();
+        expect(find.textContaining('시간이 겹치지 않는 콜을 받을 수 있습니다'), findsWidgets);
+      } else {
+        expect(find.textContaining('시간이 겹치지 않는 콜을 받을 수 있습니다'), findsNothing);
+        if (reason == DriverCallEligibilityReason.unpaidSettlement) {
+          expect(find.textContaining('정산 확인 필요'), findsOneWidget);
+        }
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  test('status parsing preserves server eligibility with assignments', () {
+    for (final allowed in [true, false]) {
+      final status = DriverStatus.fromJson({
+        'driverId': 7,
+        'active': true,
+        'online': true,
+        'status': 'AVAILABLE',
+        'hasActiveJob': true,
+        'callEligibility': {
+          'canReceiveCalls': allowed,
+          'reasonCode': allowed ? 'READY' : 'UNPAID_SETTLEMENT',
+        },
+      });
+      expect(status.callEligibility.canReceiveCalls, allowed);
+    }
+    final legacy = DriverStatus.fromJson({
+      'online': true,
+      'status': 'AVAILABLE',
+      'hasActiveJob': true,
+    });
+    expect(legacy.callEligibility.canReceiveCalls, isTrue);
   });
 
   testWidgets('driver shell status control explains settlement blocker', (
@@ -864,10 +941,7 @@ void main() {
 
     expect(api.lockCalls, 1);
     expect(find.byType(AlertDialog), findsOneWidget);
-    expect(
-      find.textContaining('도착 예상 시간을 입력하시면'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('도착 예상 시간을 입력하시면'), findsOneWidget);
 
     await tester.enterText(find.byType(TextFormField), '20');
     await tester.tap(find.widgetWithText(TextButton, '제출 / ส่ง'));
@@ -1077,10 +1151,9 @@ DriverOpenCall _openCall({String number = 'TX202607130001'}) {
 }
 
 DriverOpenCall _urgentOpenCall({String number = 'TX202607130099'}) {
-  return _openCall(number: number).copyWith(
-    isUrgentRequest: true,
-    negotiationId: 100,
-  );
+  return _openCall(
+    number: number,
+  ).copyWith(isUrgentRequest: true, negotiationId: 100);
 }
 
 void _useTallViewport(WidgetTester tester) {

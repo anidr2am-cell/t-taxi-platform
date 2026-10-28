@@ -208,43 +208,42 @@ class _StatusContent extends StatelessWidget {
     final activeJob = status.hasActiveJob;
     final online = status.online;
     final eligibility = status.callEligibility;
-    final reasonCode = activeJob
-        ? DriverCallEligibilityReason.activeTrip
+    // Assignment existence does not mean a trip is in progress or block calls.
+    // The server's eligibility is authoritative; keep operational rules unchanged.
+    final canReceiveCalls = eligibility.canReceiveCalls;
+    final reasonCode = canReceiveCalls
+        ? DriverCallEligibilityReason.ready
+        : eligibility.reasonCode == DriverCallEligibilityReason.ready
+        ? DriverCallEligibilityReason.unknownRestriction
         : eligibility.reasonCode;
-    final state = activeJob
-        ? _StatusVisual(
-            icon: Icons.local_taxi,
-            label: l10n.t('driver_call_status_active_trip'),
-            helper: l10n.t(_callStatusMessageKey(reasonCode)),
-            backgroundColor: AppTokens.warningLight,
-            borderColor: AppTokens.warning,
-            iconColor: AppTokens.warning,
-          )
-        : online
-        ? _StatusVisual(
-            icon: eligibility.canReceiveCalls
-                ? Icons.check_circle
-                : Icons.info_outline,
-            label: l10n.t('driver_online'),
-            helper: l10n.t(_callStatusMessageKey(reasonCode)),
-            backgroundColor: eligibility.canReceiveCalls
-                ? AppTokens.successLight
-                : AppTokens.warningLight,
-            borderColor: eligibility.canReceiveCalls
-                ? AppTokens.success
-                : AppTokens.warning,
-            iconColor: eligibility.canReceiveCalls
-                ? AppTokens.success
-                : AppTokens.warning,
-          )
-        : _StatusVisual(
-            icon: Icons.pause_circle_filled,
-            label: l10n.t('driver_offline'),
-            helper: l10n.t(_callStatusMessageKey(reasonCode)),
-            backgroundColor: AppTokens.surfaceMuted,
-            borderColor: AppTokens.textMuted,
-            iconColor: AppTokens.textMuted,
-          );
+    final assignedReady = activeJob && canReceiveCalls;
+    final helperKey = assignedReady
+        ? 'driver_call_status_assigned_ready'
+        : _callStatusMessageKey(reasonCode);
+    final state = _StatusVisual(
+      icon: canReceiveCalls
+          ? Icons.check_circle
+          : online
+          ? Icons.info_outline
+          : Icons.pause_circle_filled,
+      label: l10n.t(online ? 'driver_online' : 'driver_offline'),
+      helper: l10n.t(helperKey),
+      backgroundColor: canReceiveCalls
+          ? AppTokens.successLight
+          : online
+          ? AppTokens.warningLight
+          : AppTokens.surfaceMuted,
+      borderColor: canReceiveCalls
+          ? AppTokens.success
+          : online
+          ? AppTokens.warning
+          : AppTokens.textMuted,
+      iconColor: canReceiveCalls
+          ? AppTokens.success
+          : online
+          ? AppTokens.warning
+          : AppTokens.textMuted,
+    );
 
     final button = SizedBox(
       width: double.infinity,
@@ -283,7 +282,11 @@ class _StatusContent extends StatelessWidget {
     return _StatusFrame(
       backgroundColor: state.backgroundColor,
       borderColor: state.borderColor,
-      onTap: () => _showStatusDetail(context, reasonCode),
+      onTap: () => _showStatusDetail(
+        context,
+        reasonCode,
+        detailKey: assignedReady ? helperKey : null,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -401,7 +404,11 @@ String _callStatusDetailKey(String reasonCode) {
   }
 }
 
-void _showStatusDetail(BuildContext context, String reasonCode) {
+void _showStatusDetail(
+  BuildContext context,
+  String reasonCode, {
+  String? detailKey,
+}) {
   showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
@@ -431,7 +438,7 @@ void _showStatusDetail(BuildContext context, String reasonCode) {
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: AppTokens.spaceXs),
-            Text(context.l10n.t(_callStatusDetailKey(reasonCode))),
+            Text(context.l10n.t(detailKey ?? _callStatusDetailKey(reasonCode))),
             const SizedBox(height: AppTokens.spaceMd),
             SizedBox(
               width: double.infinity,

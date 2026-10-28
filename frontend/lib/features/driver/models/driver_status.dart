@@ -65,12 +65,6 @@ class DriverCallEligibility {
     required String status,
     required bool hasActiveJob,
   }) {
-    if (hasActiveJob) {
-      return const DriverCallEligibility(
-        canReceiveCalls: false,
-        reasonCode: DriverCallEligibilityReason.activeTrip,
-      );
-    }
     if (!online || status == 'OFFLINE') {
       return const DriverCallEligibility(
         canReceiveCalls: false,
