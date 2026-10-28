@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:frontend/features/admin_dispatch/models/admin_calling_codes.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
@@ -184,6 +185,60 @@ Future<void> _tapSubmit(WidgetTester tester) async {
 }
 
 void main() {
+  test(
+    'worldwide calling codes are unique and normalize international input',
+    () {
+      expect(adminCallingCodes.length, 206);
+      expect(adminCallingCodes.toSet().length, adminCallingCodes.length);
+      for (final code in [
+        '+1',
+        '+7',
+        '+33',
+        '+44',
+        '+49',
+        '+61',
+        '+91',
+        '+255',
+        '+358',
+        '+971',
+        '+998',
+      ]) {
+        expect(adminCallingCodes, contains(code));
+      }
+      expect(normalizeAdminManualPhone('+44', '07911 123456'), '+447911123456');
+      expect(normalizeAdminManualPhone('+1', '202-555-0123'), '+12025550123');
+      expect(normalizeAdminManualPhone('+971', '0501234567'), '+971501234567');
+    },
+  );
+  testWidgets('admin selector scrolls to and selects worldwide code', (
+    tester,
+  ) async {
+    await _pumpAdminPage(tester);
+    final selector = find.byKey(const ValueKey('adminManualPhoneDialCode-+66'));
+    await tester.scrollUntilVisible(
+      selector,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(selector);
+    await tester.tap(selector);
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.scrollUntilVisible(
+      find.text('+998'),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.text('+998').last);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(
+      find.byKey(const ValueKey('adminManualPhoneDialCode-+998')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+
+
   test('normalizes domestic admin phone input to E.164', () {
     expect(
       normalizeAdminManualPhone('+82', '010-1234-5678'),
