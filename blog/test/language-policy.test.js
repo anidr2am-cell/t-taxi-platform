@@ -39,13 +39,17 @@ test('guarantees disappear from published body, list, related cards, titles, met
 });
 test.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
 
-test('Pattaya return-transfer article alone presets English airport drop-off in all three CTAs',()=>{
+test('arrival and return articles preset the correct English airport service without changing other CTAs',()=>{
  const slug='pattaya-to-airport-transfer-en',html=read(blog,slug);
  const expected='/booking?service=AIRPORT_DROPOFF&amp;lang=en';
  assert.equal((html.match(/href="\/booking[^"]*"/g)||[]).length,3);
  assert.equal(html.split('href="'+expected+'"').length-1,3);
  assert.ok(html.includes('>Book your airport drop-off in English</a>'));
- for(const post of posts.filter(p=>p.slug!==slug)){
+ const pickupSlug='suvarnabhumi-to-pattaya-en',pickup=read(blog,pickupSlug);
+ const pickupLinks=[...pickup.matchAll(/href="(\/booking[^\"]*)"/g)].map(m=>new URL(m[1].replaceAll('&amp;','&'),'https://trider.taxi'));
+ assert.equal(pickupLinks.length,5);
+ for(const url of pickupLinks){assert.equal(url.searchParams.get('service'),'AIRPORT_PICKUP');assert.equal(url.searchParams.get('lang'),'en');assert.equal(url.searchParams.has('utm_source'),false);}
+ for(const post of posts.filter(p=>![slug,pickupSlug].includes(p.slug))){
   const page=read(blog,post.slug);
   const bookingLang=post.lang==='ru'?'en':post.lang;
   assert.ok(page.includes('class="book-button" href="/booking?lang='+bookingLang+'"'),post.slug);
