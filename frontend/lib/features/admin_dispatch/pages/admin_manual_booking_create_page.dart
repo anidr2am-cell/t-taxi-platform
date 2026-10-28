@@ -22,6 +22,7 @@ import '../../booking/utils/thailand_pickup_datetime.dart';
 import '../../booking/widgets/google_places_search_field.dart';
 import '../../booking/widgets/pickup_time_picker_sheet.dart';
 import '../widgets/admin_manual_flight_section.dart';
+import '../models/admin_calling_codes.dart';
 import '../../driver/widgets/driver_workflow_widgets.dart';
 import '../services/admin_dispatch_api_service.dart';
 import '../widgets/assign_driver_dialog.dart';
@@ -1059,7 +1060,8 @@ class _AdminManualBookingCreatePageState
           child: DropdownButtonFormField<String>(
             key: ValueKey('adminManualPhoneDialCode-$_guestPhoneDialCode'),
             initialValue: _guestPhoneDialCode,
-            items: const ['+66', '+82', '+81', '+86']
+            menuMaxHeight: AppTokens.spaceXl * 10,
+            items: adminCallingCodes
                 .map((code) => DropdownMenuItem(value: code, child: Text(code)))
                 .toList(),
             onChanged: _submitting
