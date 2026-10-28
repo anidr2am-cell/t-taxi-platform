@@ -43,6 +43,33 @@ class BookingCreateResult {
     this.contactConnectionRequired = false,
   });
 
+  BookingCreateResult withContactState({
+    required String contactStatus,
+    String? contactChannel,
+    String? bookingStatus,
+  }) => BookingCreateResult(
+    bookingId: bookingId,
+    bookingNumber: bookingNumber,
+    status: bookingStatus ?? status,
+    paymentMethod: paymentMethod,
+    paymentStatus: paymentStatus,
+    paymentCurrency: paymentCurrency,
+    paymentInstructions: paymentInstructions,
+    totalAmount: totalAmount,
+    currency: currency,
+    guestAccessToken: guestAccessToken,
+    boardingQrToken: boardingQrToken,
+    trustMessage: trustMessage,
+    trackingAvailable: trackingAvailable,
+    canCancel: canCancel,
+    cancellationDeadline: cancellationDeadline,
+    cancellationBlockedReason: cancellationBlockedReason,
+    isUrgentRequest: isUrgentRequest,
+    contactStatus: contactStatus,
+    contactChannel: contactChannel ?? this.contactChannel,
+    contactConnectionRequired: contactConnectionRequired,
+  );
+
   factory BookingCreateResult.fromJson(Map<String, dynamic> json) {
     final capabilities = json['capabilities'] is Map
         ? Map<String, dynamic>.from(json['capabilities'] as Map)

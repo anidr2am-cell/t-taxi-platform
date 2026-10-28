@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -35,8 +33,6 @@ class BookingContactConnectPage extends StatefulWidget {
   final BookingContactConnectionService? service;
   final BookingAnalytics? analytics;
 
-  static const pollInterval = Duration(seconds: 5);
-
   @visibleForTesting
   static String bookingRefMessage(String bookingNumber) =>
       'T-Rider $bookingNumber';
@@ -61,7 +57,7 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
   bool _confirmSubmitting = false;
   bool _isRefreshing = false;
   bool _viewTracked = false;
-  Timer? _pollTimer;
+  bool _navigatingToCompletion = false;
 
   BookingCreateResult? get _result => widget.args?.result;
 
@@ -85,7 +81,6 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _pollTimer?.cancel();
     super.dispose();
   }
 
@@ -134,15 +129,12 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
       });
 
       _trackViewOnce(connection.contactStatus);
-      if (connection.isVerified) {
+      if (connection.isVerified || connection.isConfirmRequested) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
           _navigateToCompletion(connection: connection, guestToken: token);
         });
         return;
-      }
-      if (connection.isConfirmRequested) {
-        _startPolling();
       }
     } catch (e) {
       if (!mounted) return;
@@ -162,14 +154,6 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
     );
   }
 
-  void _startPolling() {
-    _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(BookingContactConnectPage.pollInterval, (_) {
-      if (_isRefreshing) return;
-      _refreshConnection(silent: true);
-    });
-  }
-
   Future<void> _refreshConnection({bool silent = false}) async {
     if (_isRefreshing) return;
 
@@ -187,8 +171,7 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
         _connection = connection;
         _selectedChannelCode ??= connection.connectionChannel;
       });
-      if (connection.isVerified) {
-        _pollTimer?.cancel();
+      if (connection.isVerified || connection.isConfirmRequested) {
         _navigateToCompletion(connection: connection, guestToken: token);
       }
     } catch (_) {
@@ -333,6 +316,11 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
         guestAccessToken: token,
       );
       if (!mounted) return;
+      if (!connection.isConfirmRequested && !connection.isVerified) {
+        throw BookingContactConnectionException(
+          'Message confirmation was not recorded',
+        );
+      }
       setState(() {
         _connection = connection;
         _actionBusy = false;
@@ -342,7 +330,7 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
         bookingId: widget.bookingNumber,
         channel: _selectedChannelCode,
       );
-      _startPolling();
+      _navigateToCompletion(connection: connection, guestToken: token);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -357,11 +345,21 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
     ContactConnectionState? connection,
     String? guestToken,
   }) {
+    if (_navigatingToCompletion) return;
+    _navigatingToCompletion = true;
     final args = widget.args;
     final resolvedConnection = connection ?? _connection;
     final token = guestToken ?? _guestToken;
     final result =
-        args?.result ??
+        (args?.result != null && resolvedConnection != null
+            ? args!.result.withContactState(
+                contactStatus: resolvedConnection.contactStatus,
+                contactChannel:
+                    resolvedConnection.contactChannel ??
+                    resolvedConnection.connectionChannel,
+                bookingStatus: resolvedConnection.bookingStatus,
+              )
+            : args?.result) ??
         (resolvedConnection != null
             ? resolvedConnection.toMinimalCreateResult(guestAccessToken: token)
             : null);
@@ -379,9 +377,10 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
         Navigator.of(context).pushReplacementNamed('/booking/lookup');
         return;
       case ContactCompletionTarget.urgentFlow:
-        _analytics.trackContactConnectSucceeded(
-          bookingId: widget.bookingNumber,
-        );
+        if (resolvedConnection?.isVerified == true)
+          _analytics.trackContactConnectSucceeded(
+            bookingId: widget.bookingNumber,
+          );
         _analytics.trackBookingFullyCompleted(
           bookingId: widget.bookingNumber,
           vehicleType: args?.selectedVehicle,
@@ -398,9 +397,10 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
         );
         return;
       case ContactCompletionTarget.completePage:
-        _analytics.trackContactConnectSucceeded(
-          bookingId: widget.bookingNumber,
-        );
+        if (resolvedConnection?.isVerified == true)
+          _analytics.trackContactConnectSucceeded(
+            bookingId: widget.bookingNumber,
+          );
         _analytics.trackBookingFullyCompleted(
           bookingId: widget.bookingNumber,
           vehicleType: args?.selectedVehicle,
@@ -466,7 +466,7 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
     required ContactChannel? selectedChannel,
   }) {
     if (_isConfirmRequested) {
-      return _WaitingCard(l10n: l10n);
+      return Text(l10n.t('contact_connect_sent_complete_notice'));
     }
     if (!_hasStartedConnection) {
       return Column(
@@ -481,7 +481,8 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
           for (final channel in orderedChannels) ...[
             _ChannelButton(
               channel: channel,
-              preferred: const {'KAKAO', 'LINE'}.contains(channel.code) &&
+              preferred:
+                  const {'KAKAO', 'LINE'}.contains(channel.code) &&
                   channel.code == widget.args?.preferredChannel,
               busy: _actionBusy,
               onTap: () => _handleChannelTap(channel),
@@ -855,45 +856,6 @@ class _WeChatPanel extends StatelessWidget {
               ],
             ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-class _WaitingCard extends StatelessWidget {
-  const _WaitingCard({required this.l10n});
-
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppUi.surfaceCard(
-      backgroundColor: AppTokens.accentLight,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  l10n.t('contact_connect_waiting'),
-                  style: const TextStyle(height: 1.45),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.t('contact_connect_waiting_hint'),
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
         ],
       ),
     );

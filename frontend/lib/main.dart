@@ -241,6 +241,12 @@ Route<dynamic>? buildLandingUtilityRoute(RouteSettings settings) {
 @visibleForTesting
 Route<dynamic>? buildBookingEntryRoute(RouteSettings settings) {
   final uri = Uri.tryParse(settings.name ?? '');
+  if (uri?.path == '/booking/contact-connect') {
+    return MaterialPageRoute<void>(
+      settings: settings,
+      builder: (_) => BookingContactConnectRouteLoader(uri: uri),
+    );
+  }
   if (uri == null || uri.path != '/booking' || !uri.hasQuery) return null;
   final args = BookingEntryQuery.parse(uri);
   return MaterialPageRoute<void>(
