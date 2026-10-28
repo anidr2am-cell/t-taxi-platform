@@ -17,6 +17,10 @@ class AppLocalizations {
 
   static final Map<String, Map<String, String>> _translations = {
     'en': {
+      "admin_phone_country_cancel": "Cancel",
+      "admin_phone_country_title": "Select country / calling code",
+      "admin_phone_country_search": "Search country name or calling code",
+      "admin_phone_country_empty": "No matching countries",
       "admin_copy_action": "Copy {field}",
       "admin_copy_success": "Copied",
       "admin_copy_failed": "Could not copy. Please select the text and copy it manually.",
@@ -2062,6 +2066,10 @@ class AppLocalizations {
       'guest_lookup_booking_number_hint': 'TX202607010001',
     },
     'ko': {
+      "admin_phone_country_cancel": "취소",
+      "admin_phone_country_title": "국가·국가번호 선택",
+      "admin_phone_country_search": "국가명 또는 국가번호 검색",
+      "admin_phone_country_empty": "검색된 국가가 없습니다",
       "admin_copy_action": "{field} 복사",
       "admin_copy_success": "복사했습니다",
       "admin_copy_failed": "복사하지 못했습니다. 텍스트를 선택해 직접 복사해 주세요.",
@@ -3545,6 +3553,10 @@ class AppLocalizations {
       'customer_driver_location_retry': '다시 시도',
     },
     'zh': {
+      "admin_phone_country_cancel": "取消",
+      "admin_phone_country_title": "选择国家或区号",
+      "admin_phone_country_search": "搜索国家名称或电话区号",
+      "admin_phone_country_empty": "未找到匹配的国家",
       "admin_copy_action": "复制{field}",
       "admin_copy_success": "已复制",
       "admin_copy_failed": "复制失败。请选择文字后手动复制。",
@@ -4530,6 +4542,10 @@ class AppLocalizations {
       'thb': 'THB',
     },
     'ja': {
+      "admin_phone_country_cancel": "キャンセル",
+      "admin_phone_country_title": "国・国番号を選択",
+      "admin_phone_country_search": "国名または国番号で検索",
+      "admin_phone_country_empty": "該当する国がありません",
       "admin_copy_action": "{field}をコピー",
       "admin_copy_success": "コピーしました",
       "admin_copy_failed": "コピーできませんでした。テキストを選択して手動でコピーしてください。",
@@ -5555,6 +5571,10 @@ class AppLocalizations {
       'thb': 'THB',
     },
     'th': {
+      "admin_phone_country_cancel": "ยกเลิก",
+      "admin_phone_country_title": "เลือกประเทศ / รหัสโทรศัพท์",
+      "admin_phone_country_search": "ค้นหาชื่อประเทศหรือรหัสโทรศัพท์",
+      "admin_phone_country_empty": "ไม่พบประเทศที่ค้นหา",
       "admin_copy_action": "คัดลอก{field}",
       "admin_copy_success": "คัดลอกแล้ว",
       "admin_copy_failed": "คัดลอกไม่สำเร็จ โปรดเลือกข้อความแล้วคัดลอกด้วยตนเอง",

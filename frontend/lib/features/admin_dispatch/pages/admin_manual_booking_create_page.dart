@@ -23,6 +23,7 @@ import '../../booking/widgets/google_places_search_field.dart';
 import '../../booking/widgets/pickup_time_picker_sheet.dart';
 import '../widgets/admin_manual_flight_section.dart';
 import '../models/admin_calling_codes.dart';
+import '../widgets/admin_calling_country_picker.dart';
 import '../../driver/widgets/driver_workflow_widgets.dart';
 import '../services/admin_dispatch_api_service.dart';
 import '../widgets/assign_driver_dialog.dart';
@@ -187,6 +188,7 @@ class _AdminManualBookingCreatePageState
   int? _selectedDirectDriverId;
   String? _messengerType;
   String _guestPhoneDialCode = '+66';
+  String _guestPhoneCountryCode = 'TH';
   List<Map<String, dynamic>> _directDrivers = const [];
   bool _loadingDirectDrivers = false;
   List<String> _golfRegions = const [];
@@ -1055,26 +1057,33 @@ class _AdminManualBookingCreatePageState
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          width: 105,
-          child: DropdownButtonFormField<String>(
+        Expanded(
+          flex: 4,
+          child: OutlinedButton(
             key: ValueKey('adminManualPhoneDialCode-$_guestPhoneDialCode'),
-            initialValue: _guestPhoneDialCode,
-            menuMaxHeight: AppTokens.spaceXl * 10,
-            items: adminCallingCodes
-                .map((code) => DropdownMenuItem(value: code, child: Text(code)))
-                .toList(),
-            onChanged: _submitting
-                ? null
-                : (value) {
-                    if (value != null) {
-                      setState(() => _guestPhoneDialCode = value);
-                    }
-                  },
+            onPressed: _submitting ? null : () async {
+              final country = await showAdminCallingCountryPicker(
+                context, selectedCountryCode: _guestPhoneCountryCode,
+              );
+              if (!mounted || country == null) return;
+              setState(() {
+                _guestPhoneCountryCode = country.code;
+                _guestPhoneDialCode = country.dialCode;
+              });
+            },
+            child: Row(
+              children: [
+                Expanded(child: Text(adminCallingCountries.firstWhere(
+                  (country) => country.code == _guestPhoneCountryCode,
+                ).label(l10n.languageCode))),
+                const Icon(Icons.arrow_drop_down),
+              ],
+            ),
           ),
         ),
         const SizedBox(width: AppTokens.spaceSm),
         Expanded(
+          flex: 5,
           child: TextFormField(
             key: const Key('adminManualBookingGuestPhone'),
             controller: _guestPhoneController,
@@ -1808,6 +1817,7 @@ class _AdminManualBookingCreatePageState
                       onChanged: _submitting ? null : (value) => setState(() {
                         _messengerType = value;
                         _guestPhoneDialCode = value == 'KAKAO' ? '+82' : '+66';
+                        _guestPhoneCountryCode = value == 'KAKAO' ? 'KR' : 'TH';
                         if (value == null ||
                             const {'WHATSAPP', 'SMS'}.contains(value)) {
                           _messengerIdController.clear();
