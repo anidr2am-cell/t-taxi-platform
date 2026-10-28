@@ -223,12 +223,9 @@ void main() {
     await tester.ensureVisible(selector);
     await tester.tap(selector);
     await tester.pump(const Duration(milliseconds: 400));
-    await tester.scrollUntilVisible(
-      find.text('+998'),
-      300,
-      scrollable: find.byType(Scrollable).last,
-    );
-    await tester.tap(find.text('+998').last);
+    await tester.enterText(find.byKey(const Key('adminCallingCountrySearch')), '+998');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.byKey(const ValueKey('adminCallingCountry-UZ')));
     await tester.pump(const Duration(milliseconds: 400));
     expect(
       find.byKey(const ValueKey('adminManualPhoneDialCode-+998')),
