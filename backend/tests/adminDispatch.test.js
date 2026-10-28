@@ -2152,3 +2152,27 @@ test("listDrivers marks pickup conflict without masking other errors", async () 
   assert.equal(items[0].assignmentEligible, false);
   assert.equal(items[0].pickupTimeConflict, true);
 });
+
+for (const pickup of ['2020-01-01 12:00:00','2099-01-01 12:00:00']) {
+  test(`admin assignment is not restricted by pickup ${pickup}`, async () => {
+    let committed = false;
+    const conn = {async beginTransaction(){},async commit(){committed=true;},async rollback(){},release(){}};
+    const repo = {
+      async findByBookingNumberForUpdate(){return {id:900,status:'OPEN',booking_number:'TX209901010001',scheduled_pickup_at:pickup};},
+      async findActiveAssignmentForUpdate(){return null;},
+      async insertDriverAssignment(){return 900;},
+      async insertActivityLog(){},
+    };
+    const driverRepo = {
+      async findByIdForUpdate(){return {id:6,name:'QA Driver',is_active:1,status:'OFFLINE',is_online:0};},
+      async findPrimaryVehicle(){return {id:3};},
+      async findActiveAssignmentPickupsForConflict(){return [];},
+    };
+    const statusService={async transitionInTransaction(){return {result:{},domainEvent:null,eventPayload:null};}};
+    const service=new AdminDispatchService({async getConnection(){return conn;}},repo,driverRepo,statusService,settlementStub,null,null,scoringService);
+    const result=await service.assignDriver('TX209901010001',{driverId:6},{id:1,role:'ADMIN'});
+    assert.equal(result.bookingStatus,'DRIVER_ASSIGNED');
+    assert.equal(result.driver.driverId,6);
+    assert.equal(committed,true);
+  });
+}

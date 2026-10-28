@@ -102,6 +102,8 @@ class AdminOperationsUx {
 
   static String actionReasonLabel(AppLocalizations l10n, String? code) {
     switch (code) {
+      case 'UNASSIGNED_BOOKING':
+        return l10n.t('admin_ops_reason_unassigned_booking');
       case 'LOW_RATING':
         return l10n.t('admin_ops_reason_low_rating');
       case 'RECEIPT_REJECTED':
