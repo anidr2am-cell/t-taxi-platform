@@ -1091,7 +1091,6 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
                       requiredField: false,
                       keyboardType: TextInputType.number,
                       maxLength: 4,
-                      maxLengthEnforcement: MaxLengthEnforcement.none,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       validator: _validateVehicleYear,
                     ),
