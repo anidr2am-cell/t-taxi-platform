@@ -8069,6 +8069,8 @@ class AppLocalizations {
     'driver_mark_all_read': '모두 읽음 / อ่านทั้งหมด',
     'driver_notifications_empty': '알림이 없습니다\n(ยังไม่มีการแจ้งเตือน)',
     'driver_call_status_ready': '콜 수신 가능 / พร้อมรับงาน',
+    'driver_call_status_assigned_ready':
+        '배정된 예약이 있습니다. 시간이 겹치지 않는 콜을 받을 수 있습니다.\n(มีงานที่ได้รับมอบหมายแล้ว คุณยังรับงานที่เวลาไม่ทับซ้อนกันได้)',
     'driver_call_status_offline': '콜 수신 일시 중지 / หยุดรับงานชั่วคราว',
     'driver_call_status_active_trip': '운행 중 / กำลังให้บริการ',
     'driver_call_status_active_trip_helper': '새 콜 수신 불가 / ยังรับงานใหม่ไม่ได้',
