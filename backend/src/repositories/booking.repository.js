@@ -1693,7 +1693,6 @@ class BookingRepository {
     const where = [];
     const params = [];
     const nowText = filters.operationsNow;
-    const urgentCutoff = filters.operationsUrgentCutoff;
     const unread = this.buildAdminUnreadExistsSql(filters.adminUserId);
 
     where.push(this.buildLowRatingExistsSql());
@@ -1727,13 +1726,9 @@ class BookingRepository {
       )
     `);
 
-    where.push(`
-      (
-        ${this.unassignedBookingSql()}
-        AND b.scheduled_pickup_at <= ?
-      )
-    `);
-    params.push(urgentCutoff);
+    // Admins may assign any unassigned booking, not only imminent pickups.
+    // Urgency remains a presentation/sorting concern, not a visibility gate.
+    where.push(`(${this.unassignedBookingSql()})`);
 
     where.push(`
       (

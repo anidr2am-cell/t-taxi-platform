@@ -526,6 +526,15 @@ class AdminOperationsService {
       }
     }
 
+    if (!reasons.length && this.isUnassigned(row)
+      && UNASSIGNED_BOOKING_STATUSES.includes(status)) {
+      reasons.push({
+        code: "UNASSIGNED_BOOKING",
+        severity: OPERATIONS_SEVERITY.REVIEW,
+        priority: 240,
+      });
+    }
+
     reasons.sort((a, b) => a.priority - b.priority);
     return { reasons, nowText };
   }
@@ -569,6 +578,9 @@ class AdminOperationsService {
 
   buildPrimaryCta(row, primaryReason) {
     const status = row.status;
+    if (this.isUnassigned(row) && UNASSIGNED_BOOKING_STATUSES.includes(status)) {
+      return OPERATIONS_CTA.ASSIGN_DRIVER;
+    }
     if (!primaryReason) {
       if (
         status === BOOKING_STATUS.COMPLETED ||
@@ -622,6 +634,9 @@ class AdminOperationsService {
 
   buildNextAction(row, primaryReason) {
     const status = row.status;
+    if (this.isUnassigned(row) && UNASSIGNED_BOOKING_STATUSES.includes(status)) {
+      return { code: "ASSIGN_DRIVER", params: {} };
+    }
     if (!primaryReason) {
       if (
         this.isUnassigned(row) &&

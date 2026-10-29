@@ -470,7 +470,8 @@ test("issues SQL is narrower than needs action SQL", () => {
   const issues = repo.buildAdminBookingFilters(issueFilters);
   assert.match(needs.whereSql, /commission_receipt_file_id IS NOT NULL/);
   assert.doesNotMatch(issues.whereSql, /commission_receipt_file_id IS NOT NULL/);
-  assert.match(needs.whereSql, /scheduled_pickup_at <= \?/);
+  assert.doesNotMatch(needs.whereSql, /scheduled_pickup_at <= \?/);
+  assert.ok(needs.whereSql.includes(`(${repo.unassignedBookingSql()})`));
   assert.doesNotMatch(issues.whereSql, /scheduled_pickup_at <= \?/);
 });
 
@@ -654,4 +655,30 @@ test("getBookingDetail uses actor for unread count", async () => {
   assert.deepEqual(unreadArgs, { adminUserId: 5, bookingId: 10 });
   assert.equal(detail.operations.adminUnreadCount, 2);
   assert.equal(detail.operations.hasUnreadInquiry, true);
+});
+
+for (const status of ['PENDING', 'OPEN', 'CONFIRMED']) {
+  for (const pickup of ['2026-07-11 09:00:00', '2026-07-11 10:30:00', '2026-07-12 10:00:00', '2026-07-18 10:00:00', '2026-08-10 10:00:00']) {
+    test(`unassigned ${status} ${pickup} is actionable regardless of pickup time`, () => {
+      const service = new AdminOperationsService(() => fixedNow());
+      const row = {status, scheduled_pickup_at: pickup, assignment_id: null, driver_id: null, updated_at: '2026-07-11 10:00:00'};
+      const ops = service.evaluateOperations(row);
+      assert.equal(ops.needsAction, true);
+      assert.equal(ops.primaryCta, 'ASSIGN_DRIVER');
+      assert.equal(ops.nextAction.code, 'ASSIGN_DRIVER');
+    });
+  }
+}
+test('needs-action unassigned branch has no pickup-time cutoff', () => {
+  const repo = new BookingRepository();
+  const where = repo.buildNeedsActionWhere({operationsNow: '2026-07-11 10:00:00', operationsUrgentCutoff: '2026-07-11 10:30:00'});
+  assert.ok(where.sql.includes(`(${repo.unassignedBookingSql()})`));
+  assert.ok(!where.params.includes('2026-07-11 10:30:00'));
+  assert.ok(where.sql.includes("b.status IN ('PENDING', 'OPEN', 'CONFIRMED')"));
+});
+test('fresh distant booking gets an explicit unassigned reason', () => {
+  const service = new AdminOperationsService(() => fixedNow());
+  const ops = service.evaluateOperations({status:'OPEN',scheduled_pickup_at:'2026-08-10 10:00:00',assignment_id:null,updated_at:'2026-07-11 10:00:00'});
+  assert.equal(ops.primaryActionReason,'UNASSIGNED_BOOKING');
+  assert.equal(ops.severity,'REVIEW');
 });

@@ -442,6 +442,30 @@ Map<String, dynamic> _queueItem(String bookingNumber) => {
 };
 
 void main() {
+  test('unassigned booking explanation is localized in five admin languages', () {
+    for (final language in AppLocalizations.supportedLanguages) {
+      final label = AdminOperationsUx.actionReasonLabel(AppLocalizations(language), 'UNASSIGNED_BOOKING');
+      expect(label, isNotEmpty);
+      expect(label, isNot('admin_ops_reason_unassigned_booking'));
+    }
+  });
+
+  testWidgets('distant future booking exposes assign driver action immediately', (tester) async {
+    final api = _FakeAdminApi(detailResponse: {
+      'bookingNumber':'TX209901010001','status':'OPEN',
+      'scheduledPickupAt':'2099-01-01T05:00:00.000Z',
+      'route':{'origin':{'address':'QA BKK'},'destination':{'address':'QA Hotel'}},
+      'customer':{'name':'QA Customer'},
+      'pricing':{'totalAmount':1000,'currency':'THB','paymentMethod':'PAY_DRIVER'},
+      'activeAssignment':null,'allowedActions':['ASSIGN_DRIVER'],
+      'primaryCta':'ASSIGN_DRIVER',
+    });
+    await tester.pumpWidget(MaterialApp(home:AdminBookingDetailPage(bookingNumber:'TX209901010001',api:api,onChanged:(){})));
+    await tester.pumpAndSettle();
+    expect(find.text('Assign driver'), findsWidgets);
+    expect(api.assignCalls,0);
+  });
+
   testWidgets('shows login when token missing', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

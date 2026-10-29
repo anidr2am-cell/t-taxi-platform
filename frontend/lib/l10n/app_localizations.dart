@@ -17,6 +17,7 @@ class AppLocalizations {
 
   static final Map<String, Map<String, String>> _translations = {
     'en': {
+      "admin_ops_reason_unassigned_booking": "Unassigned · ready to assign",
       "admin_phone_country_cancel": "Cancel",
       "admin_phone_country_title": "Select country / calling code",
       "admin_phone_country_search": "Search country name or calling code",
@@ -2066,6 +2067,7 @@ class AppLocalizations {
       'guest_lookup_booking_number_hint': 'TX202607010001',
     },
     'ko': {
+      "admin_ops_reason_unassigned_booking": "기사 미배정 · 지금 지정 가능",
       "admin_phone_country_cancel": "취소",
       "admin_phone_country_title": "국가·국가번호 선택",
       "admin_phone_country_search": "국가명 또는 국가번호 검색",
@@ -3553,6 +3555,7 @@ class AppLocalizations {
       'customer_driver_location_retry': '다시 시도',
     },
     'zh': {
+      "admin_ops_reason_unassigned_booking": "未分配司机 · 可立即指派",
       "admin_phone_country_cancel": "取消",
       "admin_phone_country_title": "选择国家或区号",
       "admin_phone_country_search": "搜索国家名称或电话区号",
@@ -4542,6 +4545,7 @@ class AppLocalizations {
       'thb': 'THB',
     },
     'ja': {
+      "admin_ops_reason_unassigned_booking": "ドライバー未割当・今すぐ指定可能",
       "admin_phone_country_cancel": "キャンセル",
       "admin_phone_country_title": "国・国番号を選択",
       "admin_phone_country_search": "国名または国番号で検索",
@@ -5571,6 +5575,7 @@ class AppLocalizations {
       'thb': 'THB',
     },
     'th': {
+      "admin_ops_reason_unassigned_booking": "ยังไม่มีคนขับ · มอบหมายได้ทันที",
       "admin_phone_country_cancel": "ยกเลิก",
       "admin_phone_country_title": "เลือกประเทศ / รหัสโทรศัพท์",
       "admin_phone_country_search": "ค้นหาชื่อประเทศหรือรหัสโทรศัพท์",
