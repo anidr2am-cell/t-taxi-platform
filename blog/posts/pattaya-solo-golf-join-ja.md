@@ -4,9 +4,10 @@ description: パタヤへ一人や少人数でゴルフ旅行をする方へ。�
 slug: pattaya-solo-golf-join-ja
 lang: ja
 category: golf
+bookingService: GOLF_TRANSFER
 translationKey: pattaya-solo-golf-join
 date: 2026-10-28
-updated: 2026-10-28
+updated: 2026-10-30
 related:
   - trounding-golf-join-bar-benefits-ja
   - pattaya-golf-transfer-price-ja
@@ -21,11 +22,11 @@ related:
 
 同伴者、プレー枠、ホテル出発時刻と送迎車をまとめて相談し、実際に参加できる日程とティータイムを確認すると、行程を整えやすくなります。
 
-## Buddy Golfの相談対象と言語
+## Buddy Golfに希望の日程と言語を伝える
 
-Buddy Golf（버디골프）は、パタヤのゴルフツアーと組み合わせ相談のブランドです。以前の名称はTRoundingでした。主に韓国人のゴルフ旅行者を対象にしており、日本語での組み合わせや相談対応を保証するものではありません。
+Buddy Golf（버디골프）は、パタヤのゴルフツアーと組み合わせ相談のブランドです。以前の名称はTRoundingでした。希望する日程や同伴者、案内言語を伝え、参加できる組み合わせやプレー枠を確認しましょう。
 
-[WhatsApp](https://wa.me/66815693445)で希望日、人数、コース、ホテルと送迎の希望をまとめてお知らせください。希望する案内言語も伝え、参加できる日程と実際のティータイムを確認しましょう。
+[LINE](https://lin.ee/55A9phq)で希望日、人数、コース、ホテルと送迎の希望をまとめてお知らせください。実際のティータイムと手配内容を確認して行程を整えましょう。[WhatsApp](https://wa.me/66815693445)でも同じ内容をまとめて相談できます。
 
 ## 少人数だからこそ荷物も一緒に確認
 
@@ -47,4 +48,4 @@ Buddy Golf（버디골프）は、パタヤのゴルフツアーと組み合わ�
 
 TRiderはパタヤとゴルフ場の往復送迎を提供しています。車種別、ホール数別、コースグループ別の料金は[パタヤのゴルフ場送迎料金](/blog/pattaya-golf-transfer-price-ja)をご確認ください。
 
-パタヤで一人ゴルフを計画する際は、同伴者とプレー枠の確認を先に行い、その後で[TRiderの日本語予約画面](https://trider.taxi/booking?lang=ja)から車両を手配しましょう。オンラインの送迎予約は24時間可能です。
+パタヤで一人ゴルフを計画する際は、同伴者とプレー枠の確認を先に行い、その後で[TRiderの日本語ゴルフ場送迎予約画面](/booking?service=GOLF_TRANSFER&lang=ja)から車両を手配しましょう。オンラインの送迎予約は24時間可能です。
