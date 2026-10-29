@@ -49,7 +49,13 @@ test('arrival and return articles preset the correct English airport service wit
  const pickupLinks=[...pickup.matchAll(/href="(\/booking[^\"]*)"/g)].map(m=>new URL(m[1].replaceAll('&amp;','&'),'https://trider.taxi'));
  assert.equal(pickupLinks.length,5);
  for(const url of pickupLinks){assert.equal(url.searchParams.get('service'),'AIRPORT_PICKUP');assert.equal(url.searchParams.get('lang'),'en');assert.equal(url.searchParams.has('utm_source'),false);}
- for(const post of posts.filter(p=>![slug,pickupSlug].includes(p.slug))){
+ const guideSlug='suvarnabhumi-airport-pickup-guide-en',guide=read(blog,guideSlug);
+ const guideLinks=[...guide.matchAll(/href="(\/booking[^\"]*)"/g)].map(m=>new URL(m[1].replaceAll('&amp;','&'),'https://trider.taxi'));
+ assert.equal(guideLinks.length,4);
+ for(const url of guideLinks){assert.equal(url.searchParams.get('service'),'AIRPORT_PICKUP');assert.equal(url.searchParams.get('lang'),'en');assert.equal(url.searchParams.has('utm_source'),false);}
+ assert.ok(guide.includes('address-based distance charge'));
+ assert.doesNotMatch(guide,/with no extra charges/);
+ for(const post of posts.filter(p=>![slug,pickupSlug,guideSlug].includes(p.slug))){
   const page=read(blog,post.slug);
   const bookingLang=post.lang==='ru'?'en':post.lang;
   assert.ok(page.includes('class="book-button" href="/booking?lang='+bookingLang+'"'),post.slug);
