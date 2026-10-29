@@ -39,7 +39,7 @@ test('guarantees disappear from published body, list, related cards, titles, met
 });
 test.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
 
-test('arrival and return articles preset the correct English airport service without changing other CTAs',()=>{
+test('English airport and golf guides preset the correct service without changing other CTAs',()=>{
  const slug='pattaya-to-airport-transfer-en',html=read(blog,slug);
  const expected='/booking?service=AIRPORT_DROPOFF&amp;lang=en';
  assert.equal((html.match(/href="\/booking[^"]*"/g)||[]).length,3);
@@ -55,7 +55,16 @@ test('arrival and return articles preset the correct English airport service wit
  for(const url of guideLinks){assert.equal(url.searchParams.get('service'),'AIRPORT_PICKUP');assert.equal(url.searchParams.get('lang'),'en');assert.equal(url.searchParams.has('utm_source'),false);}
  assert.ok(guide.includes('address-based distance charge'));
  assert.doesNotMatch(guide,/with no extra charges/);
- for(const post of posts.filter(p=>![slug,pickupSlug,guideSlug].includes(p.slug))){
+ const golfSlugs=['pattaya-golf-transfer-price-en','pattaya-solo-golf-join-en'];
+ for(const golfSlug of golfSlugs){
+  const page=read(blog,golfSlug),expectedGolf='/booking?service=GOLF_TRANSFER&amp;lang=en';
+  assert.ok(page.includes('class="book-button" href="'+expectedGolf+'"'),golfSlug);
+  assert.ok(page.includes('class="cta-primary" href="'+expectedGolf+'"'),golfSlug);
+  const golfLinks=[...page.matchAll(/href="(\/booking[^\"]*)"/g)].map(m=>new URL(m[1].replaceAll('&amp;','&'),'https://trider.taxi'));
+  assert.equal(golfLinks.length,3,golfSlug);
+  for(const url of golfLinks){assert.equal(url.searchParams.get('service'),'GOLF_TRANSFER',golfSlug);assert.equal(url.searchParams.get('lang'),'en',golfSlug);assert.equal(url.searchParams.has('utm_source'),false,golfSlug);}
+ }
+ for(const post of posts.filter(p=>![slug,pickupSlug,guideSlug,...golfSlugs].includes(p.slug))){
   const page=read(blog,post.slug);
   const bookingLang=post.lang==='ru'?'en':post.lang;
   assert.ok(page.includes('class="book-button" href="/booking?lang='+bookingLang+'"'),post.slug);
