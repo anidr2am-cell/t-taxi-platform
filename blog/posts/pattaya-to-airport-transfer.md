@@ -4,9 +4,10 @@ description: 파타야에서 수완나품·돈므앙 공항으로 가는 귀국 
 slug: pattaya-to-airport-transfer
 lang: ko
 category: airport
+bookingService: AIRPORT_DROPOFF
 translationKey: pattaya-to-airport-transfer
 date: 2026-10-08
-updated: 2026-10-28
+updated: 2026-10-30
 related:
   - suvarnabhumi-to-pattaya
   - don-mueang-to-pattaya
@@ -54,6 +55,6 @@ related:
 
 ## 파타야 수완나품 택시와 돈므앙 샌딩 예약
 
-[TRider 예약 페이지](https://trider.taxi/)에서 파타야 출발 공항 샌딩을 24시간 온라인으로 예약할 수 있습니다. 목적 공항과 인원, 캐리어, 골프백을 확인한 뒤 차종을 선택하세요.
+[TRider 예약 페이지](/booking?service=AIRPORT_DROPOFF&lang=ko)에서 파타야 출발 공항 샌딩을 24시간 온라인으로 예약할 수 있습니다. 목적 공항과 인원, 캐리어, 골프백을 확인한 뒤 차종을 선택하세요.
 
 돈므앙 공항 도착 후 파타야로 이동하는 일정도 함께 준비한다면 [돈므앙 공항에서 파타야 가는 법](/blog/don-mueang-to-pattaya)을 참고하세요. 귀국일 파타야 공항 샌딩은 항공편의 출발 공항을 먼저 확인한 뒤 파타야 수완나품 택시 또는 파타야 돈므앙 구간으로 예약하면 됩니다.

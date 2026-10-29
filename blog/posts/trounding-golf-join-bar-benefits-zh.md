@@ -4,9 +4,10 @@ description: "了解Buddy Golf（原TRounding）的球旅与拼组咨询，向TR
 slug: trounding-golf-join-bar-benefits-zh
 lang: zh
 category: golf
+bookingService: GOLF_TRANSFER
 translationKey: trounding-golf-join-bar-benefits
 date: 2026-10-07
-updated: 2026-10-28
+updated: 2026-10-30
 related:
   - pattaya-solo-golf-join-zh
   - pattaya-golf-price-match-guarantee-zh
@@ -45,4 +46,4 @@ TRider提供曼谷机场与芭提雅之间的接送，以及芭提雅与球场�
 
 推荐先确认球场和开球时间，再填写酒店上车地址、真实人数与球包，最后安排接送。若球局发生变化，应及时核对交通预约是否也需要调整。
 
-在[TRider预约页面](https://trider.taxi/)可全天24小时用中文预约车辆。也可先通过WhatsApp一并沟通Buddy Golf球旅与TRider交通需求，核对整趟行程和费用后安排预约。
+在[TRider预约页面](/booking?service=GOLF_TRANSFER&lang=zh)可全天24小时用中文预约车辆。也可先通过WhatsApp一并沟通Buddy Golf球旅与TRider交通需求，核对整趟行程和费用后安排预约。

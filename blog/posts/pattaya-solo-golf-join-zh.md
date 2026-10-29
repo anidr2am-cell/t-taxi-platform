@@ -4,9 +4,10 @@ description: "独自或少人数去芭提雅打球，可向TRider与Buddy Golf�
 slug: pattaya-solo-golf-join-zh
 lang: zh
 category: golf
+bookingService: GOLF_TRANSFER
 translationKey: pattaya-solo-golf-join
 date: 2026-10-28
-updated: 2026-10-28
+updated: 2026-10-30
 related:
   - trounding-golf-join-bar-benefits-zh
   - pattaya-golf-transfer-price-zh
@@ -49,4 +50,4 @@ TRider提供芭提雅与球场之间的往返车辆及打球期间司机等待�
 
 通过[WhatsApp统一咨询](https://wa.me/66815693445)，可以把找同组球友、开球时间、酒店往返和球包信息一起沟通，确认球位与接送安排。
 
-在[TRider预约页面](https://trider.taxi/)可全天24小时用中文填写车辆行程。一个人去芭提雅打高尔夫时，先把拼组与开球安排确认，再按真实人数和球包预约交通，更容易衔接整天行程。
+在[TRider预约页面](/booking?service=GOLF_TRANSFER&lang=zh)可全天24小时用中文填写车辆行程。一个人去芭提雅打高尔夫时，先把拼组与开球安排确认，再按真实人数和球包预约交通，更容易衔接整天行程。

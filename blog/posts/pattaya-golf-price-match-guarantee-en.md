@@ -6,9 +6,10 @@ description: >-
 slug: pattaya-golf-price-match-guarantee-en
 lang: en
 category: golf
+bookingService: GOLF_TRANSFER
 translationKey: pattaya-golf-price-match-guarantee
 date: 2026-10-07
-updated: 2026-10-28
+updated: 2026-10-30
 related:
   - burapha-cc-green-fee-en
   - trounding-golf-join-bar-benefits-en
@@ -38,4 +39,4 @@ Ask about the golf product's own payment and cancellation terms. Airport-transfe
 
 ## Prepare a clear golf budget
 
-Choose a date and course, then add the confirmed round and transport costs. Ask us about golf dates, joining a round and vehicle transfers together through [WhatsApp](https://wa.me/66815693445). Read the [Burapha CC planning guide](/blog/burapha-cc-green-fee-en) and use the [TRider booking page](https://trider.taxi/) for your agreed vehicle arrangements.
+Choose a date and course, then add the confirmed round and transport costs. Ask us about golf dates, joining a round and vehicle transfers together through [WhatsApp](https://wa.me/66815693445). Read the [Burapha CC planning guide](/blog/burapha-cc-green-fee-en) and use the [TRider booking page](/booking?service=GOLF_TRANSFER&lang=en) for your agreed vehicle arrangements.

@@ -4,9 +4,10 @@ description: "准备Burapha球局时，先确认日期、开球时间和果岭�
 slug: burapha-cc-green-fee-zh
 lang: zh
 category: golf
+bookingService: GOLF_TRANSFER
 translationKey: burapha-cc-green-fee
 date: 2026-10-07
-updated: 2026-10-28
+updated: 2026-10-30
 related:
   - pattaya-golf-transfer-price-zh
   - pattaya-golf-price-match-guarantee-zh
@@ -56,4 +57,4 @@ Buddy Golf（버디골프）是原TRounding的新名称，目前重点服务韩�
 
 可以通过[WhatsApp统一咨询](https://wa.me/66815693445)，把球场、拼组、酒店上车地点与球包信息一起说明，核对球位、接送安排和完整费用。
 
-在[TRider预约页面](https://trider.taxi/)可全天24小时用中文安排Burapha球场接送。也可先通过WhatsApp一并沟通球场与交通需求，确认开球时间、酒店、人数、球包和最终报价后安排预约。
+在[TRider预约页面](/booking?service=GOLF_TRANSFER&lang=zh)可全天24小时用中文安排Burapha球场接送。也可先通过WhatsApp一并沟通球场与交通需求，确认开球时间、酒店、人数、球包和最终报价后安排预约。

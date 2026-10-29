@@ -34,7 +34,7 @@ test('guarantees disappear from published body, list, related cards, titles, met
   // The published URL/translation identity is intentionally unchanged.
   const html=fs.readFileSync(p,'utf8').replaceAll(/pattaya-golf-price-match-guarantee(?:-(?:en|ja|zh))?/g,'legacy-golf-guide');assert.doesNotMatch(html,forbidden,p);
  }}}audit(blog);
- for(const suffix of ['','-en','-ja','-zh','-ru']){const slug='pattaya-golf-price-match-guarantee'+suffix,html=read(blog,slug);assert.ok(html.includes('https://trider.taxi/blog/'+slug));assert.match(html,/"@type":"Article"/);assert.match(html,suffix==='-ja'?/2026-10-30/:/2026-10-28/);}
+ for(const suffix of ['','-en','-ja','-zh','-ru']){const slug='pattaya-golf-price-match-guarantee'+suffix,html=read(blog,slug);assert.ok(html.includes('https://trider.taxi/blog/'+slug));assert.match(html,/"@type":"Article"/);assert.match(html,/2026-10-30/);}
  const sitemap=fs.readFileSync(path.join(blog,'sitemap-blog.xml'),'utf8');for(const post of posts)assert.ok(sitemap.includes('/blog/'+post.slug+'</loc>'),post.slug);
 });
 test.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
@@ -49,23 +49,31 @@ test('airport and localized golf guides preset the correct service without chang
  const pickupLinks=[...pickup.matchAll(/href="(\/booking[^\"]*)"/g)].map(m=>new URL(m[1].replaceAll('&amp;','&'),'https://trider.taxi'));
  assert.equal(pickupLinks.length,5);
  for(const url of pickupLinks){assert.equal(url.searchParams.get('service'),'AIRPORT_PICKUP');assert.equal(url.searchParams.get('lang'),'en');assert.equal(url.searchParams.has('utm_source'),false);}
+ assert.match(pickup,/<aside class="cta"><strong>✈️ Airport pickup/);
  const guideSlug='suvarnabhumi-airport-pickup-guide-en',guide=read(blog,guideSlug);
  const guideLinks=[...guide.matchAll(/href="(\/booking[^\"]*)"/g)].map(m=>new URL(m[1].replaceAll('&amp;','&'),'https://trider.taxi'));
  assert.equal(guideLinks.length,4);
  for(const url of guideLinks){assert.equal(url.searchParams.get('service'),'AIRPORT_PICKUP');assert.equal(url.searchParams.get('lang'),'en');assert.equal(url.searchParams.has('utm_source'),false);}
+ assert.match(guide,/<aside class="cta"><strong>✈️ Airport pickup/);
  assert.ok(guide.includes('address-based distance charge'));
  assert.doesNotMatch(guide,/with no extra charges/);
- const golfSlugs=['pattaya-golf-transfer-price-en','pattaya-solo-golf-join-en',...posts.filter(p=>p.lang==='ja'&&p.category==='golf').map(p=>p.slug)];
- for(const golfSlug of golfSlugs){
-  const golfLang=posts.find(p=>p.slug===golfSlug).lang;
-  const page=read(blog,golfSlug),expectedGolf='/booking?service=GOLF_TRANSFER&amp;lang='+golfLang;
-  assert.ok(page.includes('class="book-button" href="'+expectedGolf+'"'),golfSlug);
-  assert.ok(page.includes('class="cta-primary" href="'+expectedGolf+'"'),golfSlug);
-  const golfLinks=[...page.matchAll(/href="(\/booking[^\"]*)"/g)].map(m=>new URL(m[1].replaceAll('&amp;','&'),'https://trider.taxi'));
-  assert.equal(golfLinks.length,3,golfSlug);
-  for(const url of golfLinks){assert.equal(url.searchParams.get('service'),'GOLF_TRANSFER',golfSlug);assert.equal(url.searchParams.get('lang'),golfLang,golfSlug);assert.equal(url.searchParams.has('utm_source'),false,golfSlug);}
+ const topicPosts=posts.filter(p=>p.category==='golf'||p.translationKey==='pattaya-to-airport-transfer');
+ const golfLabels={ko:/골프장/,en:/Golf course/,ja:/ゴルフ場/,zh:/高尔夫球场/,ru:/гольфа/};
+ const dropoffLabels={ko:/공항 샌딩/,en:/to the airport/,ja:/空港への/,zh:/送机/,ru:/в аэропорт/};
+ for(const post of topicPosts){
+  const service=post.category==='golf'?'GOLF_TRANSFER':'AIRPORT_DROPOFF',lang=post.lang==='ru'?'en':post.lang;
+  assert.equal(post.bookingService,service,post.slug);
+  const page=read(blog,post.slug),expectedTopic='/booking?service='+service+'&amp;lang='+lang;
+  assert.ok(page.includes('class="book-button" href="'+expectedTopic+'"'),post.slug);
+  assert.ok(page.includes('class="cta-primary" href="'+expectedTopic+'"'),post.slug);
+  const title=page.match(/<aside class="cta"><strong>([^<]+)<\/strong>/)?.[1];
+  assert.match(title,(post.category==='golf'?golfLabels:dropoffLabels)[post.lang],post.slug);
+  if(post.category==='golf')assert.doesNotMatch(title,/공항|airport|空港|机场|аэропорт/i,post.slug);
+  const bookingLinks=[...page.matchAll(/href="(\/booking[^\"]*)"/g)].map(m=>new URL(m[1].replaceAll('&amp;','&'),'https://trider.taxi'));
+  assert.ok(bookingLinks.length>=2,post.slug);
+  for(const url of bookingLinks){assert.equal(url.searchParams.get('service'),service,post.slug);assert.equal(url.searchParams.get('lang'),lang,post.slug);assert.equal(url.searchParams.has('utm_source'),false,post.slug);}
  }
- for(const post of posts.filter(p=>![slug,pickupSlug,guideSlug,...golfSlugs].includes(p.slug))){
+ for(const post of posts.filter(p=>![pickupSlug,guideSlug,...topicPosts.map(p=>p.slug)].includes(p.slug))){
   const page=read(blog,post.slug);
   const bookingLang=post.lang==='ru'?'en':post.lang;
   assert.ok(page.includes('class="book-button" href="/booking?lang='+bookingLang+'"'),post.slug);

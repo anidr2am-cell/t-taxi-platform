@@ -4,9 +4,10 @@ description: "整理芭提雅到素万那普BKK、廊曼DMK的车辆参考费用
 slug: pattaya-to-airport-transfer-zh
 lang: zh
 category: airport
+bookingService: AIRPORT_DROPOFF
 translationKey: pattaya-to-airport-transfer
 date: 2026-10-28
-updated: 2026-10-28
+updated: 2026-10-30
 related:
   - suvarnabhumi-to-pattaya-zh
   - don-mueang-to-pattaya-zh
@@ -50,4 +51,4 @@ related:
 
 ## 用中文预约芭提雅送机
 
-可通过[TRider预约页面](https://trider.taxi/)全天24小时填写送机行程，确认机场、酒店、人数、行李和最终费用。尚在准备到达段交通的旅客，可参考[廊曼机场到芭提雅](/blog/don-mueang-to-pattaya-zh)及[素万那普机场到芭提雅](/blog/suvarnabhumi-to-pattaya-zh)。芭提雅送机的关键，是让预订目的地与实际离境机场保持一致。
+可通过[TRider预约页面](/booking?service=AIRPORT_DROPOFF&lang=zh)全天24小时填写送机行程，确认机场、酒店、人数、行李和最终费用。尚在准备到达段交通的旅客，可参考[廊曼机场到芭提雅](/blog/don-mueang-to-pattaya-zh)及[素万那普机场到芭提雅](/blog/suvarnabhumi-to-pattaya-zh)。芭提雅送机的关键，是让预订目的地与实际离境机场保持一致。

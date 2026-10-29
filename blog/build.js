@@ -15,12 +15,38 @@ const LANGUAGE_NAMES = { ko: '한국어', en: 'English', ja: '日本語', zh: '�
 const bookingLanguage = (lang) => lang === 'ru' ? 'en' : lang;
 const DEFAULT_OG_IMAGE = `${BLOG_ORIGIN}/blog/assets/og-default.png`;
 const UI = {
-  ko: { blog: '블로그', title: 'TRider 블로그', intro: '태국 공항 이동과 여행에 필요한 정보를 확인하세요.', updated: '최종 업데이트', related: '관련 글', categories: '카테고리', all: '전체', cta: '✈️ 정찰제 공항픽업 · 24시간 예약', book: '지금 예약하기', support: '카카오톡 상담', supportUrl: 'https://open.kakao.com/o/suG4krMi' },
+  ko: { blog: '블로그', title: 'TRider 블로그', intro: '태국 공항 이동과 여행에 필요한 정보를 확인하세요.', updated: '최종 업데이트', related: '관련 글', categories: '카테고리', all: '전체', cta: '✈️ 공항 이동 차량 · 24시간 예약', book: '지금 예약하기', support: '카카오톡 상담', supportUrl: 'https://open.kakao.com/o/suG4krMi' },
   en: { blog: 'Blog', title: 'TRider Blog', intro: 'Practical guides for airport transfers and travel in Thailand.', updated: 'Last updated', related: 'Related articles', categories: 'Categories', all: 'All posts', cta: '✈️ Fixed-price airport transfers · Book 24/7', book: 'Book now', support: 'WhatsApp', supportUrl: 'https://wa.me/66815693445' },
   ja: { blog: 'ブログ', title: 'TRiderブログ', intro: 'タイの空港送迎と旅行に役立つ情報をご案内します。', updated: '最終更新', related: '関連記事', categories: 'カテゴリー', all: 'すべての記事', cta: '✈️ 定額の空港送迎・24時間予約', book: '今すぐ予約', support: 'LINEで相談', supportUrl: 'https://lin.ee/55A9phq' },
   zh: { blog: '博客', title: 'TRider博客', intro: '查看泰国机场接送和旅行实用信息。', updated: '最后更新', related: '相关文章', categories: '分类', all: '全部文章', cta: '✈️ 固定价格机场接送 · 24小时预约', book: '立即预约', support: 'WhatsApp咨询', supportUrl: 'https://wa.me/66815693445' },
-  ru: { blog: 'Блог', title: 'Блог TRider', intro: 'Практические советы о трансферах из аэропортов и поездках по Таиланду.', updated: 'Обновлено', related: 'Читайте также', categories: 'Категории', all: 'Все статьи', cta: '✈️ Трансферы из аэропорта · Онлайн-бронирование круглосуточно', book: 'Забронировать на английском', support: 'WhatsApp', supportUrl: 'https://wa.me/66815693445' },
+  ru: { blog: 'Блог', title: 'Блог TRider', intro: 'Практические советы о трансферах из аэропортов и поездках по Таиланду.', updated: 'Обновлено', related: 'Читайте также', categories: 'Категории', all: 'Все статьи', cta: '✈️ Трансферы в аэропорт и из аэропорта · Онлайн-бронирование', book: 'Забронировать на английском', support: 'WhatsApp', supportUrl: 'https://wa.me/66815693445' },
   th: { blog: 'บล็อก', title: 'บล็อก TRider', intro: 'ข้อมูลการเดินทางและบริการรับส่งสนามบินในประเทศไทย', updated: 'อัปเดตล่าสุด', related: 'บทความที่เกี่ยวข้อง', categories: 'หมวดหมู่', all: 'บทความทั้งหมด', cta: '✈️ รถรับส่งสนามบินราคาเหมาจ่าย · จองได้ 24 ชั่วโมง', book: 'จองเลย', support: 'WhatsApp', supportUrl: 'https://wa.me/66815693445' },
+};
+const SERVICE_CTA = {
+  GOLF_TRANSFER: {
+    ko: '⛳ 골프장 차량 이동 · 24시간 예약',
+    en: '⛳ Golf course transfers · Book your vehicle 24/7',
+    ja: '⛳ ゴルフ場への車両送迎・24時間予約',
+    zh: '⛳ 高尔夫球场接送车辆 · 24小时预约',
+    ru: '⛳ Трансфер на поле для гольфа · Онлайн-бронирование',
+    th: '⛳ รถรับส่งสนามกอล์ฟ · จองรถออนไลน์',
+  },
+  AIRPORT_DROPOFF: {
+    ko: '✈️ 공항 샌딩 차량 · 24시간 예약',
+    en: '✈️ Transfers to the airport · Book your vehicle 24/7',
+    ja: '✈️ 空港へのお送り・24時間予約',
+    zh: '✈️ 送机车辆 · 24小时预约',
+    ru: '✈️ Трансфер в аэропорт · Онлайн-бронирование',
+    th: '✈️ รถรับส่งไปสนามบิน · จองรถออนไลน์',
+  },
+  AIRPORT_PICKUP: {
+    ko: '✈️ 공항 도착 픽업 차량 · 24시간 예약',
+    en: '✈️ Airport pickup · Book your vehicle 24/7',
+    ja: '✈️ 空港到着時のお迎え・24時間予約',
+    zh: '✈️ 接机车辆 · 24小时预约',
+    ru: '✈️ Трансфер из аэропорта · Онлайн-бронирование',
+    th: '✈️ รถรับจากสนามบิน · จองรถออนไลน์',
+  },
 };
 const CATEGORY_LABELS = {
   ko: { airport: '공항', golf: '골프', travel: '여행', faq: '자주 묻는 질문' },
@@ -239,7 +265,8 @@ function build() {
       ? `<img class="cover" src="${escapeHtml(post.cover)}" alt="" loading="lazy" decoding="async" width="${Number(post.coverWidth)}" height="${Number(post.coverHeight)}">`
       : '';
     const bookingHref = post.bookingService ? `/booking?service=${post.bookingService}&lang=${bookingLanguage(post.lang)}` : `/booking?lang=${bookingLanguage(post.lang)}`;
-    const body = `<main><article class="article"><nav><a href="${listPath(post.lang)}">${ui.blog}</a> / <a href="${categoryPath(post.lang, post.category)}">${CATEGORY_LABELS[post.lang][post.category]}</a></nav>${languageSwitcher(translations, post.lang)}<h1>${escapeHtml(post.title)}</h1><p class="updated">${ui.updated}: <time datetime="${post.updated}">${post.updated}</time></p>${cover}<div class="content">${localizeBookingLinks(marked.parse(post.content), post.lang)}</div>${relatedBlock(post, posts)}<aside class="cta"><strong>${ui.cta}</strong><div><a class="cta-primary" href="${escapeHtml(bookingHref)}">${ui.book}</a><a class="cta-secondary" href="${ui.supportUrl}" rel="noopener noreferrer">${ui.support}</a></div></aside></article></main>`;
+    const ctaTitle = SERVICE_CTA[post.bookingService]?.[post.lang] || ui.cta;
+    const body = `<main><article class="article"><nav><a href="${listPath(post.lang)}">${ui.blog}</a> / <a href="${categoryPath(post.lang, post.category)}">${CATEGORY_LABELS[post.lang][post.category]}</a></nav>${languageSwitcher(translations, post.lang)}<h1>${escapeHtml(post.title)}</h1><p class="updated">${ui.updated}: <time datetime="${post.updated}">${post.updated}</time></p>${cover}<div class="content">${localizeBookingLinks(marked.parse(post.content), post.lang)}</div>${relatedBlock(post, posts)}<aside class="cta"><strong>${escapeHtml(ctaTitle)}</strong><div><a class="cta-primary" href="${escapeHtml(bookingHref)}">${ui.book}</a><a class="cta-secondary" href="${ui.supportUrl}" rel="noopener noreferrer">${ui.support}</a></div></aside></article></main>`;
     write(path.join(post.slug, 'index.html'), page({
       title: `${post.title} | TRider`, description: post.description,
       canonical, lang: post.lang, body, image: post.cover, jsonLd, bookingHref,

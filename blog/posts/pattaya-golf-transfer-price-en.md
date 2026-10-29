@@ -7,7 +7,7 @@ lang: en
 category: golf
 bookingService: GOLF_TRANSFER
 date: 2026-10-29
-updated: 2026-10-29
+updated: 2026-10-30
 related:
   - pattaya-solo-golf-join-en
   - burapha-cc-green-fee-en

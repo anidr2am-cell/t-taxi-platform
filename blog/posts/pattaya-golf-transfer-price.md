@@ -5,8 +5,9 @@ slug: pattaya-golf-transfer-price
 translationKey: pattaya-golf-transfer-price
 lang: ko
 category: golf
+bookingService: GOLF_TRANSFER
 date: 2026-10-01
-updated: 2026-10-14
+updated: 2026-10-30
 ---
 
 파타야에서 골프장을 오갈 때는 골프장 위치, 홀 수, 차량 종류에 따라 이동 요금이 달라집니다. 아래 요금은 **차량 1대 기준**이며, 파타야와 골프장 사이의 **왕복 이동과 라운드 동안의 기사 대기**를 포함합니다. 시즌이나 요일에 따른 요금 차이는 없습니다.

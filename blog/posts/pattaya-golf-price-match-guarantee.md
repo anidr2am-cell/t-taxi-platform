@@ -4,9 +4,10 @@ description: '파타야 골프 견적의 그린피·캐디피·카트비와 별�
 slug: pattaya-golf-price-match-guarantee
 lang: ko
 category: golf
+bookingService: GOLF_TRANSFER
 translationKey: pattaya-golf-price-match-guarantee
 date: 2026-10-06
-updated: 2026-10-28
+updated: 2026-10-30
 related:
   - burapha-cc-green-fee
   - trounding-golf-join-bar-benefits
@@ -37,4 +38,4 @@ related:
 
 ## 파타야 골프 비용을 정리하는 순서
 
-희망 골프장과 날짜를 정하고 라운딩 견적과 이동비를 구분해 합산하세요. 한국인 중심 파타야 골프 여행 브랜드인 버디골프의 골프 일정·조인·차량 이동을 [WhatsApp](https://wa.me/66815693445)으로 함께 상담할 수 있습니다. [부라파CC 비용 확인](/blog/burapha-cc-green-fee)과 [차량별 골프장 이동 요금](/blog/pattaya-golf-transfer-price)을 참고하고, 안내받은 이동 차량은 [TRider 예약 페이지](https://trider.taxi/)에서 예약하세요.
+희망 골프장과 날짜를 정하고 라운딩 견적과 이동비를 구분해 합산하세요. 한국인 중심 파타야 골프 여행 브랜드인 버디골프의 골프 일정·조인·차량 이동을 [WhatsApp](https://wa.me/66815693445)으로 함께 상담할 수 있습니다. [부라파CC 비용 확인](/blog/burapha-cc-green-fee)과 [차량별 골프장 이동 요금](/blog/pattaya-golf-transfer-price)을 참고하고, 안내받은 이동 차량은 [TRider 예약 페이지](/booking?service=GOLF_TRANSFER&lang=ko)에서 예약하세요.

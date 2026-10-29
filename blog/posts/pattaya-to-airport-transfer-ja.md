@@ -4,9 +4,10 @@ description: パタヤからスワンナプーム空港・ドンムアン空港�
 slug: pattaya-to-airport-transfer-ja
 lang: ja
 category: airport
+bookingService: AIRPORT_DROPOFF
 translationKey: pattaya-to-airport-transfer
 date: 2026-10-28
-updated: 2026-10-28
+updated: 2026-10-30
 related:
   - suvarnabhumi-to-pattaya-ja
   - don-mueang-to-pattaya-ja
@@ -52,6 +53,6 @@ related:
 
 ## 帰国送迎をオンラインで予約
 
-[TRiderの日本語予約画面](https://trider.taxi/booking?lang=ja)で、パタヤ発の空港送迎を24時間申し込めます。到着時の移動も手配する方は、[ドンムアン空港からパタヤへの案内](/blog/don-mueang-to-pattaya-ja)も参考にしてください。
+[TRiderの日本語予約画面](/booking?service=AIRPORT_DROPOFF&lang=ja)で、パタヤ発の空港送迎を24時間申し込めます。到着時の移動も手配する方は、[ドンムアン空港からパタヤへの案内](/blog/don-mueang-to-pattaya-ja)も参考にしてください。
 
 パタヤから空港への送迎は、出発空港とホテル住所、乗車人数、荷物、迎車時刻をまとめて確認するのがポイントです。最終見積額と予約内容を確認し、帰国日の移動を準備しましょう。

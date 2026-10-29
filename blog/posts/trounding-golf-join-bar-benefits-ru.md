@@ -4,9 +4,10 @@ description: "Гольф-поездки Buddy Golf в Паттайе: обсуд
 slug: trounding-golf-join-bar-benefits-ru
 lang: ru
 category: golf
+bookingService: GOLF_TRANSFER
 translationKey: trounding-golf-join-bar-benefits
 date: 2026-10-28
-updated: 2026-10-28
+updated: 2026-10-30
 related:
   - pattaya-solo-golf-join-ru
   - pattaya-golf-price-match-guarantee-ru
@@ -59,4 +60,4 @@ Buddy Golf (버디골프), ранее TRounding, — направление го
 - Клуб: дата, курс, ти-тайм и состав расходов должны быть понятны до поездки.
 - TRider: автомобиль, пассажиры, багаж, маршрут и итоговая сумма проверяются в транспортном заказе.
 
-Для совместного раунда Buddy Golf в Паттайе [напишите в WhatsApp](https://wa.me/66815693445): даты, поиск партнёров и трансфер можно обсудить вместе. После согласования расписания [оформите автомобиль TRider через круглосуточную форму на английском](/booking?lang=en). Дополнительные советы собраны в [руководстве для одиночной гольф-поездки](/blog/pattaya-solo-golf-join-ru).
+Для совместного раунда Buddy Golf в Паттайе [напишите в WhatsApp](https://wa.me/66815693445): даты, поиск партнёров и трансфер можно обсудить вместе. После согласования расписания [оформите автомобиль TRider через круглосуточную форму на английском](/booking?service=GOLF_TRANSFER&lang=en). Дополнительные советы собраны в [руководстве для одиночной гольф-поездки](/blog/pattaya-solo-golf-join-ru).

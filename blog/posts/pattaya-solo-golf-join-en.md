@@ -7,7 +7,7 @@ lang: en
 category: golf
 bookingService: GOLF_TRANSFER
 date: 2026-10-29
-updated: 2026-10-29
+updated: 2026-10-30
 related:
   - pattaya-golf-transfer-price-en
   - pattaya-golf-price-match-guarantee-en

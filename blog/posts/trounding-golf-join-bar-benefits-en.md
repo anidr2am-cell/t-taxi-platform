@@ -4,9 +4,10 @@ description: "Plan Pattaya golf with Buddy Golf: ask about dates, playing partne
 slug: trounding-golf-join-bar-benefits-en
 lang: en
 category: golf
+bookingService: GOLF_TRANSFER
 translationKey: trounding-golf-join-bar-benefits
 date: 2026-10-07
-updated: 2026-10-28
+updated: 2026-10-30
 related:
   - pattaya-golf-price-match-guarantee-en
   - burapha-cc-green-fee-en
@@ -36,4 +37,4 @@ Prepare the number and size of suitcases and golf bags for the whole group. You 
 
 ## One conversation for golf, joining and transport
 
-Send your date, preferred course, player count and accommodation through [WhatsApp](https://wa.me/66815693445). We can check tee-time and playing-partner availability, then help coordinate the round and pickup schedule together. The [golf cost checklist](/blog/pattaya-golf-price-match-guarantee-en) and [Burapha CC guide](/blog/burapha-cc-green-fee-en) can help you plan. Book your agreed vehicle arrangements around the clock on the [TRider booking page](https://trider.taxi/).
+Send your date, preferred course, player count and accommodation through [WhatsApp](https://wa.me/66815693445). We can check tee-time and playing-partner availability, then help coordinate the round and pickup schedule together. The [golf cost checklist](/blog/pattaya-golf-price-match-guarantee-en) and [Burapha CC guide](/blog/burapha-cc-green-fee-en) can help you plan. Book your agreed vehicle arrangements around the clock on the [TRider booking page](/booking?service=GOLF_TRANSFER&lang=en).

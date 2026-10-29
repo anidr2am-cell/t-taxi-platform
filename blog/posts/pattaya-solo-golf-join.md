@@ -4,8 +4,9 @@ description: '혼자 또는 소수 인원으로 파타야 골프 여행을 준�
 slug: pattaya-solo-golf-join
 lang: ko
 category: golf
+bookingService: GOLF_TRANSFER
 date: 2026-10-01
-updated: 2026-10-28
+updated: 2026-10-30
 translationKey: pattaya-solo-golf-join
 ---
 
@@ -33,4 +34,4 @@ TRider는 파타야와 골프장 사이 왕복 이동을 제공합니다. 홀 �
 
 ## 확정된 일정으로 예약하세요
 
-동반자와 티타임 가능 여부를 확인한 뒤 픽업 장소와 라운드 일정을 함께 정리해 드립니다. [골프 비용 비교](/blog/pattaya-golf-price-match-guarantee)와 [버디골프 조인 준비](/blog/trounding-golf-join-bar-benefits)를 참고하고, [WhatsApp](https://wa.me/66815693445)으로 골프와 이동을 한 번에 상담하세요. 안내받은 차량은 [TRider 예약 페이지](https://trider.taxi/)에서 24시간 예약할 수 있습니다.
+동반자와 티타임 가능 여부를 확인한 뒤 픽업 장소와 라운드 일정을 함께 정리해 드립니다. [골프 비용 비교](/blog/pattaya-golf-price-match-guarantee)와 [버디골프 조인 준비](/blog/trounding-golf-join-bar-benefits)를 참고하고, [WhatsApp](https://wa.me/66815693445)으로 골프와 이동을 한 번에 상담하세요. 안내받은 차량은 [TRider 예약 페이지](/booking?service=GOLF_TRANSFER&lang=ko)에서 24시간 예약할 수 있습니다.
