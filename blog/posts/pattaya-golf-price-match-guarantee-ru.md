@@ -4,9 +4,10 @@ description: "Как сравнивать гольф-предложения в �
 slug: pattaya-golf-price-match-guarantee-ru
 lang: ru
 category: golf
+bookingService: GOLF_TRANSFER
 translationKey: pattaya-golf-price-match-guarantee
 date: 2026-10-28
-updated: 2026-10-28
+updated: 2026-10-30
 related:
   - burapha-cc-green-fee-ru
   - pattaya-golf-transfer-price-ru
@@ -61,4 +62,4 @@ Buddy Golf (버디골프), ранее TRounding, ориентирован пре
 - Учтены все пассажиры, гольф-бэги и чемоданы.
 - Выбрана подходящая машина, а не только самая низкая цифра в таблице.
 
-Так бюджет гольфа в Паттайе становится понятнее до начала поездки. [Обсудите гольф и трансфер в WhatsApp](https://wa.me/66815693445), а согласованный [транспорт TRider забронируйте](/booking?lang=en) через круглосуточную форму на английском языке. Для конкретного клуба прочитайте также [подготовку к игре в Burapha CC](/blog/burapha-cc-green-fee-ru).
+Так бюджет гольфа в Паттайе становится понятнее до начала поездки. [Обсудите гольф и трансфер в WhatsApp](https://wa.me/66815693445), а согласованный [транспорт TRider забронируйте](/booking?service=GOLF_TRANSFER&lang=en) через круглосуточную форму на английском языке. Для конкретного клуба прочитайте также [подготовку к игре в Burapha CC](/blog/burapha-cc-green-fee-ru).

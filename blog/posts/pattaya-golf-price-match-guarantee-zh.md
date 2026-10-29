@@ -4,9 +4,10 @@ description: "芭提雅高尔夫报价如何比较？按同一日期、球场和
 slug: pattaya-golf-price-match-guarantee-zh
 lang: zh
 category: golf
+bookingService: GOLF_TRANSFER
 translationKey: pattaya-golf-price-match-guarantee
 date: 2026-10-07
-updated: 2026-10-28
+updated: 2026-10-30
 related:
   - burapha-cc-green-fee-zh
   - trounding-golf-join-bar-benefits-zh
@@ -51,4 +52,4 @@ TRider提供机场及球场车辆接送，也可在同一次咨询中协调高�
 
 先确认球场日期和开球可用性，再核对每人费用、别项与支付取消条件；确定实际人数和球包后，选择往返车辆。前往Burapha的旅客可参考[Burapha费用预算指南](/blog/burapha-cc-green-fee-zh)。
 
-在[TRider预约页面](https://trider.taxi/)可全天24小时用中文安排车辆交通。比较芭提雅高尔夫费用时，把球费与交通费分开，再以同一条件的最终报价决定行程。
+在[TRider预约页面](/booking?service=GOLF_TRANSFER&lang=zh)可全天24小时用中文安排车辆交通。比较芭提雅高尔夫费用时，把球费与交通费分开，再以同一条件的最终报价决定行程。

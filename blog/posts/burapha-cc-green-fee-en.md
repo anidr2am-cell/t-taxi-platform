@@ -6,9 +6,10 @@ description: >-
 slug: burapha-cc-green-fee-en
 lang: en
 category: golf
+bookingService: GOLF_TRANSFER
 translationKey: burapha-cc-green-fee
 date: 2026-10-07
-updated: 2026-10-28
+updated: 2026-10-30
 related:
   - pattaya-golf-price-match-guarantee-en
   - trounding-golf-join-bar-benefits-en
@@ -46,4 +47,4 @@ Buddy Golf, formerly TRounding, focuses on Korean golf travellers in Pattaya. Se
 
 ## Final checks before booking
 
-Confirm the date, tee time, inclusions, separate costs and hotel pickup address. Read the [golf cost checklist](/blog/pattaya-golf-price-match-guarantee-en), discuss your round and transfer through [WhatsApp](https://wa.me/66815693445), and book the agreed vehicle on the [TRider booking page](https://trider.taxi/) whenever you are ready.
+Confirm the date, tee time, inclusions, separate costs and hotel pickup address. Read the [golf cost checklist](/blog/pattaya-golf-price-match-guarantee-en), discuss your round and transfer through [WhatsApp](https://wa.me/66815693445), and book the agreed vehicle on the [TRider booking page](/booking?service=GOLF_TRANSFER&lang=en) whenever you are ready.

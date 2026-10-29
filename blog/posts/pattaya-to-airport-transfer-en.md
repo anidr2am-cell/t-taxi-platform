@@ -7,7 +7,7 @@ bookingService: AIRPORT_DROPOFF
 category: airport
 translationKey: pattaya-to-airport-transfer
 date: 2026-10-19
-updated: 2026-10-19
+updated: 2026-10-30
 related:
   - thailand-airport-taxi-booking-guide-en
   - thailand-airport-taxi-fare-tips-en

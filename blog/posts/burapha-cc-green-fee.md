@@ -4,9 +4,10 @@ description: 부라파CC 예약 전 그린피·캐디피·카트비·팁을 구�
 slug: burapha-cc-green-fee
 lang: ko
 category: golf
+bookingService: GOLF_TRANSFER
 translationKey: burapha-cc-green-fee
 date: 2026-10-06
-updated: 2026-10-28
+updated: 2026-10-30
 related:
   - pattaya-golf-price-match-guarantee
   - pattaya-golf-transfer-price
@@ -45,4 +46,4 @@ related:
 
 ## 예약 전 마지막 확인
 
-날짜와 티타임, 포함 항목, 별도 비용, 숙소 픽업 위치를 확인하세요. [파타야 골프장 이동 안내](/blog/pattaya-golf-transfer-price)와 [골프 비용 비교 가이드](/blog/pattaya-golf-price-match-guarantee)를 함께 보면 준비할 내용을 정리하기 쉽습니다. [WhatsApp](https://wa.me/66815693445)으로 라운딩과 이동을 함께 상담하고, 이동 차량은 [TRider 예약 페이지](https://trider.taxi/)에서 24시간 예약할 수 있습니다.
+날짜와 티타임, 포함 항목, 별도 비용, 숙소 픽업 위치를 확인하세요. [파타야 골프장 이동 안내](/blog/pattaya-golf-transfer-price)와 [골프 비용 비교 가이드](/blog/pattaya-golf-price-match-guarantee)를 함께 보면 준비할 내용을 정리하기 쉽습니다. [WhatsApp](https://wa.me/66815693445)으로 라운딩과 이동을 함께 상담하고, 이동 차량은 [TRider 예약 페이지](/booking?service=GOLF_TRANSFER&lang=ko)에서 24시간 예약할 수 있습니다.

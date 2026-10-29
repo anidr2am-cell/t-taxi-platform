@@ -4,9 +4,10 @@ description: '기존 TRounding의 새 이름 버디골프에서 한국인 중심
 slug: trounding-golf-join-bar-benefits
 lang: ko
 category: golf
+bookingService: GOLF_TRANSFER
 translationKey: trounding-golf-join-bar-benefits
 date: 2026-10-06
-updated: 2026-10-28
+updated: 2026-10-30
 related:
   - pattaya-golf-price-match-guarantee
   - pattaya-solo-golf-join
@@ -37,4 +38,4 @@ TRider는 공항 이동과 파타야 골프장 차량 이동을 제공합니다.
 
 ## 골프 일정·조인·차량 이동을 한 번에 상담하세요
 
-[WhatsApp 상담](https://wa.me/66815693445)으로 날짜와 희망 골프장, 인원, 숙소를 보내 주세요. 티타임과 조인 가능 여부를 확인한 뒤 라운딩과 픽업 일정을 함께 안내합니다. [혼자 파타야 골프 여행을 준비하는 방법](/blog/pattaya-solo-golf-join)도 참고하고, 안내받은 차량 이동은 [TRider 예약 페이지](https://trider.taxi/)에서 24시간 예약할 수 있습니다.
+[WhatsApp 상담](https://wa.me/66815693445)으로 날짜와 희망 골프장, 인원, 숙소를 보내 주세요. 티타임과 조인 가능 여부를 확인한 뒤 라운딩과 픽업 일정을 함께 안내합니다. [혼자 파타야 골프 여행을 준비하는 방법](/blog/pattaya-solo-golf-join)도 참고하고, 안내받은 차량 이동은 [TRider 예약 페이지](/booking?service=GOLF_TRANSFER&lang=ko)에서 24시간 예약할 수 있습니다.

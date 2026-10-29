@@ -4,9 +4,10 @@ description: "Как спланировать раунд в Burapha CC: акту
 slug: burapha-cc-green-fee-ru
 lang: ru
 category: golf
+bookingService: GOLF_TRANSFER
 translationKey: burapha-cc-green-fee
 date: 2026-10-28
-updated: 2026-10-28
+updated: 2026-10-30
 related:
   - pattaya-golf-transfer-price-ru
   - pattaya-golf-price-match-guarantee-ru
@@ -66,4 +67,4 @@ Burapha относится к группе B в тарифах TRider. Табл�
 
 Buddy Golf (버디골프), ранее TRounding, занимается гольф-поездками в Паттайе преимущественно для корейских путешественников. Напишите в [WhatsApp](https://wa.me/66815693445), чтобы в одном разговоре обсудить даты, присоединение к раунду и трансфер. Мы проверим доступность ти-тайма и партнёров, затем поможем согласовать игру и время подачи. Возможность общения на русском языке уточните при обращении.
 
-Обсудив раунд и поездку через [WhatsApp](https://wa.me/66815693445), согласованный автомобиль TRider можно [забронировать круглосуточно через форму на английском](/booking?lang=en). До поездки в Burapha CC сверяйте текущую цену игры, её состав и [условия перевозки к гольф-полям](/blog/pattaya-golf-transfer-price-ru).
+Обсудив раунд и поездку через [WhatsApp](https://wa.me/66815693445), согласованный автомобиль TRider можно [забронировать круглосуточно через форму на английском](/booking?service=GOLF_TRANSFER&lang=en). До поездки в Burapha CC сверяйте текущую цену игры, её состав и [условия перевозки к гольф-полям](/blog/pattaya-golf-transfer-price-ru).
