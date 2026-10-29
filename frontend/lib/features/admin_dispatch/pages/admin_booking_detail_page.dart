@@ -2,6 +2,7 @@ import '../../admin/widgets/admin_copy_button.dart';
 import '../../admin/widgets/admin_selection_area.dart';
 import 'package:flutter/material.dart';
 import '../widgets/admin_review_request_card.dart';
+import '../widgets/admin_driver_check_cards.dart';
 
 import '../../booking/utils/booking_status_display.dart';
 import '../../booking/utils/review_tags.dart';
@@ -1053,6 +1054,8 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                       key: _operationsSummaryKey,
                       child: _operationsSummarySection(l10n, detail),
                     ),
+                    const SizedBox(height: AppTokens.spaceMd),
+                    AdminDriverCheckCards(detail: detail),
                     const SizedBox(height: AppTokens.spaceMd),
                     _notesSection(l10n),
                     const SizedBox(height: AppTokens.spaceMd),
