@@ -11,15 +11,16 @@ const out=fs.mkdtempSync(path.join(os.tmpdir(),'trider-localized-'));
 execFileSync(process.execPath,['blog/build.js'],{cwd:root,env:{...process.env,BLOG_DIST_DIR:out}});
 const read=slug=>fs.readFileSync(path.join(out,slug,'index.html'),'utf8');
 
-test('every Korean topic has Chinese, Japanese and Russian translation links',()=>{
+test('every Korean topic has exactly one English, Japanese, Chinese and Russian translation with reciprocal links',()=>{
  const originals=posts.filter(p=>p.data.lang==='ko');
  assert.equal(originals.length,13);
  for(const original of originals){
   const key=original.data.translationKey;
   assert.ok(key,original.data.slug);
-  for(const lang of ['zh','ja','ru']){
-   const post=posts.find(p=>p.data.lang===lang&&p.data.translationKey===key);
-   assert.ok(post,`${key}: ${lang}`);
+  for(const lang of ['en','ja','zh','ru']){
+   const translations=posts.filter(p=>p.data.lang===lang&&p.data.translationKey===key);
+   assert.equal(translations.length,1,`${key}: expected one ${lang} translation`);
+   const post=translations[0];
    const html=read(post.data.slug);
    assert.ok(html.includes(`rel="canonical" href="https://trider.taxi/blog/${post.data.slug}"`));
    assert.ok(html.includes(`hreflang="ko" href="https://trider.taxi/blog/${original.data.slug}"`));
@@ -28,6 +29,11 @@ test('every Korean topic has Chinese, Japanese and Russian translation links',()
     const target=posts.find(p=>p.data.slug===match[1]);
     assert.ok(target,post.data.slug+': '+match[1]);
     assert.equal(target.data.lang,lang,post.data.slug+': mixed-language link');
+   }
+   for(const slug of post.data.related||[]){
+    const target=posts.find(p=>p.data.slug===slug);
+    assert.ok(target,post.data.slug+': missing related post '+slug);
+    assert.equal(target.data.lang,lang,post.data.slug+': mixed-language related post');
    }
    const schemas=[...html.matchAll(/<script type="application\/ld\+json">([^<]+)<\/script>/g)].map(m=>JSON.parse(m[1]));
    assert.ok(schemas.some(s=>s['@type']==='Article'&&s.inLanguage===lang));
