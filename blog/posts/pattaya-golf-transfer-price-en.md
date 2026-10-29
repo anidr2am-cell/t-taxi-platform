@@ -5,6 +5,7 @@ slug: pattaya-golf-transfer-price-en
 translationKey: pattaya-golf-transfer-price
 lang: en
 category: golf
+bookingService: GOLF_TRANSFER
 date: 2026-10-29
 updated: 2026-10-29
 related:
@@ -59,7 +60,7 @@ This is a cost-sharing example, not a promise about vehicle capacity or luggage 
 
 Send your preferred course, date, tee time, accommodation, passenger count and luggage through [WhatsApp](https://wa.me/66815693445). We can check tee-time and playing-partner availability and help coordinate your round and vehicle pickup together.
 
-For golf travel and joining arrangements with Buddy Golf, ask about participation requirements and communication options. Buddy Golf primarily focuses on Korean golf travellers; this English guide does not guarantee English-speaking playing partners or staff.
+For golf travel and joining arrangements with Buddy Golf, ask about participation requirements and share your preferred language. The team can check the available arrangements before confirmation.
 
 ## Check the details before booking
 

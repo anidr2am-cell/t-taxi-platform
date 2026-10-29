@@ -5,6 +5,7 @@ slug: pattaya-solo-golf-join-en
 translationKey: pattaya-solo-golf-join
 lang: en
 category: golf
+bookingService: GOLF_TRANSFER
 date: 2026-10-29
 updated: 2026-10-29
 related:
@@ -19,11 +20,11 @@ Planning solo golf in Pattaya? Send your preferred date, course and accommodatio
 
 Prepare your preferred date, course and possible tee times. If you are travelling alone or with a small group, other players' plans need to match yours. An enquiry does not confirm a playing group or tee time; check actual availability and wait for confirmation of the arrangements.
 
-## Buddy Golf focuses on Korean golf travellers
+## Discuss your golf plans with Buddy Golf
 
-Buddy Golf is the new name for TRounding, with a focus on Pattaya golf travel for Korean visitors. Through [WhatsApp](https://wa.me/66815693445), ask about group arrangements, participation requirements and communication options, along with your golf dates and transport plans.
+Buddy Golf is the new name for TRounding. Through [WhatsApp](https://wa.me/66815693445), share your golf dates and transport plans, and ask about group arrangements, participation requirements and playing-partner availability.
 
-This English guide does not guarantee English-speaking playing partners or staff. Check the available arrangements before committing to a round.
+Share your preferred language when enquiring so the available arrangements can be checked before confirmation.
 
 ## Keep golf fees and shared vehicle costs clear
 
