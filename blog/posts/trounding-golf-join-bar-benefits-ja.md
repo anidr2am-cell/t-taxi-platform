@@ -4,9 +4,10 @@ description: TRiderとBuddy Golfでゴルフ日程・組み合わせ・車両送
 slug: trounding-golf-join-bar-benefits-ja
 lang: ja
 category: golf
+bookingService: GOLF_TRANSFER
 translationKey: trounding-golf-join-bar-benefits
 date: 2026-10-06
-updated: 2026-10-28
+updated: 2026-10-30
 related:
   - pattaya-golf-price-match-guarantee-ja
   - pattaya-solo-golf-join-ja
@@ -15,11 +16,11 @@ related:
 
 パタヤでゴルフの組み合わせを相談するときは、TRiderとBuddy Golfで同伴者やプレー枠、ゴルフ場への車両送迎をまとめて相談できます。Buddy Golf（버디골프）は以前のTRoundingから名称が変わったゴルフツアー・組み合わせ相談ブランドです。
 
-## 誰向けの相談かを先に確認
+## 希望の日程と組み合わせを相談する
 
-Buddy Golfは主に韓国人のゴルフ旅行者を対象としています。日本語での案内や、日本語を話す同伴者との組み合わせを保証するものではありません。
+希望するプレー日、ゴルフ場、人数と同伴者の希望を整理しましょう。案内言語やコミュニケーションの希望も伝え、参加できる日程や組み合わせ、手配内容を一緒に確認できます。
 
-参加を検討するときは、[WhatsApp](https://wa.me/66815693445)で希望日、人数、ゴルフ場、ホテルと送迎の希望をまとめてお知らせください。希望する案内言語も伝え、実際に手配できる内容を確認しましょう。
+参加を検討するときは、[LINE](https://lin.ee/55A9phq)で希望日、人数、ゴルフ場、ホテルと送迎の希望をまとめてお知らせください。希望する案内言語も伝え、実際に手配できる内容を確認しましょう。[WhatsApp](https://wa.me/66815693445)でも同じ内容をまとめて相談できます。
 
 ## 同伴者とティータイムの確定内容
 
@@ -45,4 +46,4 @@ TRiderは空港送迎とパタヤのゴルフ場送迎を提供します。Buddy
 
 同じ車の費用は乗車する方同士で分担できますが、グリーンフィー、キャディフィー、カート代とは別です。各サービスの予約確定と支払い条件をそれぞれ確認してください。
 
-パタヤのゴルフ日程・組み合わせ・車両送迎は、WhatsAppでまとめて相談できます。希望する案内言語と実際の参加可否も確認しましょう。車両移動は[TRiderの日本語予約画面](https://trider.taxi/booking?lang=ja)から24時間予約できます。
+パタヤのゴルフ日程・組み合わせ・車両送迎は、LINEでまとめて相談できます。希望する案内言語と実際の参加可否も確認しましょう。車両移動は[TRiderの日本語ゴルフ場送迎予約画面](/booking?service=GOLF_TRANSFER&lang=ja)から24時間予約できます。

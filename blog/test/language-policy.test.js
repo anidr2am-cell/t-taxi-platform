@@ -34,12 +34,12 @@ test('guarantees disappear from published body, list, related cards, titles, met
   // The published URL/translation identity is intentionally unchanged.
   const html=fs.readFileSync(p,'utf8').replaceAll(/pattaya-golf-price-match-guarantee(?:-(?:en|ja|zh))?/g,'legacy-golf-guide');assert.doesNotMatch(html,forbidden,p);
  }}}audit(blog);
- for(const suffix of ['','-en','-ja','-zh','-ru']){const slug='pattaya-golf-price-match-guarantee'+suffix,html=read(blog,slug);assert.ok(html.includes('https://trider.taxi/blog/'+slug));assert.match(html,/"@type":"Article"/);assert.match(html,/2026-10-28/);}
+ for(const suffix of ['','-en','-ja','-zh','-ru']){const slug='pattaya-golf-price-match-guarantee'+suffix,html=read(blog,slug);assert.ok(html.includes('https://trider.taxi/blog/'+slug));assert.match(html,/"@type":"Article"/);assert.match(html,suffix==='-ja'?/2026-10-30/:/2026-10-28/);}
  const sitemap=fs.readFileSync(path.join(blog,'sitemap-blog.xml'),'utf8');for(const post of posts)assert.ok(sitemap.includes('/blog/'+post.slug+'</loc>'),post.slug);
 });
 test.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
 
-test('English airport and golf guides preset the correct service without changing other CTAs',()=>{
+test('airport and localized golf guides preset the correct service without changing other CTAs',()=>{
  const slug='pattaya-to-airport-transfer-en',html=read(blog,slug);
  const expected='/booking?service=AIRPORT_DROPOFF&amp;lang=en';
  assert.equal((html.match(/href="\/booking[^"]*"/g)||[]).length,3);
@@ -55,14 +55,15 @@ test('English airport and golf guides preset the correct service without changin
  for(const url of guideLinks){assert.equal(url.searchParams.get('service'),'AIRPORT_PICKUP');assert.equal(url.searchParams.get('lang'),'en');assert.equal(url.searchParams.has('utm_source'),false);}
  assert.ok(guide.includes('address-based distance charge'));
  assert.doesNotMatch(guide,/with no extra charges/);
- const golfSlugs=['pattaya-golf-transfer-price-en','pattaya-solo-golf-join-en'];
+ const golfSlugs=['pattaya-golf-transfer-price-en','pattaya-solo-golf-join-en',...posts.filter(p=>p.lang==='ja'&&p.category==='golf').map(p=>p.slug)];
  for(const golfSlug of golfSlugs){
-  const page=read(blog,golfSlug),expectedGolf='/booking?service=GOLF_TRANSFER&amp;lang=en';
+  const golfLang=posts.find(p=>p.slug===golfSlug).lang;
+  const page=read(blog,golfSlug),expectedGolf='/booking?service=GOLF_TRANSFER&amp;lang='+golfLang;
   assert.ok(page.includes('class="book-button" href="'+expectedGolf+'"'),golfSlug);
   assert.ok(page.includes('class="cta-primary" href="'+expectedGolf+'"'),golfSlug);
   const golfLinks=[...page.matchAll(/href="(\/booking[^\"]*)"/g)].map(m=>new URL(m[1].replaceAll('&amp;','&'),'https://trider.taxi'));
   assert.equal(golfLinks.length,3,golfSlug);
-  for(const url of golfLinks){assert.equal(url.searchParams.get('service'),'GOLF_TRANSFER',golfSlug);assert.equal(url.searchParams.get('lang'),'en',golfSlug);assert.equal(url.searchParams.has('utm_source'),false,golfSlug);}
+  for(const url of golfLinks){assert.equal(url.searchParams.get('service'),'GOLF_TRANSFER',golfSlug);assert.equal(url.searchParams.get('lang'),golfLang,golfSlug);assert.equal(url.searchParams.has('utm_source'),false,golfSlug);}
  }
  for(const post of posts.filter(p=>![slug,pickupSlug,guideSlug,...golfSlugs].includes(p.slug))){
   const page=read(blog,post.slug);

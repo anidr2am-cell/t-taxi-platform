@@ -23,10 +23,16 @@ test('all published languages omit unlimited waiting, unrestricted cancellation 
   }
 });
 
-test('golf guides provide the owner-approved shared consultation contact',()=>{
+test('golf guides provide shared consultation with LINE first for Japanese readers',()=>{
   for(const post of posts.filter(p=>p.data.category==='golf')){
     assert.ok(post.content.includes('https://wa.me/66815693445'),post.name);
     assert.doesNotMatch(post.content,/골프.{0,12}상담과.{0,12}차량.{0,12}별개|tour\/join consultation.*separate|相談と.*予約とは別|咨询与.*分别确认/i,post.name);
+    if(post.data.lang==='ja'){
+      assert.ok(post.content.includes('https://lin.ee/55A9phq'),post.name);
+      assert.ok(post.content.indexOf('https://lin.ee/55A9phq')<post.content.indexOf('https://wa.me/66815693445'),post.name);
+      assert.match(post.content,/まとめて相談/,post.name);
+      assert.doesNotMatch(post.content,/主に韓国人|日本語[^。\n]*保証するものではありません/,post.name);
+    }
   }
 });
 

@@ -4,9 +4,10 @@ description: パタヤのゴルフ旅行はグリーンフィー、キャディ�
 slug: pattaya-golf-price-match-guarantee-ja
 lang: ja
 category: golf
+bookingService: GOLF_TRANSFER
 translationKey: pattaya-golf-price-match-guarantee
 date: 2026-10-06
-updated: 2026-10-28
+updated: 2026-10-30
 related:
   - burapha-cc-green-fee-ja
   - trounding-golf-join-bar-benefits-ja
@@ -41,6 +42,6 @@ TRiderのゴルフ場送迎料金は車両1台あたりの移動費です。プ�
 
 ## ゴルフ日程と車両送迎をまとめて相談
 
-Buddy Golfは以前のTRoundingから名称が変わった、パタヤのゴルフツアー・組み合わせ相談ブランドです。主に韓国人旅行者を対象としています。[WhatsApp](https://wa.me/66815693445)で希望日、コース、人数、ホテル住所と送迎の希望をまとめてお知らせください。希望する案内言語と実際のティータイムも確認しましょう。
+Buddy Golfは以前のTRoundingから名称が変わった、パタヤのゴルフツアー・組み合わせ相談ブランドです。[LINE](https://lin.ee/55A9phq)で希望日、コース、人数、ホテル住所と送迎の希望をまとめてお知らせください。希望する案内言語や同伴者の希望も伝え、参加できる日程と実際のティータイムを確認しましょう。[WhatsApp](https://wa.me/66815693445)でも同じ内容をまとめて相談できます。
 
-車両が必要な場合は[パタヤのゴルフ場送迎料金](/blog/pattaya-golf-transfer-price-ja)を確認し、[TRiderの日本語予約画面](https://trider.taxi/booking?lang=ja)から24時間申し込めます。パタヤのゴルフ旅行費用はプレーと移動を分け、両方の予約内容を確認しましょう。
+車両が必要な場合は[パタヤのゴルフ場送迎料金](/blog/pattaya-golf-transfer-price-ja)を確認し、[TRiderの日本語ゴルフ場送迎予約画面](/booking?service=GOLF_TRANSFER&lang=ja)から24時間申し込めます。パタヤのゴルフ旅行費用はプレーと移動を分け、両方の予約内容を確認しましょう。
