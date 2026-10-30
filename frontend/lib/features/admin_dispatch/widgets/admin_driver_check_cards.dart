@@ -24,6 +24,7 @@ class AdminDriverCheckCards extends StatelessWidget {
           const SizedBox(height: AppTokens.spaceSm),
           for (final message in buildAdminDriverCheckMessages(detail))
             ExpansionTile(
+              initiallyExpanded: true,
               key: ValueKey('adminDriverCheck-${message.id}'),
               tilePadding: EdgeInsets.zero,
               childrenPadding: const EdgeInsets.only(bottom: AppTokens.spaceMd),
