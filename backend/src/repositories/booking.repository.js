@@ -2239,6 +2239,8 @@ class BookingRepository {
           b.payment_method,
           b.payment_status,
           b.commission_status,
+          b.commission_amount,
+          b.commission_exempt,
           b.total_amount,
           b.currency,
           b.vehicle_count,

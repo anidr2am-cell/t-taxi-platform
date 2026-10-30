@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../driver/utils/driver_backend_datetime.dart';
 
@@ -20,6 +21,57 @@ String _text(dynamic value) {
   if (value is! String) return '';
   final result = value.trim().replaceAll(RegExp(r'[\r\n]+'), ' ');
   return result == '-' || result.toLowerCase() == 'null' ? '' : result;
+}
+
+String _financialMessage(Map<String, dynamic> detail, AppLocalizations l10n) {
+  final summary = _map(detail['driverFinancialSummary']);
+  final currency = _text(summary['currency']);
+  String amount(dynamic value) {
+    if (value is! num || !value.isFinite || value < 0 || currency.isEmpty)
+      return l10n.t('admin_driver_check_missing');
+    final number = NumberFormat('#,##0.##', 'en_US').format(value);
+    return currency == 'THB' ? '฿$number' : '$number $currency';
+  }
+
+  String fill(String key, Map<String, String> values) => l10n
+      .t('admin_driver_finance_$key')
+      .replaceAllMapped(
+        RegExp(r'\{([A-Za-z]+)\}'),
+        (m) => values[m.group(1)] ?? m.group(0)!,
+      );
+  final mode = summary['collectionMode'];
+  return [
+    l10n.t(
+      'admin_driver_finance_${mode == 'DRIVER_COLLECTS' && summary['paymentStatus'] == 'PAID'
+          ? 'paid'
+          : mode == 'DRIVER_COLLECTS'
+          ? 'driver'
+          : mode == 'ADMIN_PAYS'
+          ? 'admin'
+          : 'unknown'}',
+    ),
+    fill('lines', {
+      'total': amount(summary['customerTotalAmount']),
+      'collect': amount(summary['collectFromCustomerAmount']),
+      'commission': amount(summary['commissionAmount']),
+      'sign': amount(summary['nameSignAmount']),
+      'deduction': amount(summary['companyDeductionAmount']),
+      'net': amount(summary['driverNetAmount']),
+    }),
+    if (mode == 'ADMIN_PAYS')
+      fill('payout', {'amount': amount(summary['adminPayoutAmount'])}),
+    fill('status', {
+      'status': summary['paymentStatus'] == 'PAID'
+          ? l10n.t('admin_driver_finance_paid')
+          : l10n.t('admin_driver_finance_unpaid'),
+    }),
+    if (summary['basis'] == 'CURRENT_TRIP_RULE_ESTIMATE')
+      l10n.t('admin_driver_finance_estimate'),
+    if (summary['basis'] == 'REGISTERED_PAYOUT')
+      l10n.t('admin_driver_finance_registered'),
+    if (summary.isEmpty || summary['needsConfirmation'] == true)
+      l10n.t('admin_driver_finance_confirm'),
+  ].join('\n');
 }
 
 /// No customer contact fields, API calls or inferred departure/ETA values.
@@ -82,6 +134,7 @@ List<AdminDriverCheckMessage> buildAdminDriverCheckMessages(
     final flightNumber = _text(flight['flightNumber']);
     final options = _map(detail['options']);
     final values = {
+      'finance': _financialMessage(detail, l10n),
       'booking': value(_text(detail['bookingNumber'])),
       'service':
           serviceNames[_text(_map(detail['serviceType'])['code'])] ?? missing,

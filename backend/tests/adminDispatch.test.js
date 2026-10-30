@@ -894,6 +894,9 @@ test("booking detail excludes secrets and serializes Bangkok flight arrival time
   assert.equal(detail.scheduledPickupAt, "2026-07-01T02:30:00.000Z");
   assert.equal(detail.flight.scheduledArrivalAt, "2026-07-01T02:00:00.000Z");
   assert.equal(detail.flight.estimatedArrivalAt, "2026-07-01T02:15:00.000Z");
+  assert.equal(detail.driverFinancialSummary.driverNetAmount, 1000);
+  assert.equal(detail.driverFinancialSummary.collectionMode, 'DRIVER_COLLECTS');
+  assert.equal(detail.driverFinancialSummary.basis, 'CURRENT_TRIP_RULE_ESTIMATE');
   assert.ok(!("boardingQrTokenHash" in detail));
   assert.ok(!("guestAccessToken" in detail));
 });
