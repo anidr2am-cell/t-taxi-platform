@@ -245,6 +245,13 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
       _view = view;
       _showArchived = false;
       _selectedForArchive.clear();
+      if (view == AdminBookingView.completed) {
+        _selectedBookingNumber = null;
+        _statusFilter = null;
+        _assignmentFilter = null;
+        _reviewRequestsOnly = false;
+        _settlementStatus = null;
+      }
       if (unassignedOnly != null) {
         _unassignedOnly = unassignedOnly;
       } else if (view != AdminBookingView.all) {
@@ -464,6 +471,11 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
           _buildArchiveActions(l10n),
           _buildSummaryCards(l10n),
           _buildTabs(l10n),
+          if (_view == AdminBookingView.completed)
+            Padding(
+              padding: AppUi.pagePadding(context).copyWith(top: 0, bottom: AppTokens.spaceSm),
+              child: Text(l10n.t('admin_ops_completed_help')),
+            ),
           Expanded(child: _buildWorkbench(l10n)),
         ],
       ),

@@ -17,6 +17,8 @@ class AppLocalizations {
 
   static final Map<String, Map<String, String>> _translations = {
     'en': {
+      "admin_ops_view_completed": "Trips ended",
+      "admin_ops_completed_help": "Includes trips awaiting settlement and fully completed trips. No date filter means all dates. Hidden bookings remain in the hidden view.",
       "driver_name_sign_text_label": "Name to write on the sign",
       "driver_name_sign_text_missing": "No sign name registered. Please confirm with the administrator.",
       "admin_driver_check_name_sign_text": "Name to write on the sign",
@@ -965,7 +967,6 @@ class AppLocalizations {
       'admin_ops_view_upcoming': 'Upcoming',
       'admin_ops_view_in_progress': 'In progress',
       'admin_ops_view_settlement': 'Settlement',
-      'admin_ops_view_completed': 'Completed',
       'admin_ops_view_cancelled': 'Cancelled',
       'admin_ops_view_all': 'All',
       'admin_ops_summary_needs_action': 'Needs action',
@@ -2092,6 +2093,8 @@ class AppLocalizations {
       'guest_lookup_booking_number_hint': 'TX202607010001',
     },
     'ko': {
+      "admin_ops_view_completed": "운행 완료",
+      "admin_ops_completed_help": "운행 종료·정산 완료 예약을 함께 조회합니다. 기간 미선택 시 전체 기간이며, 숨긴 예약은 숨김 보기에서 확인하세요.",
       "driver_name_sign_text_label": "피켓에 적을 이름",
       "driver_name_sign_text_missing": "등록된 피켓 이름이 없습니다. 관리자에게 확인하세요.",
       "admin_driver_check_name_sign_text": "피켓에 적을 이름",
@@ -2897,7 +2900,6 @@ class AppLocalizations {
       'admin_ops_view_upcoming': '예정',
       'admin_ops_view_in_progress': '운행 중',
       'admin_ops_view_settlement': '정산 대기',
-      'admin_ops_view_completed': '완료',
       'admin_ops_view_cancelled': '취소',
       'admin_ops_view_all': '전체',
       'admin_ops_summary_needs_action': '처리 필요',
@@ -3605,6 +3607,8 @@ class AppLocalizations {
       'customer_driver_location_retry': '다시 시도',
     },
     'zh': {
+      "admin_ops_view_completed": "行程已结束",
+      "admin_ops_completed_help": "同时显示待结算及已完成的行程。未选日期时显示全部时间，隐藏的预订请在隐藏列表查看。",
       "driver_name_sign_text_label": "接机牌上填写的姓名",
       "driver_name_sign_text_missing": "尚未登记接机牌姓名，请向管理员确认。",
       "admin_driver_check_name_sign_text": "接机牌上填写的姓名",
@@ -4620,6 +4624,8 @@ class AppLocalizations {
       'thb': 'THB',
     },
     'ja': {
+      "admin_ops_view_completed": "運行終了",
+      "admin_ops_completed_help": "精算待ち・精算済みの予約を表示します。日付未指定は全期間です。非表示の予約は非表示一覧で確認できます。",
       "driver_name_sign_text_label": "ネームボードに記載する名前",
       "driver_name_sign_text_missing": "名前が登録されていません。管理者に確認してください。",
       "admin_driver_check_name_sign_text": "ネームボードに記載する名前",
@@ -5675,6 +5681,8 @@ class AppLocalizations {
       'thb': 'THB',
     },
     'th': {
+      "admin_ops_view_completed": "จบทริปแล้ว",
+      "admin_ops_completed_help": "แสดงทริปที่รอชำระค่าคอมมิชชันและทริปที่เสร็จสมบูรณ์ หากไม่เลือกวันที่จะแสดงทุกช่วงเวลา ดูรายการที่ซ่อนได้ในมุมมองรายการที่ซ่อน",
       "driver_name_sign_text_label": "ชื่อที่ต้องเขียนบนป้าย",
       "driver_name_sign_text_missing": "ยังไม่ได้ระบุชื่อบนป้าย กรุณาสอบถามผู้ดูแล",
       "admin_driver_check_name_sign_text": "ชื่อที่ต้องเขียนบนป้าย",
@@ -6886,7 +6894,6 @@ class AppLocalizations {
       'admin_ops_view_upcoming': 'กำลังจะมาถึง',
       'admin_ops_view_in_progress': 'กำลังเดินทาง',
       'admin_ops_view_settlement': 'รอชำระเงิน',
-      'admin_ops_view_completed': 'เสร็จสิ้น',
       'admin_ops_view_cancelled': 'ยกเลิก',
       'admin_ops_view_all': 'ทั้งหมด',
       'admin_ops_summary_needs_action': 'ต้องดำเนินการ',

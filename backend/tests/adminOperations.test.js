@@ -56,12 +56,18 @@ test("AdminOperationsService rejects invalid view", () => {
   assert.equal(filters.invalidView, true);
 });
 
-test("completed tab applies 30-day history range", () => {
+test("trip-ended view includes settlement pending and completed without implicit history cutoff", () => {
   const service = new AdminOperationsService(() => fixedNow());
   const filters = service.buildFilters({ view: ADMIN_BOOKING_VIEWS.COMPLETED });
-  assert.equal(filters.status, "COMPLETED");
-  assert.ok(filters.serviceDateFrom);
-  assert.ok(filters.serviceDateTo);
+  assert.equal(filters.completedTripsOnly, true);
+  assert.equal(filters.serviceDateFrom, null);
+  assert.equal(filters.serviceDateTo, null);
+  const sql=new BookingRepository().buildAdminBookingFilters(filters);
+  assert(sql.whereSql.includes("b.status IN ('SETTLEMENT_PENDING', 'COMPLETED')"));
+  assert(!sql.whereSql.includes('scheduled_pickup_at >='));
+  assert(!sql.whereSql.includes('b.status NOT IN'));
+  const ranged=service.buildFilters({view:ADMIN_BOOKING_VIEWS.COMPLETED,serviceDateFrom:'2026-01-01',serviceDateTo:'2026-02-01'});
+  assert(ranged.serviceDateFrom && ranged.serviceDateTo);
 });
 
 test("exact booking number search bypasses view, date, status, and archive filters", () => {

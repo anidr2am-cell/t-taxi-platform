@@ -1,0 +1,112 @@
+{
+  "ko": {
+    "receipt": "이동 서비스 영수증",
+    "statement": "이동 서비스 이용명세",
+    "issued": "발행 일시 (태국 시간)",
+    "status": "결제 상태",
+    "paid": "결제 확인 완료",
+    "unconfirmed": "결제 미확인",
+    "paidAmount": "결제 확인 금액",
+    "amount": "이용 금액",
+    "method": "결제 방법",
+    "unknown": "관리자 확인 필요",
+    "note": "이동 서비스 이용 내역을 안내하는 문서이며 세금계산서가 아닙니다.",
+    "pendingNote": "결제가 확인되지 않아 영수증이 아닌 이용명세로 안내합니다.",
+    "methods": {
+      "PAY_DRIVER": "현금",
+      "BANK_TRANSFER": "계좌이체",
+      "CARD": "카드",
+      "ADMIN_COLLECTED": "관리자 수금",
+      "ONLINE": "온라인 결제"
+    },
+    "paidNote": "결제가 확인되었습니다. 같은 요금을 다시 결제하지 마세요."
+  },
+  "en": {
+    "receipt": "Transfer receipt",
+    "statement": "Transfer statement",
+    "issued": "Issued (Thailand time)",
+    "status": "Payment status",
+    "paid": "Payment confirmed",
+    "unconfirmed": "Payment not confirmed",
+    "paidAmount": "Confirmed payment",
+    "amount": "Trip amount",
+    "method": "Payment method",
+    "unknown": "Please confirm with the administrator",
+    "note": "This document records your transfer service. It is not a tax invoice.",
+    "pendingNote": "Payment has not been confirmed. This is a trip statement, not a receipt.",
+    "methods": {
+      "PAY_DRIVER": "Cash",
+      "BANK_TRANSFER": "Bank transfer",
+      "CARD": "Card",
+      "ADMIN_COLLECTED": "Collected by the administrator",
+      "ONLINE": "Online payment"
+    },
+    "paidNote": "Your payment is confirmed. Please do not pay the same fare again."
+  },
+  "th": {
+    "receipt": "ใบรับเงินค่าบริการรับส่ง",
+    "statement": "รายละเอียดการใช้บริการรับส่ง",
+    "issued": "วันเวลาออกเอกสาร (เวลาไทย)",
+    "status": "สถานะการชำระเงิน",
+    "paid": "ยืนยันการชำระเงินแล้ว",
+    "unconfirmed": "ยังไม่ได้ยืนยันการชำระเงิน",
+    "paidAmount": "ยอดชำระที่ยืนยันแล้ว",
+    "amount": "ค่าบริการ",
+    "method": "วิธีชำระเงิน",
+    "unknown": "กรุณาสอบถามผู้ดูแล",
+    "note": "เอกสารนี้แสดงรายละเอียดการใช้บริการรับส่ง ไม่ใช่ใบกำกับภาษี",
+    "pendingNote": "ยังไม่ได้ยืนยันการชำระเงิน จึงออกเป็นรายละเอียดการใช้บริการ ไม่ใช่ใบรับเงิน",
+    "methods": {
+      "PAY_DRIVER": "เงินสด",
+      "BANK_TRANSFER": "โอนเงิน",
+      "CARD": "บัตร",
+      "ADMIN_COLLECTED": "ผู้ดูแลรับชำระ",
+      "ONLINE": "ชำระออนไลน์"
+    },
+    "paidNote": "ยืนยันการชำระเงินแล้ว ไม่ต้องชำระค่าบริการซ้ำ"
+  },
+  "ja": {
+    "receipt": "送迎サービス領収書",
+    "statement": "送迎サービス利用明細",
+    "issued": "発行日時（タイ時間）",
+    "status": "お支払い状況",
+    "paid": "お支払い確認済み",
+    "unconfirmed": "お支払い未確認",
+    "paidAmount": "確認済みのお支払い金額",
+    "amount": "ご利用金額",
+    "method": "お支払い方法",
+    "unknown": "管理者にご確認ください",
+    "note": "送迎サービスのご利用内容を示す書類であり、税務用のタックスインボイスではありません。",
+    "pendingNote": "お支払いが未確認のため、領収書ではなく利用明細としてご案内します。",
+    "methods": {
+      "PAY_DRIVER": "現金",
+      "BANK_TRANSFER": "銀行振込",
+      "CARD": "カード",
+      "ADMIN_COLLECTED": "管理者が受領",
+      "ONLINE": "オンライン決済"
+    },
+    "paidNote": "お支払いは確認済みです。同じ料金を重ねてお支払いにならないでください。"
+  },
+  "zh": {
+    "receipt": "接送服务收据",
+    "statement": "接送服务使用明细",
+    "issued": "出具时间（泰国时间）",
+    "status": "付款状态",
+    "paid": "已确认付款",
+    "unconfirmed": "尚未确认付款",
+    "paidAmount": "已确认付款金额",
+    "amount": "服务金额",
+    "method": "付款方式",
+    "unknown": "请向管理员确认",
+    "note": "本文件记录接送服务使用情况，不是税务发票。",
+    "pendingNote": "付款尚未确认，因此提供使用明细，而非收据。",
+    "methods": {
+      "PAY_DRIVER": "现金",
+      "BANK_TRANSFER": "银行转账",
+      "CARD": "银行卡",
+      "ADMIN_COLLECTED": "由管理员收款",
+      "ONLINE": "在线付款"
+    },
+    "paidNote": "付款已确认，请勿重复支付同一笔费用。"
+  }
+}

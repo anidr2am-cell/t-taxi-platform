@@ -1897,6 +1897,10 @@ class BookingRepository {
       params.push(...filters.statuses);
     }
 
+    if (filters.completedTripsOnly) {
+      where.push(`b.status IN ('SETTLEMENT_PENDING', 'COMPLETED')`);
+    }
+
     if (filters.cancelledTab) {
       where.push(`b.status IN ('CANCELLED', 'NO_SHOW')`);
     }

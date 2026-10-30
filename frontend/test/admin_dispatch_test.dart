@@ -442,6 +442,17 @@ Map<String, dynamic> _queueItem(String bookingNumber) => {
 };
 
 void main() {
+  testWidgets('trip ended tab requests completed view without implicit dates',(tester) async {
+    tester.view.physicalSize=const Size(1440,1000);tester.view.devicePixelRatio=1;
+    addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
+    final api=_FakeAdminApi(token:'token');
+    await tester.pumpWidget(MaterialApp(home:AdminDispatchQueuePage(api:api)));
+    await tester.pumpAndSettle();
+    final tab=find.text('Trips ended');await tester.ensureVisible(tab);await tester.tap(tab);await tester.pumpAndSettle();
+    expect(api.lastView,'completed');expect(api.lastStatus,isNull);expect(api.lastServiceDateFrom,isNull);expect(api.lastServiceDateTo,isNull);
+    expect(find.textContaining('No date filter means all dates'),findsOneWidget);
+  });
+
   test('unassigned booking explanation is localized in five admin languages', () {
     for (final language in AppLocalizations.supportedLanguages) {
       final label = AdminOperationsUx.actionReasonLabel(AppLocalizations(language), 'UNASSIGNED_BOOKING');

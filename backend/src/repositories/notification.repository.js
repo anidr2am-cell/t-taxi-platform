@@ -132,6 +132,8 @@ class NotificationRepository {
           n.audience_role, n.event_id, n.event_name, n.type, n.title, n.body, n.payload,
           n.read_at, n.created_at, n.updated_at,
           CASE
+            WHEN n.recipient_type = 'USER' AND n.type = 'TRIP_ENDED' AND u.role = 'CUSTOMER'
+              THEN COALESCE(NULLIF(TRIM(b.customer_email), ''), u.email)
             WHEN n.recipient_type = 'USER' THEN u.email
             WHEN n.recipient_type = 'GUEST_BOOKING' THEN b.customer_email
             ELSE NULL
@@ -141,6 +143,8 @@ class NotificationRepository {
           b.metadata AS booking_metadata,
           b.total_amount AS booking_total_amount,
           b.payment_method AS booking_payment_method,
+          b.payment_status AS booking_payment_status,
+          b.currency AS booking_currency,
           vt.code AS booking_vehicle_type,
           b.booking_number,
           b.scheduled_pickup_at,
