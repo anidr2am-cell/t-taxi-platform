@@ -1,5 +1,6 @@
 const copy = require('./customer-email.json');
 const { receiptDocument } = require('./customerReceipt');
+const { isTripEndEmail } = require('../policies/notificationEmail.policy');
 const { parseServiceDateTimeToMs } = require('../utils/serviceDateTime.util');
 const { customerPaymentFromMetadata } = require('../utils/customerPayment');
 
@@ -55,7 +56,7 @@ function renderCustomerEmail(notification, { origin = 'https://trider.taxi', goo
   const supportUrl = new URL('/support', base);
   supportUrl.searchParams.set('lang', locale);
   const googleUrl = httpsUrl(googleReviewUrl);
-  const review = ['TRIP_ENDED', 'REVIEW_REQUESTED'].includes(notification.type);
+  const review = isTripEndEmail(notification) || notification.type==='REVIEW_REQUESTED';
   const body = review ? t.review
     .replace('{googleLine}', googleUrl ? `${t.google.replace('{googleUrl}', googleUrl)}\n` : '')
     .replace('{bookingUrl}', bookingUrl.href) : template.body;
@@ -76,7 +77,7 @@ function renderCustomerEmail(notification, { origin = 'https://trider.taxi', goo
     receipt && paymentLabel ? `${t.paymentMethod}: ${paymentLabel}` : null,
     '', t.fare, t.cancel, t.payment, '', `${t.lookup}: ${bookingUrl.href}`, `${t.support}: ${supportUrl.href}`,
   ].filter((line) => line != null);
-  const document = notification.type === 'TRIP_ENDED'
+  const document = isTripEndEmail(notification)
     ? receiptDocument(notification, {locale, labels:t, pickupAt:pickup, issuedAt:bangkokDateTime(notification.created_at), escapeHtml}) : null;
   if(document) lines=[...document.lines,'',body,'',t.fare,t.cancel,t.payment,'',`${t.lookup}: ${bookingUrl.href}`,`${t.support}: ${supportUrl.href}`];
   // Allowlist only the itinerary above; never interpolate arbitrary payload/body or contact fields.
@@ -86,7 +87,7 @@ function renderCustomerEmail(notification, { origin = 'https://trider.taxi', goo
     return `<p>${safe.replace(/https?:\/\/[^\s<]+/g, (url) => `<a href="${url}">${url}</a>`) || '<br>'}</p>`;
   }).join('\n');
   const subject=document?.subject || template.subject;
-  const documentHtml=document ? document.html+lines.slice(document.lines.length).map(line=>'<p>'+escapeHtml(line).replace(/https?:\/\/[^\s<]+/g,(url)=>`<a href="${url}">${url}</a>` )+'</p>').join('\n') : htmlLines;
+  const documentHtml=document ? document.html+lines.slice(document.lines.length).join('\n').split('\n').map(line=>'<p>'+escapeHtml(line).replace(/https?:\/\/[^\s<]+/g,(url)=>`<a href="${url}">${url}</a>` )+'</p>').join('\n') : htmlLines;
   return { subject, text,
     html: `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(subject)}</title></head><body${document ? ' style="margin:0;background:#f3f7f6;font-family:Arial,sans-serif;color:#243936"' : ''}><main${document ? ' style="max-width:640px;margin:24px auto;background:white;padding:20px;overflow-wrap:anywhere"' : ''}>${document ? '' : `<h1>${escapeHtml(subject)}</h1>`}${documentHtml}</main></body></html>` };
 }

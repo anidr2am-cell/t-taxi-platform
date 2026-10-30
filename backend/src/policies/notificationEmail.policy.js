@@ -1,5 +1,11 @@
 // EMAIL only. IN_APP/FCM and domain events are deliberately unaffected.
-const CUSTOMER_EMAIL_TYPES = new Set(['BOOKING_CREATED', 'TRIP_ENDED', 'BOOKING_CANCELLED']);
+const CUSTOMER_EMAIL_TYPES = new Set(['BOOKING_CREATED', 'TRIP_ENDED', 'TRIP_COMPLETED', 'BOOKING_CANCELLED']);
+function isTripEndEmail(notification) {
+  const type=notification.type || notification.notificationType;
+  let payload=notification.payload;
+  if(typeof payload==='string'){try{payload=JSON.parse(payload)}catch{payload={}}}
+  return type==='TRIP_ENDED' || (type==='TRIP_COMPLETED' && payload?.tripEndedDirectly===true);
+}
 function emailAudience(notification) {
   return notification.audience_role || notification.audienceRole
     || (notification.recipient_type === 'GUEST_BOOKING' ? 'CUSTOMER' : null)
@@ -9,6 +15,7 @@ function emailAudience(notification) {
 function emailPolicyError(notification) {
   const audience = emailAudience(notification);
   if (audience === 'DRIVER') return 'EMAIL_POLICY_DRIVER_DISABLED';
+  if (audience === 'CUSTOMER' && (notification.type || notification.notificationType)==='TRIP_COMPLETED' && !isTripEndEmail(notification)) return 'EMAIL_POLICY_CUSTOMER_TYPE_DISABLED';
   if (audience === 'CUSTOMER' && !CUSTOMER_EMAIL_TYPES.has(notification.type || notification.notificationType)) {
     return 'EMAIL_POLICY_CUSTOMER_TYPE_DISABLED';
   }
@@ -17,4 +24,4 @@ function emailPolicyError(notification) {
 function customerEmailSlot(type) {
   return type === 'BOOKING_CREATED' ? 'RECEIPT' : 'TERMINAL';
 }
-module.exports = { CUSTOMER_EMAIL_TYPES, emailAudience, emailPolicyError, customerEmailSlot };
+module.exports = { isTripEndEmail, CUSTOMER_EMAIL_TYPES, emailAudience, emailPolicyError, customerEmailSlot };

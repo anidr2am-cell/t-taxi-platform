@@ -3,7 +3,7 @@ const NOTIFICATION_CHANNELS = require('../constants/notificationChannels');
 const config = require('../config/env');
 const fs = require('node:fs');
 const { isCustomerEmail, renderCustomerEmail } = require('../templates/customerEmail');
-const { emailPolicyError } = require('../policies/notificationEmail.policy');
+const { emailPolicyError, isTripEndEmail } = require('../policies/notificationEmail.policy');
 const { smtpFailureEvidence } = require('../policies/emailAttempt.policy');
 const { encrypt, decrypt } = require('../utils/tokenEncryption.util');
 
@@ -141,7 +141,7 @@ class EmailNotificationAdapter {
 
     try {
       let emailNotification = notification;
-      if (isCustomerEmail(notification) && ['TRIP_ENDED', 'REVIEW_REQUESTED'].includes(notification.type)) {
+      if (isCustomerEmail(notification) && (isTripEndEmail(notification) || notification.type==='REVIEW_REQUESTED')) {
         let googleUrl = '';
         try { googleUrl = await this.googleReviewUrlProvider(); } catch (_) {
           // A missing/unavailable optional setting must not change email delivery/retry behavior.
