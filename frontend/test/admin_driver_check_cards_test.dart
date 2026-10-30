@@ -180,6 +180,58 @@ void main() {
       }
     },
   );
+  test('finance separates collection commission sign and net', () {
+    final detail = sample()
+      ..['driverFinancialSummary'] = {
+        'collectionMode': 'DRIVER_COLLECTS',
+        'paymentStatus': 'UNPAID',
+        'currency': 'THB',
+        'customerTotalAmount': 1100,
+        'collectFromCustomerAmount': 1100,
+        'commissionAmount': 200,
+        'nameSignAmount': 100,
+        'companyDeductionAmount': 300,
+        'driverNetAmount': 800,
+        'basis': 'CURRENT_TRIP_RULE_ESTIMATE',
+        'needsConfirmation': false,
+      };
+    final text = buildAdminDriverCheckMessages(detail).single.thai;
+    expect(text, contains('เก็บจากลูกค้าโดยตรง'));
+    expect(text, contains('ค่าคอมมิชชันบริษัท: ฿200'));
+    expect(text, contains('ค่าตอบแทนคนขับสุทธิ: ฿800'));
+    expect(text, contains('฿1,100'));
+    expect(text, contains('ประมาณการ'));
+    detail['driverFinancialSummary'] = <String, dynamic>{
+      ...Map<String, dynamic>.from(detail['driverFinancialSummary'] as Map),
+      'collectionMode': 'ADMIN_PAYS',
+      'collectFromCustomerAmount': 0,
+      'adminPayoutAmount': 800,
+      'paymentStatus': 'PAID',
+      'basis': 'REGISTERED_PAYOUT',
+    };
+    final admin = buildAdminDriverCheckMessages(detail).single.thai;
+    expect(admin, contains('ไม่เรียกเก็บเงินลูกค้า'));
+    expect(admin, contains('คนขับรับจากลูกค้า: ฿0'));
+    expect(admin, contains('ยอดที่ผู้ดูแลจะจ่ายให้คนขับ: ฿800'));
+    expect(admin, contains('ลูกค้าชำระแล้ว'));
+    expect(admin, contains('ไม่หักซ้ำ'));
+  });
+  test('missing or invalid money needs confirmation, not zero', () {
+    final missing = buildAdminDriverCheckMessages(sample()).single.thai;
+    expect(missing, contains('ต้องให้ผู้ดูแลตรวจสอบ'));
+    expect(missing, contains('ค่าคอมมิชชันบริษัท: ยังไม่ระบุ'));
+    expect(missing, isNot(contains('฿0')));
+    final detail = sample()
+      ..['driverFinancialSummary'] = {
+        'currency': 'THB',
+        'driverNetAmount': -1,
+        'needsConfirmation': true,
+      };
+    expect(
+      buildAdminDriverCheckMessages(detail).single.thai,
+      contains('ค่าตอบแทนคนขับสุทธิ: ยังไม่ระบุ'),
+    );
+  });
   testWidgets(
     'copy contains Thai only, reports success and does not send or change booking',
     (tester) async {

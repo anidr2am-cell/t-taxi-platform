@@ -1,3 +1,4 @@
+const { buildAdminDriverFinancialSummary } = require('../utils/adminDriverFinancialSummary');
 const { randomUUID } = require("node:crypto");
 const AppError = require("../utils/AppError");
 const HTTP_STATUS = require("../constants/httpStatus");
@@ -674,6 +675,7 @@ class AdminDispatchService {
           amount: Number(item.amount),
         })),
       },
+      driverFinancialSummary: buildAdminDriverFinancialSummary(row, chargeItems),
       commissionStatus: row.commission_status,
       activeAssignment: activeAssignment
         ? {

@@ -1,3 +1,4 @@
+const { commissionAmountAtTripEnd } = require('../policies/tripCommission.policy');
 const AppError = require('../utils/AppError');
 const { randomUUID } = require('node:crypto');
 const HTTP_STATUS = require('../constants/httpStatus');
@@ -393,12 +394,7 @@ class BookingStatusService {
     }
 
     if (requestedToStatus === BOOKING_STATUS.SETTLEMENT_PENDING) {
-      const storedCommissionAmount = Number(booking.commission_amount);
-      const commissionAmount = commissionExempt
-        ? 0
-        : (Number.isFinite(storedCommissionAmount) && storedCommissionAmount > 0
-          ? storedCommissionAmount
-          : 200);
+      const commissionAmount = commissionAmountAtTripEnd(booking, commissionExempt);
       await this.bookingRepository.updateCommissionFields(conn, booking.id, {
         commissionStatus: commissionExempt ? 'WAIVED' : 'DUE',
         commissionAmount,
