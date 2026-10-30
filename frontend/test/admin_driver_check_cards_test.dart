@@ -54,6 +54,32 @@ Widget host({String language = 'ko', Future<void> Function(String)? copy}) =>
 
 void main() {
   test(
+    'sign copy preserves explicit name and handles missing or disabled signs',
+    () {
+      final detail = sample();
+      for (final name in ['홍길동 สมชาย Jane {booking}', null, '  ']) {
+        detail['options'] = {'nameSign': true, 'nameSignText': name};
+        final message = buildAdminDriverCheckMessages(detail).single;
+        if (name != null && name.trim().isNotEmpty) {
+          expect(message.thai, contains('ชื่อที่ต้องเขียนบนป้าย: $name'));
+          expect(message.korean, contains('피켓에 적을 이름: $name'));
+        } else {
+          expect(
+            message.thai,
+            contains('ยังไม่ได้ระบุชื่อ กรุณาสอบถามผู้ดูแล'),
+          );
+          expect(message.korean, contains('이름 미등록 — 관리자 확인 필요'));
+        }
+      }
+      detail['options'] = {'nameSign': false, 'nameSignText': 'STALE NAME'};
+      expect(
+        buildAdminDriverCheckMessages(detail).single.thai,
+        isNot(contains('STALE NAME')),
+      );
+    },
+  );
+
+  test(
     'Thai date, weekday and 24-hour time use Bangkok across midnight and offsets',
     () {
       final original = buildAdminDriverCheckMessages(sample());

@@ -165,7 +165,7 @@ List<AdminDriverCheckMessage> buildAdminDriverCheckMessages(
           ? ''
           : '${thai ? '✈️ เที่ยวบิน' : '✈️ 항공편'}: $flightNumber',
       'nameSign': options['nameSign'] == true
-          ? (thai ? '🪧 ป้ายชื่อ: รวมในรายการจอง' : '🪧 피켓: 예약에 포함')
+          ? '${thai ? '🪧 ป้ายชื่อ: รวมในรายการจอง' : '🪧 피켓: 예약에 포함'}\n${l10n.t('admin_driver_check_name_sign_text')}: ${_text(options['nameSignText']).isEmpty ? l10n.t('admin_driver_check_name_sign_missing') : _text(options['nameSignText'])}'
           : '',
       'driver': value(_text(assignment['driverDisplayName'])),
       'plate': value(_text(vehicle['plateNumber'])),
