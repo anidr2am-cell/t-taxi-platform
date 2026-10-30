@@ -1,3 +1,4 @@
+import '../widgets/admin_receipt_email_card.dart';
 import '../../admin/widgets/admin_copy_button.dart';
 import '../../admin/widgets/admin_selection_area.dart';
 import 'package:flutter/material.dart';
@@ -1081,6 +1082,8 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                       const SizedBox(height: AppTokens.spaceMd),
                       _noShowPenaltySection(l10n, detail),
                     ],
+                    if (['SETTLEMENT_PENDING','COMPLETED'].contains(detail['status']))
+                      AdminReceiptEmailCard(key:ValueKey('receipt_${widget.bookingNumber}'),bookingNumber:widget.bookingNumber,api:widget.api,onChanged:(){_load();widget.onChanged?.call();}),
                     AdminReviewRequestCard(
                       key: ValueKey(
                         'admin_review_request_${widget.bookingNumber}',

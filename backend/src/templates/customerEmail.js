@@ -1,4 +1,6 @@
 const copy = require('./customer-email.json');
+const { receiptDocument } = require('./customerReceipt');
+const { isTripEndEmail } = require('../policies/notificationEmail.policy');
 const { parseServiceDateTimeToMs } = require('../utils/serviceDateTime.util');
 const { customerPaymentFromMetadata } = require('../utils/customerPayment');
 
@@ -12,6 +14,9 @@ function metadata(value) {
   try { return JSON.parse(value) || {}; } catch { return {}; }
 }
 function resolveEmailLocale(notification) {
+  if(metadata(notification.payload).adminReceipt===true && normalizeLocale(metadata(notification.payload).locale)) {
+    return normalizeLocale(metadata(notification.payload).locale);
+  }
   return normalizeLocale(metadata(notification.booking_metadata).locale)
     || normalizeLocale(notification.recipient_locale)
     || normalizeLocale(notification.payload?.locale)
@@ -54,7 +59,7 @@ function renderCustomerEmail(notification, { origin = 'https://trider.taxi', goo
   const supportUrl = new URL('/support', base);
   supportUrl.searchParams.set('lang', locale);
   const googleUrl = httpsUrl(googleReviewUrl);
-  const review = ['TRIP_ENDED', 'REVIEW_REQUESTED'].includes(notification.type);
+  const review = isTripEndEmail(notification) || notification.type==='REVIEW_REQUESTED';
   const body = review ? t.review
     .replace('{googleLine}', googleUrl ? `${t.google.replace('{googleUrl}', googleUrl)}\n` : '')
     .replace('{bookingUrl}', bookingUrl.href) : template.body;
@@ -66,7 +71,7 @@ function renderCustomerEmail(notification, { origin = 'https://trider.taxi', goo
   const vehicle = t.vehicles?.[notification.booking_vehicle_type];
   const payment = customerPaymentFromMetadata(notification.booking_metadata, notification.booking_payment_method);
   const paymentLabel = t.paymentMethods?.[payment.method];
-  const lines = [body, '', `${t.booking}: ${number}`,
+  let lines = [body, '', `${t.booking}: ${number}`,
     pickup ? `${t.pickup}: ${pickup}` : null,
     route ? `${t.route}: ${route}` : null,
     receipt && vehicle ? `${t.vehicle}: ${vehicle}` : null,
@@ -75,13 +80,18 @@ function renderCustomerEmail(notification, { origin = 'https://trider.taxi', goo
     receipt && paymentLabel ? `${t.paymentMethod}: ${paymentLabel}` : null,
     '', t.fare, t.cancel, t.payment, '', `${t.lookup}: ${bookingUrl.href}`, `${t.support}: ${supportUrl.href}`,
   ].filter((line) => line != null);
+  const document = isTripEndEmail(notification)
+    ? receiptDocument(notification, {locale, labels:t, pickupAt:pickup, issuedAt:bangkokDateTime(notification.created_at), escapeHtml}) : null;
+  if(document) lines=[...document.lines,'',body,'',t.fare,t.cancel,t.payment,'',`${t.lookup}: ${bookingUrl.href}`,`${t.support}: ${supportUrl.href}`];
   // Allowlist only the itinerary above; never interpolate arbitrary payload/body or contact fields.
   const text = lines.join('\n');
   const htmlLines = text.split('\n').map((line) => {
     const safe = escapeHtml(line);
     return `<p>${safe.replace(/https?:\/\/[^\s<]+/g, (url) => `<a href="${url}">${url}</a>`) || '<br>'}</p>`;
   }).join('\n');
-  return { subject: template.subject, text,
-    html: `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(template.subject)}</title></head><body><main><h1>${escapeHtml(template.subject)}</h1>${htmlLines}</main></body></html>` };
+  const subject=document?.subject || template.subject;
+  const documentHtml=document ? document.html+lines.slice(document.lines.length).join('\n').split('\n').map(line=>'<p>'+escapeHtml(line).replace(/https?:\/\/[^\s<]+/g,(url)=>`<a href="${url}">${url}</a>` )+'</p>').join('\n') : htmlLines;
+  return { subject, text,
+    html: `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(subject)}</title></head><body${document ? ' style="margin:0;background:#f3f7f6;font-family:Arial,sans-serif;color:#243936"' : ''}><main${document ? ' style="max-width:640px;margin:24px auto;background:white;padding:20px;overflow-wrap:anywhere"' : ''}>${document ? '' : `<h1>${escapeHtml(subject)}</h1>`}${documentHtml}</main></body></html>` };
 }
 module.exports = { copy, CUSTOMER_TYPES, normalizeLocale, resolveEmailLocale, isCustomerEmail, bangkokDateTime, renderCustomerEmail };

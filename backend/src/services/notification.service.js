@@ -384,7 +384,9 @@ class NotificationService {
     const driverId = payload.driverId ?? booking?.driver_id ?? null;
 
     const customerPayload = this.sanitizePayload({ bookingNumber });
-    const customerEmailPayload = this.sanitizePayload({ bookingNumber, locale: payload.locale ?? payload.language ?? null });
+    const customerEmailPayload = this.sanitizePayload({ bookingNumber, locale: payload.locale ?? payload.language ?? null,
+      ...(eventName===EVENTS.TRIP_COMPLETED && ['DRIVER_ASSIGNED','ON_ROUTE','DRIVER_ARRIVED','PICKED_UP'].includes(payload.previousStatus) ? {tripEndedDirectly:true} : {}),
+    });
 
     const addCustomer = (notificationType) => {
       if (customerUserId) {

@@ -206,10 +206,8 @@ class AdminOperationsService {
         next.status = BOOKING_STATUS.SETTLEMENT_PENDING;
         break;
       case ADMIN_BOOKING_VIEWS.COMPLETED:
-        next.status = BOOKING_STATUS.COMPLETED;
-        if (!next.serviceDateFrom)
-          next.serviceDateFrom = history.serviceDateFrom;
-        if (!next.serviceDateTo) next.serviceDateTo = history.serviceDateTo;
+        // Trip ended includes commission settlement pending; explicit date filters remain.
+        next.completedTripsOnly = true;
         break;
       case ADMIN_BOOKING_VIEWS.CANCELLED:
         next.cancelledTab = true;

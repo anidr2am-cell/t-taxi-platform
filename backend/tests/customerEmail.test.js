@@ -1,7 +1,7 @@
 const test=require('node:test');const assert=require('node:assert/strict');const fs=require('fs');const path=require('path');
 const {copy,CUSTOMER_TYPES,resolveEmailLocale,isCustomerEmail,bangkokDateTime,renderCustomerEmail}=require('../src/templates/customerEmail');
 const {EmailNotificationAdapter}=require('../src/services/notificationDelivery.adapters');
-const base={type:'TRIP_ENDED',audience_role:'CUSTOMER',recipient_type:'GUEST_BOOKING',booking_number:'QA_EMAIL',booking_metadata:{locale:'ko'},scheduled_pickup_at:'2026-10-15 23:30:00',booking_total_amount:'1000.00',origin_address:'QA origin',destination_address:'QA destination'};
+const base={type:'TRIP_ENDED',audience_role:'CUSTOMER',recipient_type:'GUEST_BOOKING',booking_number:'QA_EMAIL',booking_metadata:{locale:'ko'},scheduled_pickup_at:'2026-10-15 23:30:00',booking_total_amount:'1000.00',booking_currency:'THB',origin_address:'QA origin',destination_address:'QA destination'};
 test('email locale prioritizes booking, then member, then booking-screen locale, then English',()=>{
  assert.equal(resolveEmailLocale({...base,booking_metadata:'{"locale":"ja"}',recipient_locale:'ko',payload:{locale:'th'}}),'ja');
  assert.equal(resolveEmailLocale({...base,booking_metadata:{locale:'invalid'},recipient_locale:'zh-CN',payload:{locale:'th'}}),'zh');
@@ -13,7 +13,7 @@ for(const locale of ['ko','en','th','ja','zh'])for(const type of CUSTOMER_TYPES)
  test(`customer email renders ${locale} ${type} with policies, Bangkok time, THB, no contacts`,()=>{
   const n={...base,type,booking_metadata:{locale},customerPhone:'PHONE_CANARY',customer_email:'EMAIL_CANARY',driverPhone:'DRIVER_PHONE_CANARY',customerContact:{messengerId:'ID_CANARY'},body:'UNTRUSTED_BODY',payload:{messengerId:'PAYLOAD_CANARY'}};
   const r=renderCustomerEmail(n,{googleReviewUrl:'https://g.page/r/test/review'});const t=copy[locale];
-  assert.equal(r.subject,t.messages[type].subject);assert(r.text.includes(t.fare));assert(r.text.includes(t.cancel));assert(r.text.includes(t.payment));assert(r.text.includes(t.support));
+  if(type==='TRIP_ENDED')assert(r.subject.includes('T-Rider'));else assert.equal(r.subject,t.messages[type].subject);assert(r.text.includes(t.fare));assert(r.text.includes(t.cancel));assert(r.text.includes(t.payment));assert(r.text.includes(t.support));
   assert(r.text.includes('2026-10-15 23:30'));assert(r.text.includes('1,000 '+t.currency));assert(r.text.includes('lang='+locale));assert(r.html.includes('lang="'+locale+'"'));
   for(const secret of ['PHONE_CANARY','EMAIL_CANARY','DRIVER_PHONE_CANARY','ID_CANARY','PAYLOAD_CANARY','UNTRUSTED_BODY','SETTLEMENT_PENDING'])assert(!r.text.includes(secret)&&!r.html.includes(secret));
   if(type==='TRIP_COMPLETED')assert(!r.text.includes('g.page')&&!r.text.includes(t.google.split(':')[0])&&!r.text.includes(t.review.split('\n')[1]));

@@ -3,7 +3,7 @@ const NOTIFICATION_CHANNELS = require('../constants/notificationChannels');
 const config = require('../config/env');
 const fs = require('node:fs');
 const { isCustomerEmail, renderCustomerEmail } = require('../templates/customerEmail');
-const { emailPolicyError } = require('../policies/notificationEmail.policy');
+const { emailPolicyError, isTripEndEmail } = require('../policies/notificationEmail.policy');
 const { smtpFailureEvidence } = require('../policies/emailAttempt.policy');
 const { encrypt, decrypt } = require('../utils/tokenEncryption.util');
 
@@ -42,8 +42,14 @@ class EmailNotificationAdapter {
     return this.smtp.fromName ? `"${this.smtp.fromName}" <${from}>` : from;
   }
 
+  approvedEmail(notification) {
+    if(notification.payload?.adminReceipt!==true)return null;
+    if(typeof notification.payload.approvedEmail!=='string')throw new Error('Approved email is missing');
+    return JSON.parse(decrypt(notification.payload.approvedEmail));
+  }
+
   getRecipientEmail(notification) {
-    const email = notification.recipient_email;
+    const email = this.approvedEmail(notification)?.to || notification.recipient_email;
     if (!email || typeof email !== 'string') return null;
     const normalized = email.trim();
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized) ? normalized : null;
@@ -140,8 +146,9 @@ class EmailNotificationAdapter {
     }
 
     try {
+      const approved=this.approvedEmail(notification);
       let emailNotification = notification;
-      if (isCustomerEmail(notification) && ['TRIP_ENDED', 'REVIEW_REQUESTED'].includes(notification.type)) {
+      if (!approved && isCustomerEmail(notification) && (isTripEndEmail(notification) || notification.type==='REVIEW_REQUESTED')) {
         let googleUrl = '';
         try { googleUrl = await this.googleReviewUrlProvider(); } catch (_) {
           // A missing/unavailable optional setting must not change email delivery/retry behavior.
@@ -154,6 +161,7 @@ class EmailNotificationAdapter {
         from: this.normalizeFrom(),
         to,
         ...this.buildMessage(emailNotification),
+        ...(approved || {}),
         ...(restored || {}),
         ...(recipient.emailAttempt ? { messageId: recipient.emailAttempt.messageId,
           headers: { 'X-TRider-Email-Trace': recipient.emailAttempt.traceId } } : {}),

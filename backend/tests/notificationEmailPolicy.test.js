@@ -18,7 +18,7 @@ function harness({ started = false, failSmtp = false, historical = [] } = {}) {
       async beginTransaction() {},
       async query(sql, params) {
         sqlLog.push(sql);
-        if (sql.startsWith('SELECT id FROM bookings')) {
+        if (sql.startsWith('SELECT id, metadata FROM bookings')) {
           const previous = tail;
           tail = new Promise((resolve) => { releaseLock = resolve; });
           await previous;
@@ -167,3 +167,5 @@ for (const locale of ['ko', 'en', 'th', 'ja', 'zh']) test(`receipt includes sele
     for (const value of ['QA_MANUAL', '2026-10-18 14:00', 'BKK → Pattaya', t.vehicles.SEDAN, t.paymentMethods[method], t.fare, t.cancel, t.payment, t.support, '/booking/lookup']) assert(message.text.includes(value), value);
   }
 });
+
+test('direct-completed receipt still uses the same terminal slot and at most two customer emails',async()=>{const h=harness();await h.flow(['BOOKING_CREATED']);let id=h.add('TRIP_COMPLETED');h.rows[id-1].n.payload={tripEndedDirectly:true};await h.service.processDeliveries(id);let duplicate=h.add('TRIP_COMPLETED');h.rows[duplicate-1].n.payload={tripEndedDirectly:true};await h.service.processDeliveries(duplicate);await h.flow(['TRIP_COMPLETED']);assert.equal(h.sent.length,2);assert.deepEqual(h.sent.map(n=>n.type),['BOOKING_CREATED','TRIP_COMPLETED']);assert.equal(h.other.filter(([channel])=>channel==='IN_APP').length,4);assert.equal(h.other.filter(([channel])=>channel==='FCM').length,4);});

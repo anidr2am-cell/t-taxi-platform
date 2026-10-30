@@ -72,6 +72,12 @@ class NotificationRepository {
     return result.insertId;
   }
 
+  async insertEmailOnly(conn,data) {
+    const id=await this.insert(conn,data);
+    await conn.query("UPDATE notifications SET channel='EMAIL' WHERE id=?",[id]);
+    return id;
+  }
+
   async insertDelivery(conn, data) {
     const [result] = await conn.query(
       `
@@ -132,6 +138,8 @@ class NotificationRepository {
           n.audience_role, n.event_id, n.event_name, n.type, n.title, n.body, n.payload,
           n.read_at, n.created_at, n.updated_at,
           CASE
+            WHEN n.recipient_type = 'USER' AND (n.type = 'TRIP_ENDED' OR (n.type = 'TRIP_COMPLETED' AND JSON_UNQUOTE(JSON_EXTRACT(n.payload, '$.tripEndedDirectly')) = 'true')) AND u.role = 'CUSTOMER'
+              THEN COALESCE(NULLIF(TRIM(b.customer_email), ''), u.email)
             WHEN n.recipient_type = 'USER' THEN u.email
             WHEN n.recipient_type = 'GUEST_BOOKING' THEN b.customer_email
             ELSE NULL
@@ -141,6 +149,8 @@ class NotificationRepository {
           b.metadata AS booking_metadata,
           b.total_amount AS booking_total_amount,
           b.payment_method AS booking_payment_method,
+          b.payment_status AS booking_payment_status,
+          b.currency AS booking_currency,
           vt.code AS booking_vehicle_type,
           b.booking_number,
           b.scheduled_pickup_at,
@@ -169,10 +179,15 @@ class NotificationRepository {
     const conn = await this.pool.getConnection();
     try {
       await conn.beginTransaction();
-      const [bookings] = await conn.query('SELECT id FROM bookings WHERE id = ? AND deleted_at IS NULL FOR UPDATE', [notification.booking_id]);
+      const [bookings] = await conn.query('SELECT id, metadata FROM bookings WHERE id = ? AND deleted_at IS NULL FOR UPDATE', [notification.booking_id]);
       if (!bookings.length) {
         await conn.commit();
         return { allowed: false, error: 'EMAIL_POLICY_BOOKING_REQUIRED' };
+      }
+      let receiptMetadata=bookings[0].metadata;
+      if(typeof receiptMetadata==='string'){try{receiptMetadata=JSON.parse(receiptMetadata)}catch{receiptMetadata={}}}
+      if(receiptMetadata?.adminReceiptEmail?.notificationId && Number(receiptMetadata.adminReceiptEmail.notificationId)!==Number(notification.id)) {
+        await conn.commit();return {allowed:false,error:'EMAIL_POLICY_SUPERSEDED_BY_ADMIN_RECEIPT'};
       }
       const [[current]] = await conn.query('SELECT delivery_status, attempt_count, last_error FROM notification_deliveries WHERE id = ? FOR UPDATE', [delivery.id]);
       if (!current || ['DELIVERED', 'SKIPPED'].includes(current.delivery_status)
@@ -251,6 +266,7 @@ class NotificationRepository {
   async emailReviewRows(includeHandled = false, page = 1) {
     const [rows] = await this.pool.query(`SELECT d.id deliveryId,n.id notificationId,n.type notificationType,
       n.booking_id bookingId,b.booking_number bookingNumber,d.delivery_status deliveryStatus,
+      (JSON_UNQUOTE(JSON_EXTRACT(n.payload, '$.tripEndedDirectly')) = 'true') directTripEnded,
       d.last_error lastError,d.attempt_count attemptCount,d.updated_at updatedAt,
       a.id attemptId,a.trace_id traceId,a.message_id messageId,a.provider_message_id providerMessageId,
       a.outcome,a.error_code errorCode,a.smtp_command smtpCommand,a.smtp_response_code smtpResponseCode,
@@ -277,6 +293,7 @@ class NotificationRepository {
       recoverable: canRecoverAttempt({ outcome: r.outcome,
       error_code: r.errorCode, smtp_command: r.smtpCommand, smtp_response_code: r.smtpResponseCode })
       && Boolean(r.hasEnvelope) && CUSTOMER_EMAIL_TYPES.has(r.notificationType)
+      && (r.notificationType!=='TRIP_COMPLETED' || Number(r.directTripEnded)===1)
       && !['DELIVERED','SKIPPED'].includes(r.deliveryStatus) && !Number(r.acceptedConfirmed) }));
   }
 
@@ -549,7 +566,7 @@ class NotificationRepository {
   }
 
   buildListFilters(filters) {
-    const where = ['deleted_at IS NULL'];
+    const where = ['deleted_at IS NULL', "NOT (channel='EMAIL' AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(payload,'$.adminReceipt')),'false')='true')"];
     const params = [];
 
     if (filters.userId) {

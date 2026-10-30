@@ -787,4 +787,8 @@ container.register(
 container.register("reviewRequestService", (c) => new (require("../services/reviewRequest.service"))(
   database.pool, c.get("bookingRepository"), c.get("platformSettingsService"),
 ));
+container.register("adminReceiptEmailService",(c)=>new (require('../services/adminReceiptEmail.service'))(
+  database.pool,new (require('../repositories/adminReceiptEmail.repository'))(),
+  c.get('notificationRepository'),c.get('bookingRepository'),c.get('notificationService'),
+));
 module.exports = container;
