@@ -190,16 +190,23 @@ void main() {
         'collectFromCustomerAmount': 1100,
         'commissionAmount': 200,
         'nameSignAmount': 100,
-        'companyDeductionAmount': 300,
-        'driverNetAmount': 800,
+        'companyDeductionAmount': 200,
+        'driverNetAmount': 900,
+        'driverReceiptAmount': 900,
+        'driverOperatingIncomeAmount': 800,
+        'nameSignAdvanceAmount': 100,
+        'nameSignReimbursementAmount': 100,
         'basis': 'CURRENT_TRIP_RULE_ESTIMATE',
         'needsConfirmation': false,
       };
     final text = buildAdminDriverCheckMessages(detail).single.thai;
     expect(text, contains('เก็บจากลูกค้าโดยตรง'));
     expect(text, contains('ค่าคอมมิชชันบริษัท: ฿200'));
-    expect(text, contains('ค่าตอบแทนคนขับสุทธิ: ฿800'));
+    expect(text, contains('ยอดเงินที่คนขับได้รับ (รวมเงินคืนค่าป้าย): ฿900'));
     expect(text, contains('฿1,100'));
+    expect(text, contains('รายได้จากงานหลังหักต้นทุนค่าป้าย: ฿800'));
+    expect(text, isNot(contains('ยอดหักรวมของบริษัท')));
+    expect(text, contains('ห้ามเรียกเก็บค่าป้ายเพิ่ม'));
     expect(text, contains('ประมาณการ'));
     final paid = sample()
       ..['driverFinancialSummary'] = <String, dynamic>{
@@ -214,16 +221,21 @@ void main() {
       ...Map<String, dynamic>.from(detail['driverFinancialSummary'] as Map),
       'collectionMode': 'ADMIN_PAYS',
       'collectFromCustomerAmount': 0,
-      'adminPayoutAmount': 800,
+      'adminPayoutAmount': 900,
       'paymentStatus': 'PAID',
       'basis': 'REGISTERED_PAYOUT',
     };
     final admin = buildAdminDriverCheckMessages(detail).single.thai;
     expect(admin, contains('ไม่เรียกเก็บเงินลูกค้า'));
     expect(admin, contains('คนขับรับจากลูกค้า: ฿0'));
-    expect(admin, contains('ยอดที่ผู้ดูแลจะจ่ายให้คนขับ: ฿800'));
+    expect(admin, contains('ยอดที่ผู้ดูแลจะจ่ายให้คนขับ: ฿900'));
     expect(admin, contains('ลูกค้าชำระแล้ว'));
-    expect(admin, contains('ไม่หักซ้ำ'));
+    expect(admin, contains('ไม่หักเพิ่ม'));
+    final korean = buildAdminDriverCheckMessages(detail).single.korean;
+    expect(korean, contains('회사 수수료: ฿200'));
+    expect(korean, isNot(contains('회사 수수료 몫')));
+    expect(korean, contains('기사 수령액(피켓비 보전 포함): ฿900'));
+    expect(korean, contains('운행 수익(수령액에서 선납 피켓 원가 제외): ฿800'));
   });
   test('missing or invalid money needs confirmation, not zero', () {
     final missing = buildAdminDriverCheckMessages(sample()).single.thai;
@@ -238,7 +250,7 @@ void main() {
       };
     expect(
       buildAdminDriverCheckMessages(detail).single.thai,
-      contains('ค่าตอบแทนคนขับสุทธิ: ยังไม่ระบุ'),
+      contains('ยอดเงินที่คนขับได้รับ (รวมเงินคืนค่าป้าย): ยังไม่ระบุ'),
     );
   });
   testWidgets(
