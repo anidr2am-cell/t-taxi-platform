@@ -25,3 +25,9 @@ test('public channels resolve to QR-based WeChat and configured Telegram; old se
  assert.equal(resolveBookingContactChannel('TELEGRAM',{defaultChannel:'LINE',channels:[{code:'LINE',addUrl:'https://line.me/test'}]}),'LINE');
 });
 test('legacy SMS is still accepted for already-open clients',()=>assert.equal(createBookingSchema.validate(request({messengerType:'SMS',messengerId:'+821012345678',phone:'+821012345678'})).error,undefined));
+test('member notification email uses the booking-entered address before profile fallback; other roles keep their own address',async()=>{
+ const Repo=require('../src/repositories/notification.repository');let sql='';await new Repo({async query(q){sql=q;return [[{id:1,payload:'{}'}]]}}).findById(1);
+ assert(sql.includes("WHEN n.recipient_type = 'USER' AND u.role = 'CUSTOMER'"));
+ assert(sql.includes("THEN COALESCE(NULLIF(TRIM(b.customer_email), ''), u.email)"));
+ assert(sql.includes("WHEN n.recipient_type = 'USER' THEN u.email"));
+});
