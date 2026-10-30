@@ -1,3 +1,5 @@
+import 'dart:convert';
+import '../../../utils/browser_download.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../l10n/app_localizations.dart';
@@ -348,6 +350,27 @@ class _AdminReceiptEmailCardState extends State<AdminReceiptEmailCard> {
               if (_preview != null) ...[
                 const SizedBox(height: AppTokens.spaceSm),
                 Text(_preview!['subject'] as String? ?? ''),
+                if (_preview!['attachments'] is List &&
+                    (_preview!['attachments'] as List).isNotEmpty)
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.picture_as_pdf),
+                    label: Text(l.t('admin_receipt_pdf_download')),
+                    onPressed: () {
+                      try {
+                        final a =
+                            (_preview!['attachments'] as List).first as Map;
+                        downloadBytes(
+                          base64Decode(a['content'] as String),
+                          a['filename'] as String,
+                          'application/pdf',
+                        );
+                      } catch (_) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(l.t('admin_receipt_failed'))),
+                        );
+                      }
+                    },
+                  ),
                 SelectableText(_preview!['text'] as String? ?? ''),
                 const SizedBox(height: AppTokens.spaceSm),
                 FilledButton(

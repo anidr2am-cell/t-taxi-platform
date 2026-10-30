@@ -17,6 +17,7 @@ class AppLocalizations {
 
   static final Map<String, Map<String, String>> _translations = {
     'en': {
+      "admin_receipt_pdf_download": "Download receipt / statement PDF",
       "admin_customer_payment_confirm": "Confirm customer payment",
       "admin_customer_payment_confirm_body": "I confirm that payment of {amount} for {booking} was actually received. This records customer payment only; commission settlement and assignments stay unchanged. No email is sent.",
       "admin_customer_payment_reason": "Payment confirmation reason (required)",
@@ -2118,6 +2119,7 @@ class AppLocalizations {
       'guest_lookup_booking_number_hint': 'TX202607010001',
     },
     'ko': {
+      "admin_receipt_pdf_download": "영수증·이용명세 PDF 다운로드",
       "admin_customer_payment_confirm": "고객 결제 확인",
       "admin_customer_payment_confirm_body": "{booking}의 고객 결제 {amount}을 실제로 수령했음을 확인합니다. 고객 결제 상태만 변경하며 수수료 정산·배정은 유지합니다. 메일은 발송하지 않습니다.",
       "admin_customer_payment_reason": "결제 확인 사유 (필수)",
@@ -3657,6 +3659,7 @@ class AppLocalizations {
       'customer_driver_location_retry': '다시 시도',
     },
     'zh': {
+      "admin_receipt_pdf_download": "下载收据·使用明细 PDF",
       "admin_customer_payment_confirm": "确认客户付款",
       "admin_customer_payment_confirm_body": "确认已实际收到预订 {booking} 的客户付款 {amount}。仅更新客户付款状态，不改变佣金结算或司机分配，也不会发送邮件。",
       "admin_customer_payment_reason": "付款确认原因（必填）",
@@ -4699,6 +4702,7 @@ class AppLocalizations {
       'thb': 'THB',
     },
     'ja': {
+      "admin_receipt_pdf_download": "領収書・利用明細PDFをダウンロード",
       "admin_customer_payment_confirm": "お客様の支払いを確認",
       "admin_customer_payment_confirm_body": "予約 {booking} の代金 {amount} を実際に受領したことを確認します。お客様の支払状況のみ更新し、手数料精算・配車は変更しません。メールは送信されません。",
       "admin_customer_payment_reason": "入金確認の理由（必須）",
@@ -5781,6 +5785,7 @@ class AppLocalizations {
       'thb': 'THB',
     },
     'th': {
+      "admin_receipt_pdf_download": "ดาวน์โหลดใบเสร็จ / รายการใช้บริการ PDF",
       "admin_customer_payment_confirm": "ยืนยันการชำระเงินของลูกค้า",
       "admin_customer_payment_confirm_body": "ยืนยันว่าได้รับเงิน {amount} สำหรับการจอง {booking} จากลูกค้าแล้วจริง บันทึกเฉพาะสถานะการชำระเงินของลูกค้า ไม่เปลี่ยนการชำระค่าคอมมิชชันหรือการมอบหมายคนขับ และไม่ส่งอีเมล",
       "admin_customer_payment_reason": "เหตุผลในการยืนยันการชำระเงิน (จำเป็น)",

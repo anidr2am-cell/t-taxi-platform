@@ -24,3 +24,11 @@ Run backend npm test and frontend receipt/admin widget tests; review CI before m
 On ended trips, POST /api/v1/admin/bookings/:bookingNumber/customer-payment/confirm records customer payment separately from commission settlement. Only UNPAID/PENDING can become PAID; refunded/failed and non-ended trips are refused. Administrators must confirm receipt, provide a reason and match the displayed amount/currency. A booking-row lock makes repeated/concurrent confirmation idempotent. The only writes are payment_status, metadata.customerPaymentConfirmation, updated_by/updated_at and CUSTOMER_PAYMENT_CONFIRMED activity history. No email, notification, assignment or commission/settlement update is triggered.
 
 The UI invalidates an old statement preview, preserves a typed email and refreshes the displayed payment state without losing the form. A fresh preview renders a receipt after confirmation. Existing accepted/in-flight/unknown delivery guards and the two-email booking limit remain enforced; payment confirmation does not authorize a replacement for an already sent statement.
+
+## PDF attachments
+
+New trip documents include an application/pdf attachment (Content-Disposition: attachment). The administrator preview exposes the same document format as a downloadable PDF before sending. PAID produces Receipt, otherwise Statement. The PDF includes booking reference, Bangkok issue/pickup/explicit payment-confirmation time, route, vehicle, payment method and customer amount; no customer/driver contacts, company commission, invented tax ID/address or signature.
+
+PDF bytes are Base64 in the approved encrypted envelope and existing SMTP attempt snapshot, so confirmed non-acceptance recovery reuses the original file rather than regenerating it. Existing already-frozen messages are not changed or resent. PDF template version participates in preview approval hashing. No public receipt URL/storage is created.
+
+Generation uses PDFKit with separately packaged OFL fonts under backend/assets/receipt-pdf (see included licenses). Flutter font assets, fallbacks, engine and renderer are unchanged. The backend production Docker target copies these PDF-only assets.

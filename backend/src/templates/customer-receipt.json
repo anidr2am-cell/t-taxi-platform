@@ -19,7 +19,8 @@
       "ADMIN_COLLECTED": "관리자 수금",
       "ONLINE": "온라인 결제"
     },
-    "paidNote": "결제가 확인되었습니다. 같은 요금을 다시 결제하지 마세요."
+    "paidNote": "결제가 확인되었습니다. 같은 요금을 다시 결제하지 마세요.",
+    "paidAt": "결제 확인 일시 (태국 시간)"
   },
   "en": {
     "receipt": "Transfer receipt",
@@ -41,7 +42,8 @@
       "ADMIN_COLLECTED": "Collected by the administrator",
       "ONLINE": "Online payment"
     },
-    "paidNote": "Your payment is confirmed. Please do not pay the same fare again."
+    "paidNote": "Your payment is confirmed. Please do not pay the same fare again.",
+    "paidAt": "Payment confirmed (Thailand time)"
   },
   "th": {
     "receipt": "ใบรับเงินค่าบริการรับส่ง",
@@ -63,7 +65,8 @@
       "ADMIN_COLLECTED": "ผู้ดูแลรับชำระ",
       "ONLINE": "ชำระออนไลน์"
     },
-    "paidNote": "ยืนยันการชำระเงินแล้ว ไม่ต้องชำระค่าบริการซ้ำ"
+    "paidNote": "ยืนยันการชำระเงินแล้ว ไม่ต้องชำระค่าบริการซ้ำ",
+    "paidAt": "เวลายืนยันการชำระเงิน (เวลาไทย)"
   },
   "ja": {
     "receipt": "送迎サービス領収書",
@@ -85,7 +88,8 @@
       "ADMIN_COLLECTED": "管理者が受領",
       "ONLINE": "オンライン決済"
     },
-    "paidNote": "お支払いは確認済みです。同じ料金を重ねてお支払いにならないでください。"
+    "paidNote": "お支払いは確認済みです。同じ料金を重ねてお支払いにならないでください。",
+    "paidAt": "入金確認日時（タイ時間）"
   },
   "zh": {
     "receipt": "接送服务收据",
@@ -107,6 +111,7 @@
       "ADMIN_COLLECTED": "由管理员收款",
       "ONLINE": "在线付款"
     },
-    "paidNote": "付款已确认，请勿重复支付同一笔费用。"
+    "paidNote": "付款已确认，请勿重复支付同一笔费用。",
+    "paidAt": "付款确认时间（泰国时间）"
   }
 }

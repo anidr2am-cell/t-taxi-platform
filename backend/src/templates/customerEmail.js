@@ -81,7 +81,7 @@ function renderCustomerEmail(notification, { origin = 'https://trider.taxi', goo
     '', t.fare, t.cancel, t.payment, '', `${t.lookup}: ${bookingUrl.href}`, `${t.support}: ${supportUrl.href}`,
   ].filter((line) => line != null);
   const document = isTripEndEmail(notification)
-    ? receiptDocument(notification, {locale, labels:t, pickupAt:pickup, issuedAt:bangkokDateTime(notification.created_at), escapeHtml}) : null;
+    ? receiptDocument(notification, {locale, labels:t, pickupAt:pickup, issuedAt:bangkokDateTime(notification.created_at), escapeHtml,formatDateTime:bangkokDateTime}) : null;
   if(document) lines=[...document.lines,'',body,'',t.fare,t.cancel,t.payment,'',`${t.lookup}: ${bookingUrl.href}`,`${t.support}: ${supportUrl.href}`];
   // Allowlist only the itinerary above; never interpolate arbitrary payload/body or contact fields.
   const text = lines.join('\n');
@@ -91,7 +91,7 @@ function renderCustomerEmail(notification, { origin = 'https://trider.taxi', goo
   }).join('\n');
   const subject=document?.subject || template.subject;
   const documentHtml=document ? document.html+lines.slice(document.lines.length).join('\n').split('\n').map(line=>'<p>'+escapeHtml(line).replace(/https?:\/\/[^\s<]+/g,(url)=>`<a href="${url}">${url}</a>` )+'</p>').join('\n') : htmlLines;
-  return { subject, text,
+  return { ...(document?{receiptPdfModel:{locale,kind:document.kind,title:document.title,bookingNumber:number,rows:document.rows,note:document.note,statusNote:document.statusNote}}:{}),subject, text,
     html: `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(subject)}</title></head><body${document ? ' style="margin:0;background:#f3f7f6;font-family:Arial,sans-serif;color:#243936"' : ''}><main${document ? ' style="max-width:640px;margin:24px auto;background:white;padding:20px;overflow-wrap:anywhere"' : ''}>${document ? '' : `<h1>${escapeHtml(subject)}</h1>`}${documentHtml}</main></body></html>` };
 }
 module.exports = { copy, CUSTOMER_TYPES, normalizeLocale, resolveEmailLocale, isCustomerEmail, bangkokDateTime, renderCustomerEmail };

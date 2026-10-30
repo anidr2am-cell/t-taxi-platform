@@ -35,6 +35,7 @@ RUN mkdir -p /srv/tride/uploads /srv/tride/logs /srv/tride/backend/scripts
 COPY --from=production-deps /srv/tride/backend/node_modules ./node_modules
 COPY backend/package.json ./
 COPY backend/src ./src
+COPY backend/assets ./assets
 COPY backend/scripts/createAdminUser.js ./scripts/createAdminUser.js
 
 RUN chown -R node:node /srv/tride

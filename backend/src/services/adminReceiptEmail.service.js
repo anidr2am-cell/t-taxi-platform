@@ -1,4 +1,5 @@
 const {createHash,randomUUID}=require('node:crypto');
+const {withReceiptPdf,PDF_TEMPLATE_VERSION}=require('../templates/customerReceiptPdf');
 const AppError=require('../utils/AppError');
 const {encrypt}=require('../utils/tokenEncryption.util');
 const {renderCustomerEmail,normalizeLocale}=require('../templates/customerEmail');
@@ -80,10 +81,10 @@ class AdminReceiptEmailService {
       origin_address:row.origin_address,destination_address:row.destination_address,
       payload:{adminReceipt:true,locale:input.locale},created_at:this.now().toISOString()};
     const options={origin:adapter.customerWebOrigin,googleReviewUrl:google};
-    const output=renderCustomerEmail(n,options);
+    const output=await withReceiptPdf(renderCustomerEmail(n,options));
     // Stable across clock ticks; any amount, status, route, language, setting or template change invalidates approval.
     const stable=renderCustomerEmail({...n,created_at:'2000-01-01T00:00:00.000Z'},options);
-    const previewHash=createHash('sha256').update(JSON.stringify({email:input.email,subject:stable.subject,text:stable.text})).digest('hex');
+    const previewHash=createHash('sha256').update(JSON.stringify({email:input.email,subject:stable.subject,text:stable.text,pdfTemplate:PDF_TEMPLATE_VERSION})).digest('hex');
     return {...output,previewHash,email:input.email};
   }
   async preview(number,input,actor){
@@ -105,7 +106,7 @@ class AdminReceiptEmailService {
       if(await this.notifications.findByIdempotencyKey(conn,key))fail('RECEIPT_EMAIL_ALREADY_APPROVED');
       id=await this.notifications.insertEmailOnly(conn,{recipientType:'GUEST_BOOKING',bookingId:row.id,audienceRole:'CUSTOMER',
         eventId:randomUUID(),eventName:'ADMIN_RECEIPT_EMAIL_APPROVED',idempotencyKey:key,notificationType:'TRIP_ENDED',
-        title:doc.subject,body:'Administrator-approved trip document',payload:{adminReceipt:true,locale:parsed.locale,approvedEmail:encrypt(JSON.stringify({to:parsed.email,subject:doc.subject,text:doc.text,html:doc.html}))}});
+        title:doc.subject,body:'Administrator-approved trip document',payload:{adminReceipt:true,locale:parsed.locale,approvedEmail:encrypt(JSON.stringify({to:parsed.email,subject:doc.subject,text:doc.text,html:doc.html,attachments:doc.attachments}))}});
       const deliveryId=await this.notifications.insertDelivery(conn,{notificationId:id,channel:'EMAIL',deliveryStatus:'PENDING'});
       // Supersede old missing-address email rows before the entered address becomes visible.
       await this.repo.approve(conn,row,parsed.email,{approvedAt:this.now().toISOString(),actorUserId:actor.id,

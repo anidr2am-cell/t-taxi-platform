@@ -45,6 +45,14 @@ class Api extends AdminDispatchApiService {
       'subject': 'QA 영수증',
       'text': '결제 확인 금액: 1,100 바트',
       'previewHash': 'abc',
+      'attachments': [
+        {
+          'filename': 'QA.pdf',
+          'content': 'JVBERi0xLjM=',
+          'encoding': 'base64',
+          'contentType': 'application/pdf',
+        },
+      ],
     };
   }
 
