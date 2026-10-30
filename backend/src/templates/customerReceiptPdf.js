@@ -1,7 +1,7 @@
 const PDFDocument=require('pdfkit');
 const fs=require('node:fs');
 const path=require('node:path');
-const PDF_TEMPLATE_VERSION=1;
+const PDF_TEMPLATE_VERSION=2;
 let fonts;
 function fontData(){if(!fonts)fonts={cjk:fs.readFileSync(path.join(__dirname,'../../assets/receipt-pdf/NotoSansCJKkr-Regular.otf')),thai:fs.readFileSync(path.join(__dirname,'../../assets/receipt-pdf/NotoSansThai.ttf'))};return fonts;}
 function createReceiptPdf(model){
@@ -11,7 +11,7 @@ function createReceiptPdf(model){
   try{
    const data=fontData();doc.registerFont('cjk',data.cjk);doc.registerFont('thai',data.thai);
    const face=c=>/[\u0e00-\u0e7f]/.test(c)?'thai':'cjk',cache=new Map(),segmenter=new Intl.Segmenter(model.locale||'en',{granularity:'grapheme'});
-   function lines(text,width,size){const out=[];let line='',used=0;for(const {segment:c} of segmenter.segment(String(text||'').replace(/\r/g,''))){if(c==='\n'){out.push(line);line='';used=0;continue;}const key=face(c)+size+c;let w=cache.get(key);if(w===undefined){w=doc.font(face(c)).fontSize(size).widthOfString(c);cache.set(key,w);}if(used+w>width&&line){out.push(line);line='';used=0;}line+=c;used+=w;}if(line||!out.length)out.push(line);return out;}
+   function lines(text,width,size){const out=[];let line='',used=0;for(const {segment:c} of segmenter.segment(String(text||'').replace(/\r/g,''))){if(c==='\n'){out.push(line);line='';used=0;continue;}const key=face(c)+size+c;let w=cache.get(key);if(w===undefined){w=doc.font(face(c)).fontSize(size).widthOfString(c);cache.set(key,w);}if(used+w>width&&line){const split=line.lastIndexOf(' ');if(split>line.length*.4){out.push(line.slice(0,split));line=line.slice(split+1);used=0;for(const {segment:g} of segmenter.segment(line)){const k=face(g)+size+g;let v=cache.get(k);if(v===undefined){v=doc.font(face(g)).fontSize(size).widthOfString(g);cache.set(k,v);}used+=v;}}else{out.push(line);line='';used=0;}}line+=c;used+=w;}if(line||!out.length)out.push(line);return out;}
    function text(line,x,y,size,color='#25393b'){const runs=String(line).match(/[\u0e00-\u0e7f]+|[^\u0e00-\u0e7f]+/g)||[''];doc.fillColor(color);runs.forEach((s,i)=>{doc.font(face(s)).fontSize(size);if(i===0)doc.text(s,x,y,{lineBreak:false,continued:i<runs.length-1});else doc.text(s,{lineBreak:false,continued:i<runs.length-1});});}
    function paragraph(ls,x,y,size,color){ls.forEach((l,i)=>text(l,x,y+i*(size+5),size,color));}
    let y=150;
