@@ -14,7 +14,14 @@ Map<String, dynamic> sample() => {
       'nameTh': 'สนามบินทดสอบ',
       'address': 'QA meeting gate 4',
     },
+    'destination': {'nameTh': 'โรงแรมทดสอบ', 'address': 'QA Hotel Road'},
   },
+  'serviceType': {'code': 'AIRPORT_PICKUP'},
+  'vehicle': {'typeCode': 'SEDAN'},
+  'passengers': {'adults': 2, 'children': 1, 'infants': 0},
+  'luggage': {'carriers20Inch': 2, 'carriers24InchPlus': 1, 'golfBags': 0},
+  'flight': {'flightNumber': 'KE651'},
+  'options': {'nameSign': true},
   'activeAssignment': {
     'driverDisplayName': 'QA Somchai',
     'vehicle': {'plateNumber': 'QA 1234'},
@@ -50,8 +57,10 @@ void main() {
     'Thai date, weekday and 24-hour time use Bangkok across midnight and offsets',
     () {
       final original = buildAdminDriverCheckMessages(sample());
-      expect(original.first.thai, contains('2026-10-30 (วันศุกร์) เวลา 00:15'));
-      expect(original.first.korean, contains('2026-10-30 (금요일) 00:15'));
+      expect(original.first.thai, contains('2026-10-30 (วันศุกร์)'));
+      expect(original.first.korean, contains('2026-10-30 (금요일)'));
+      expect(original.first.thai, contains('เวลารับ: 00:15'));
+      expect(original.first.korean, contains('픽업 시각: 00:15'));
       for (final raw in ['2026-10-30T02:15:00+09:00', '2026-10-30 00:15:00']) {
         final value = sample()..['scheduledPickupAt'] = raw;
         expect(
@@ -71,21 +80,32 @@ void main() {
         expect(message.thai, isNot(contains('private@example.invalid')));
       }
       final messages = buildAdminDriverCheckMessages(sample());
-      expect(messages.first.thai, contains('สนามบินทดสอบ · QA meeting gate 4'));
-      expect(messages.first.thai, contains('ข้อมูลอ้างอิง'));
-      expect(messages.first.thai, contains('QA Somchai'));
-      expect(messages.first.thai, contains('QA 1234'));
-      for (final card in messages.take(3)) {
-        expect(card.thai, contains('ชื่อผู้ขับจริง: ______'));
-        expect(card.thai, contains('ทะเบียนรถจริง: ______'));
+      expect(messages, hasLength(1));
+      final text = messages.single.thai;
+      for (final part in [
+        'สนามบินทดสอบ · QA meeting gate 4',
+        'โรงแรมทดสอบ · QA Hotel Road',
+        'รับจากสนามบิน',
+        'ซีดาน',
+        'KE651',
+        'ผู้ใหญ่ 2 / เด็ก 1 / ทารก 0',
+        'QA Somchai',
+        'QA 1234',
+        'ป้ายชื่อ',
+      ]) {
+        expect(text, contains(part));
       }
-      expect(messages[2].thai, contains('ชื่อผู้ขับจริง: ______'));
-      expect(messages[2].thai, contains('ทะเบียนรถจริง: ______'));
-      expect(messages[2].thai, contains('รับผิดชอบการจองนี้'));
-      expect(messages[2].thai, contains('พร้อมรับงานใหม่'));
-      expect(messages[2].thai, contains('วันเวลาออกจริง'));
-      expect(messages[2].thai, contains('ETA'));
-      expect(messages.last.thai, isNot(contains('\n')));
+      for (final removed in [
+        '______',
+        'ตอบกลับ',
+        'กรอก',
+        'ETA',
+        'พร้อมรับงานใหม่',
+      ]) {
+        expect(text, isNot(contains(removed)));
+      }
+      expect(text, contains('ไม่ได้หมายความว่าคนขับออกเดินทางแล้ว'));
+      expect(text, contains('การติดต่อกับลูกค้าดำเนินการผ่านผู้ดูแล'));
     },
   );
   test(
@@ -117,6 +137,49 @@ void main() {
       );
     },
   );
+  test(
+    'no fabricated counts, no optional lines or empty placeholders when absent',
+    () {
+      final detail = sample()
+        ..remove('passengers')
+        ..remove('luggage')
+        ..remove('flight')
+        ..remove('options');
+      final text = buildAdminDriverCheckMessages(detail).single.thai;
+      expect(text, contains('ผู้ใหญ่ ยังไม่ระบุ'));
+      expect(text, isNot(contains('✈️')));
+      expect(text, isNot(contains('🪧')));
+      expect(text, isNot(matches(RegExp(r'\{[A-Za-z]+\}'))));
+      final value = sample();
+      (value['route'] as Map)['origin'] = {'nameTh': '{driver}'};
+      expect(
+        buildAdminDriverCheckMessages(value).single.thai,
+        contains('จุดรับ: {driver}'),
+      );
+    },
+  );
+  test(
+    'all service and vehicle labels are Thai with no status-dependent departure claims',
+    () {
+      for (final service in [
+        'AIRPORT_PICKUP',
+        'AIRPORT_DROPOFF',
+        'CITY_TRANSFER',
+        'GOLF_TRANSFER',
+      ]) {
+        for (final vehicle in ['SEDAN', 'SUV', 'VAN']) {
+          final detail = sample()
+            ..['serviceType'] = {'code': service}
+            ..['vehicle'] = {'typeCode': vehicle}
+            ..['status'] = 'ON_ROUTE';
+          final text = buildAdminDriverCheckMessages(detail).single.thai;
+          expect(text, isNot(contains(service)));
+          expect(text, isNot(contains(vehicle)));
+          expect(text, isNot(contains('ETA')));
+        }
+      }
+    },
+  );
   testWidgets(
     'copy contains Thai only, reports success and does not send or change booking',
     (tester) async {
@@ -131,7 +194,7 @@ void main() {
       await tester.pumpAndSettle();
       final tooltip = AppLocalizations('ko')
           .t('admin_copy_action')
-          .replaceAll('{field}', '예약 전달 시 확인 · 태국어 · 기사에게 보낼 내용');
+          .replaceAll('{field}', '예약 정보 복사 · 태국어 · 기사에게 보낼 내용');
       await tester.tap(find.byTooltip(tooltip));
       await tester.pumpAndSettle();
       expect(copied, buildAdminDriverCheckMessages(sample()).first.thai);
@@ -150,7 +213,7 @@ void main() {
     await tester.pumpAndSettle();
     final tooltip = AppLocalizations('ko')
         .t('admin_copy_action')
-        .replaceAll('{field}', '예약 전달 시 확인 · 태국어 · 기사에게 보낼 내용');
+        .replaceAll('{field}', '예약 정보 복사 · 태국어 · 기사에게 보낼 내용');
     await tester.tap(find.byTooltip(tooltip));
     await tester.pumpAndSettle();
     expect(
@@ -170,8 +233,7 @@ void main() {
       await tester.pumpAndSettle();
       final title = AppLocalizations(lang).t('admin_driver_check_handoff');
       expect(title, isNot('admin_driver_check_handoff'));
-      await tester.tap(find.text(title));
-      await tester.pumpAndSettle();
+      expect(find.text(title), findsOneWidget);
       expect(
         find.text(AppLocalizations(lang).t('admin_driver_check_korean')),
         findsOneWidget,

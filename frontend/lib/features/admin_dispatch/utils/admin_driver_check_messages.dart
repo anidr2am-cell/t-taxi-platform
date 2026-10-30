@@ -31,62 +31,102 @@ List<AdminDriverCheckMessage> buildAdminDriverCheckMessages(
   final bangkok = parsed?.toUtc().add(const Duration(hours: 7));
   final formatted = formatBackendServiceDateTimeBangkok(raw);
   final route = _map(detail['route']);
-  final origin = _map(route['origin']);
-  final placeName = [
-    _text(origin['nameTh']),
-    _text(origin['name']),
-    _text(origin['displayName']),
-  ].firstWhere((v) => v.isNotEmpty, orElse: () => '');
-  final address = _text(origin['address']);
-  final place = [
-    placeName,
-    if (address != placeName) address,
-  ].where((s) => s.isNotEmpty).join(' · ');
+  String place(dynamic endpoint, String missing) {
+    final location = _map(endpoint);
+    final name = [
+      _text(location['nameTh']),
+      _text(location['name']),
+      _text(location['displayName']),
+    ].firstWhere((v) => v.isNotEmpty, orElse: () => '');
+    final address = _text(location['address']);
+    final parts = [
+      name,
+      if (address != name) address,
+    ].where((v) => v.isNotEmpty).join(' · ');
+    return parts.isEmpty ? missing : parts;
+  }
+
   final assignmentRaw = _map(detail['activeAssignment']);
   final assignment = assignmentRaw['isActive'] == false
       ? <String, dynamic>{}
       : assignmentRaw;
   final vehicle = _map(assignment['vehicle']);
 
-  String render(String language, String bodyKey, {bool includeContext = true}) {
+  String render(String language) {
     final l10n = AppLocalizations(language);
     final missing = l10n.t('admin_driver_check_missing');
     String value(String s) => s.isEmpty ? missing : s;
+    String count(dynamic n) => n is num && n >= 0 && n == n.roundToDouble()
+        ? n.toInt().toString()
+        : missing;
+    final thai = language == 'th';
+    final serviceNames = thai
+        ? {
+            'AIRPORT_PICKUP': 'รับจากสนามบิน',
+            'AIRPORT_DROPOFF': 'ส่งสนามบิน',
+            'CITY_TRANSFER': 'เดินทางระหว่างเมือง',
+            'GOLF_TRANSFER': 'รับส่งสนามกอล์ฟ',
+          }
+        : {
+            'AIRPORT_PICKUP': '공항 픽업',
+            'AIRPORT_DROPOFF': '공항 샌딩',
+            'CITY_TRANSFER': '도시간 이동',
+            'GOLF_TRANSFER': '골프 이동',
+          };
+    final vehicleNames = thai
+        ? {'SEDAN': 'ซีดาน', 'SUV': 'เอสยูวี', 'VAN': 'รถตู้'}
+        : {'SEDAN': '세단', 'SUV': 'SUV', 'VAN': '밴'};
+    final passengers = _map(detail['passengers']);
+    final luggage = _map(detail['luggage']);
+    final flight = _map(detail['flight']);
+    final flightNumber = _text(flight['flightNumber']);
+    final options = _map(detail['options']);
     final values = {
       'booking': value(_text(detail['bookingNumber'])),
+      'service':
+          serviceNames[_text(_map(detail['serviceType'])['code'])] ?? missing,
       'date': formatted?.split(' ').first ?? missing,
       'time': formatted?.split(' ').last ?? missing,
       'weekday': bangkok == null
           ? missing
           : l10n.t('admin_driver_check_weekdays').split('|')[bangkok.weekday -
                 1],
-      'pickup': value(place),
-      // Assigned records are only reference information, never proof of the actual driver.
+      'pickup': place(route['origin'], missing),
+      'destination': place(route['destination'], missing),
+      'vehicleType':
+          vehicleNames[_text(_map(detail['vehicle'])['typeCode'])] ?? missing,
+      'adults': count(passengers['adults']),
+      'children': count(passengers['children']),
+      'infants': count(passengers['infants']),
+      'smallBags': count(luggage['carriers20Inch']),
+      'largeBags': count(luggage['carriers24InchPlus']),
+      'golfBags': count(luggage['golfBags']),
+      'flight': flightNumber.isEmpty
+          ? ''
+          : '${thai ? '✈️ เที่ยวบิน' : '✈️ 항공편'}: $flightNumber',
+      'nameSign': options['nameSign'] == true
+          ? (thai ? '🪧 ป้ายชื่อ: รวมในรายการจอง' : '🪧 피켓: 예약에 포함')
+          : '',
       'driver': value(_text(assignment['driverDisplayName'])),
       'plate': value(_text(vehicle['plateNumber'])),
     };
-    final reply =
-        bodyKey.endsWith('_handoff_body') || bodyKey.endsWith('_pre_body')
-        ? '\n\n${l10n.t('admin_driver_check_reply_body')}'
-        : '';
-    final template = includeContext
-        ? '${l10n.t('admin_driver_check_context')}\n\n${l10n.t(bodyKey)}$reply'
-        : l10n.t(bodyKey);
-    return template.replaceAllMapped(
-      RegExp(r'\{(booking|date|time|weekday|pickup|driver|plate)\}'),
-      (m) => values[m.group(1)]!,
-    );
+    // Single-pass replacement: user-supplied place names are never templates.
+    return l10n
+        .t('admin_driver_check_context')
+        .replaceAllMapped(
+          RegExp(r'\{([A-Za-z]+)\}'),
+          (m) => values[m.group(1)] ?? m.group(0)!,
+        )
+        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+        .trim();
   }
 
-  return ['handoff', 'pre', 'reply', 'reminder']
-      .map((id) {
-        final body = 'admin_driver_check_${id}_body';
-        return AdminDriverCheckMessage(
-          id: id,
-          titleKey: 'admin_driver_check_$id',
-          thai: render('th', body, includeContext: id != 'reminder'),
-          korean: render('ko', body, includeContext: id != 'reminder'),
-        );
-      })
-      .toList(growable: false);
+  return [
+    AdminDriverCheckMessage(
+      id: 'brief',
+      titleKey: 'admin_driver_check_handoff',
+      thai: render('th'),
+      korean: render('ko'),
+    ),
+  ];
 }
