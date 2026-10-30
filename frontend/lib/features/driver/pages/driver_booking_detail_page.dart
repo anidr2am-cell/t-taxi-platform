@@ -1,3 +1,4 @@
+import '../widgets/driver_name_sign_details.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -643,6 +644,7 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                               message: l10n.t('driver_name_sign_required'),
                               icon: Icons.badge_outlined,
                             ),
+                            DriverNameSignDetails(name: booking.nameSignText),
                           ],
                           if (booking.hasAnyRouteCoordinate) ...[
                             const SizedBox(height: AppTokens.spaceMd),

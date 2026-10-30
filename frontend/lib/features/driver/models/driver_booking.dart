@@ -35,6 +35,7 @@ class DriverBooking {
     this.flight,
     this.specialInstructions,
     this.nameSignRequested = false,
+    this.nameSignText,
     this.customerPaymentAmount,
     this.customerPaymentCurrency,
     this.customerPaymentMethod,
@@ -90,6 +91,7 @@ class DriverBooking {
   final Map<String, dynamic>? flight;
   final String? specialInstructions;
   final bool nameSignRequested;
+  final String? nameSignText;
   final double? customerPaymentAmount;
   final String? customerPaymentCurrency;
   final String? customerPaymentMethod;
@@ -183,6 +185,9 @@ class DriverBooking {
           : Map<String, dynamic>.from(json['flight'] as Map),
       specialInstructions: json['specialInstructions'] as String?,
       nameSignRequested: json['nameSignRequested'] == true,
+      nameSignText: json['nameSignText'] is String
+          ? json['nameSignText'] as String
+          : null,
       customerPaymentAmount: (json['customerPaymentAmount'] as num?)
           ?.toDouble(),
       customerPaymentCurrency: json['customerPaymentCurrency'] as String?,

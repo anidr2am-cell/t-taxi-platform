@@ -21,6 +21,31 @@ const _releaseReasonScheduleConflict = '일정 충돌 / ตารางงาน
 const _releaseReasonAccident = '사고 / อุบัติเหตุ';
 
 void main() {
+  for (final requested in [true, false]) {
+    testWidgets('detail sign text only for requested sign $requested', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          _FakeDriverApi(
+            detail: _booking(
+              status: 'DRIVER_ASSIGNED',
+              actions: [],
+              nameSignRequested: requested,
+              nameSignText: 'QA Jane สมชาย 김민수',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text('QA Jane สมชาย 김민수'),
+        requested ? findsOneWidget : findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('shows standby confirmation and release actions when assigned', (
     tester,
   ) async {
@@ -1001,6 +1026,7 @@ DriverBooking _booking({
   bool standbyConfirmed = false,
   String? standbyConfirmedAt,
   bool nameSignRequested = false,
+  String? nameSignText,
   double? nameSignAmount,
   bool withCoordinates = false,
   DriverBookingLocation? pickupLocation,
@@ -1041,6 +1067,7 @@ DriverBooking _booking({
     customerDisplayName: 'Kim',
     customerPhone: phone,
     nameSignRequested: nameSignRequested,
+    nameSignText: nameSignText,
     customerPaymentAmount: 1300,
     customerPaymentCurrency: 'THB',
     customerPaymentMethod: 'PAY_DRIVER_AT_DESTINATION',

@@ -17,6 +17,10 @@ class AppLocalizations {
 
   static final Map<String, Map<String, String>> _translations = {
     'en': {
+      "driver_name_sign_text_label": "Name to write on the sign",
+      "driver_name_sign_text_missing": "No sign name registered. Please confirm with the administrator.",
+      "admin_driver_check_name_sign_text": "Name to write on the sign",
+      "admin_driver_check_name_sign_missing": "No name registered — confirm with the administrator",
       "admin_driver_finance_picket_notice": "The sign is not a company commission. The driver advances it to the airport and is reimbursed through the customer fare. Do not charge it again or deduct it again from the payout.",
       "admin_driver_finance_registered_amount": "Existing registered payout: {amount}; confirm any mismatch with the ฿200 commission rule.",
       "admin_driver_finance_driver": "💰 Collection: collect directly from the customer",
@@ -2088,6 +2092,10 @@ class AppLocalizations {
       'guest_lookup_booking_number_hint': 'TX202607010001',
     },
     'ko': {
+      "driver_name_sign_text_label": "피켓에 적을 이름",
+      "driver_name_sign_text_missing": "등록된 피켓 이름이 없습니다. 관리자에게 확인하세요.",
+      "admin_driver_check_name_sign_text": "피켓에 적을 이름",
+      "admin_driver_check_name_sign_missing": "이름 미등록 — 관리자 확인 필요",
       "admin_driver_finance_picket_notice": "피켓비는 회사 수수료가 아닙니다. 기사가 공항에 선납한 뒤 고객 요금에서 보전받습니다. 이미 포함된 피켓비를 추가 청구하거나 기사 지급액에서 다시 차감하지 마세요.",
       "admin_driver_finance_registered_amount": "기존 등록 지급액: {amount} · 수수료 ฿200 기준과 다르면 관리자 확인 필요",
       "admin_driver_finance_driver": "💰 수금: 고객에게 직접 수금",
@@ -3597,6 +3605,10 @@ class AppLocalizations {
       'customer_driver_location_retry': '다시 시도',
     },
     'zh': {
+      "driver_name_sign_text_label": "接机牌上填写的姓名",
+      "driver_name_sign_text_missing": "尚未登记接机牌姓名，请向管理员确认。",
+      "admin_driver_check_name_sign_text": "接机牌上填写的姓名",
+      "admin_driver_check_name_sign_missing": "未登记姓名，请向管理员确认",
       "admin_driver_finance_picket_notice": "接机牌费用不是公司佣金。司机在机场垫付，再从客户费用中报销。不得额外收取或重复扣除。",
       "admin_driver_finance_registered_amount": "原登记付款额：{amount}；如与฿200佣金标准不符，请管理员确认。",
       "admin_driver_finance_driver": "💰 收款：直接向客户收取",
@@ -4608,6 +4620,10 @@ class AppLocalizations {
       'thb': 'THB',
     },
     'ja': {
+      "driver_name_sign_text_label": "ネームボードに記載する名前",
+      "driver_name_sign_text_missing": "名前が登録されていません。管理者に確認してください。",
+      "admin_driver_check_name_sign_text": "ネームボードに記載する名前",
+      "admin_driver_check_name_sign_missing": "名前未登録 — 管理者に確認してください",
       "admin_driver_finance_picket_notice": "ボード代は会社手数料ではありません。ドライバーが空港で立て替え、お客様の料金から精算されます。追加請求・二重控除はしないでください。",
       "admin_driver_finance_registered_amount": "既存の登録支払額：{amount}。手数料฿200と異なる場合は管理者確認が必要です。",
       "admin_driver_finance_driver": "💰 集金：お客様から直接受領",
@@ -5659,6 +5675,10 @@ class AppLocalizations {
       'thb': 'THB',
     },
     'th': {
+      "driver_name_sign_text_label": "ชื่อที่ต้องเขียนบนป้าย",
+      "driver_name_sign_text_missing": "ยังไม่ได้ระบุชื่อบนป้าย กรุณาสอบถามผู้ดูแล",
+      "admin_driver_check_name_sign_text": "ชื่อที่ต้องเขียนบนป้าย",
+      "admin_driver_check_name_sign_missing": "ยังไม่ได้ระบุชื่อ กรุณาสอบถามผู้ดูแล",
       "admin_driver_finance_picket_notice": "ค่าป้ายไม่ใช่ค่าคอมมิชชันบริษัท คนขับสำรองจ่ายให้สนามบินแล้วรับคืนจากค่าบริการลูกค้า ห้ามเรียกเก็บค่าป้ายเพิ่มหรือหักจากยอดจ่ายให้คนขับซ้ำ",
       "admin_driver_finance_registered_amount": "ยอดจ่ายเดิมที่ลงทะเบียน: {amount} หากไม่ตรงกับค่าคอมมิชชัน ฿200 ต้องให้ผู้ดูแลตรวจสอบ",
       "admin_driver_finance_driver": "💰 รับเงิน: เก็บจากลูกค้าโดยตรง",
@@ -7727,6 +7747,8 @@ class AppLocalizations {
   };
 
   static const Map<String, String> _driverUiTranslations = {
+    "driver_name_sign_text_label": "피켓에 적을 이름\n(ชื่อที่ต้องเขียนบนป้าย)",
+    "driver_name_sign_text_missing": "등록된 피켓 이름이 없습니다. 관리자에게 확인하세요.\n(ยังไม่ได้ระบุชื่อบนป้าย กรุณาสอบถามผู้ดูแล)",
     'driver_login_error_credentials': '전화번호 또는 비밀번호를 확인해 주세요.\nกรุณาตรวจสอบหมายเลขโทรศัพท์หรือรหัสผ่าน',
     'driver_login_error_network': '연결이 원활하지 않습니다. 잠시 후 다시 시도해 주세요.\nการเชื่อมต่อขัดข้อง กรุณาลองอีกครั้งในภายหลัง',
     'driver_login_error_server': '서버에 일시적인 문제가 있습니다. 잠시 후 다시 시도해 주세요.\nเซิร์ฟเวอร์ขัดข้องชั่วคราว กรุณาลองอีกครั้งในภายหลัง',
