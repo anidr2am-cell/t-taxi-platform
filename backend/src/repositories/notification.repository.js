@@ -1,7 +1,7 @@
 const database = require('../config/database');
 const NOTIFICATION_CHANNELS = require('../constants/notificationChannels');
 const DELIVERY_STATUS = require('../constants/notificationDeliveryStatus');
-const { customerEmailSlot, CUSTOMER_EMAIL_TYPES } = require('../policies/notificationEmail.policy');
+const { customerEmailSlot, CUSTOMER_EMAIL_TYPES, CUSTOMER_EMAIL_LIMIT } = require('../policies/notificationEmail.policy');
 const { canRecoverAttempt } = require('../policies/emailAttempt.policy');
 const { randomUUID } = require('node:crypto');
 const { formatServiceDateTimeIso } = require('../utils/serviceDateTime.util');
@@ -152,6 +152,12 @@ class NotificationRepository {
           b.payment_status AS booking_payment_status,
           b.currency AS booking_currency,
           vt.code AS booking_vehicle_type,
+          ba.id AS email_assignment_id,
+          dr.name AS assigned_driver_name,
+          dv.model_name AS assigned_vehicle_model,
+          dv.color AS assigned_vehicle_color,
+          dv.plate_number AS assigned_vehicle_plate,
+          avt.code AS assigned_vehicle_type,
           b.booking_number,
           b.scheduled_pickup_at,
           b.origin_address,
@@ -161,6 +167,13 @@ class NotificationRepository {
         LEFT JOIN users u ON u.id = n.user_id AND u.deleted_at IS NULL
         LEFT JOIN bookings b ON b.id = n.booking_id AND b.deleted_at IS NULL
         LEFT JOIN vehicle_types vt ON vt.id = b.vehicle_type_id
+        LEFT JOIN booking_driver_assignments ba ON ba.id = (
+          SELECT x.id FROM booking_driver_assignments x
+          WHERE x.booking_id=b.id AND x.is_active=1 AND x.deleted_at IS NULL ORDER BY x.id DESC LIMIT 1
+        )
+        LEFT JOIN drivers dr ON dr.id=ba.driver_id AND dr.deleted_at IS NULL
+        LEFT JOIN driver_vehicles dv ON dv.id=ba.driver_vehicle_id AND dv.deleted_at IS NULL
+        LEFT JOIN vehicle_types avt ON avt.id=dv.vehicle_type_id AND avt.deleted_at IS NULL
         WHERE n.id = ? AND n.deleted_at IS NULL
         LIMIT 1
       `,
@@ -183,6 +196,18 @@ class NotificationRepository {
       if (!bookings.length) {
         await conn.commit();
         return { allowed: false, error: 'EMAIL_POLICY_BOOKING_REQUIRED' };
+      }
+      if(notification.type==='DRIVER_ASSIGNED') {
+        // Recheck the current assignment under the booking lock before reserving
+        // SMTP. Never send a stale assignment after release/completion/reassignment.
+        const [[assignment]]=await conn.query(`SELECT ba.id FROM booking_driver_assignments ba
+          JOIN bookings b ON b.id=ba.booking_id JOIN drivers d ON d.id=ba.driver_id AND d.deleted_at IS NULL
+          WHERE ba.booking_id=? AND ba.is_active=1 AND ba.deleted_at IS NULL
+          AND b.status IN ('DRIVER_ASSIGNED','ON_ROUTE','DRIVER_ARRIVED','PICKED_UP')
+          ORDER BY ba.id DESC LIMIT 1`,[notification.booking_id]);
+        if(!assignment || Number(assignment.id)!==Number(notification.email_assignment_id)) {
+          await conn.commit();return {allowed:false,error:'EMAIL_POLICY_ASSIGNMENT_CHANGED'};
+        }
       }
       let receiptMetadata=bookings[0].metadata;
       if(typeof receiptMetadata==='string'){try{receiptMetadata=JSON.parse(receiptMetadata)}catch{receiptMetadata={}}}
@@ -215,7 +240,7 @@ class NotificationRepository {
             OR EXISTS (SELECT 1 FROM notification_email_reviews hr WHERE hr.delivery_id=d.id AND hr.action='ACCEPTED_CONFIRMED')
             OR (d.attempt_count > 0 AND d.delivery_status <> 'SKIPPED'
               AND COALESCE(d.last_error, '') <> 'PERMANENT_INVALID_RECIPIENT'))`, [notification.booking_id, recovery ? delivery.id : 0]);
-      let error = history.length >= 2 ? 'EMAIL_POLICY_BOOKING_LIMIT' : null;
+      let error = history.length >= CUSTOMER_EMAIL_LIMIT ? 'EMAIL_POLICY_BOOKING_LIMIT' : null;
       if (history.some((row) => customerEmailSlot(row.type) === customerEmailSlot(notification.type))) {
         error = 'EMAIL_POLICY_SLOT_ALREADY_USED';
       }
