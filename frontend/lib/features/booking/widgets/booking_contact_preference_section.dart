@@ -60,12 +60,8 @@ class _BookingContactPreferenceSectionState
     super.dispose();
   }
 
-  String _label(AppLocalizations l10n, String type) => switch (type) {
-    BookingContactPreference.kakao => l10n.t('booking_contact_kakao'),
-    BookingContactPreference.line => l10n.t('booking_contact_line'),
-    BookingContactPreference.whatsapp => l10n.t('booking_contact_whatsapp'),
-    _ => l10n.t('booking_contact_phone_sms'),
-  };
+  String _label(AppLocalizations l10n, String type) =>
+      l10n.t(BookingContactPreference.labelKey(type));
 
   Widget _icon(String type) => switch (type) {
     BookingContactPreference.kakao => const KakaoBrandIcon(
@@ -82,7 +78,11 @@ class _BookingContactPreferenceSectionState
       height: 24,
       fit: BoxFit.contain,
     ),
-    _ => const Icon(Icons.phone_outlined, color: AppTokens.primary, size: 24),
+    BookingContactPreference.telegram => const Icon(
+      Icons.send_outlined,
+      color: AppTokens.primary,
+    ),
+    _ => const Icon(Icons.chat_outlined, color: AppTokens.primary),
   };
 
   @override
@@ -91,7 +91,7 @@ class _BookingContactPreferenceSectionState
     final savedType = BookingContactPreference.normalize(
       widget.state.messengerType,
     );
-    final type = savedType.isEmpty
+    final type = !BookingContactPreference.values.contains(savedType)
         ? BookingContactPreference.defaultFor(languageCode: l10n.languageCode)
         : savedType;
     final isPhone = BookingContactPreference.usesPhone(type);
@@ -116,56 +116,36 @@ class _BookingContactPreferenceSectionState
           style: const TextStyle(color: AppTokens.textSecondary, height: 1.4),
         ),
         const SizedBox(height: AppTokens.spaceSm),
-        GridView.count(
-          crossAxisCount: 2,
-          mainAxisExtent: 68,
-          mainAxisSpacing: AppTokens.spaceSm,
-          crossAxisSpacing: AppTokens.spaceSm,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          children: [
+        DropdownButtonFormField<String>(
+          key: ValueKey('booking-messenger-select-$type'),
+          initialValue: type,
+          isExpanded: true,
+          decoration: InputDecoration(
+            labelText: l10n.t('booking_contact_method_title'),
+          ),
+          items: [
             for (final value in BookingContactPreference.values)
-              InkWell(
-                key: ValueKey('booking-contact-$value'),
-                borderRadius: AppTokens.borderRadiusMd,
-                onTap: () => widget.onTypeChanged(value),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: type == value
-                        ? AppTokens.primaryLight
-                        : AppTokens.surface,
-                    borderRadius: AppTokens.borderRadiusMd,
-                    border: Border.all(
-                      color: type == value
-                          ? AppTokens.primary
-                          : AppTokens.border,
-                      width: type == value ? 2 : 1,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _icon(value),
-                      const SizedBox(width: AppTokens.spaceXs),
-                      Flexible(
-                        child: Text(
-                          _label(l10n, value),
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ],
-                  ),
+              DropdownMenuItem(
+                value: value,
+                child: Row(
+                  children: [
+                    _icon(value),
+                    const SizedBox(width: AppTokens.spaceSm),
+                    Flexible(child: Text(_label(l10n, value))),
+                  ],
                 ),
               ),
           ],
+          onChanged: (value) {
+            if (value != null) widget.onTypeChanged(value);
+          },
         ),
         const SizedBox(height: AppTokens.spaceMd),
         if (showsPhone) ...[
           Text(
             isKakao
                 ? l10n.t('booking_contact_kakao_phone_required')
-                : (isPhone || type == BookingContactPreference.line)
+                : (isPhone || BookingContactPreference.requiresPhone(type))
                 ? l10n.t('booking_contact_phone_required')
                 : l10n.t('booking_contact_emergency_phone_optional'),
             style: const TextStyle(fontWeight: FontWeight.w700),
@@ -223,9 +203,13 @@ class _BookingContactPreferenceSectionState
             key: const ValueKey('booking-messenger-id'),
             controller: _idController,
             decoration: InputDecoration(
-              labelText: type == BookingContactPreference.kakao
+              labelText: isKakao
                   ? l10n.t('booking_contact_kakao_id_optional')
-                  : '${l10n.t('field_required')} ${l10n.t('booking_contact_line_id')}',
+                  : type == BookingContactPreference.line
+                  ? '${l10n.t('field_required')} ${l10n.t('booking_contact_line_id')}'
+                  : l10n
+                        .t('booking_contact_optional_id')
+                        .replaceAll('{channel}', _label(l10n, type)),
               helperText: type == BookingContactPreference.line
                   ? l10n.t('booking_contact_id_searchable_notice')
                   : null,

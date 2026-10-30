@@ -99,7 +99,7 @@ void main() {
     expect(find.textContaining('(Required) Email'), findsNothing);
     expect(find.textContaining('(Required) Country'), findsNothing);
     expect(
-      find.byKey(const ValueKey('booking-contact-KAKAO'), skipOffstage: false),
+      find.byType(DropdownButtonFormField<String>).first,
       findsOneWidget,
     );
   });

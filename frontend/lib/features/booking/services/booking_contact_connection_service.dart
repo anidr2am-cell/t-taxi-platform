@@ -30,9 +30,13 @@ class BookingContactConnectionService {
     final channels = data['channels'];
     if (channels is! List) return const [];
     return channels
-        .map((item) => ContactChannel.fromJson(
-              Map<String, dynamic>.from(item as Map),
-            ))
+        .map((item) {
+          final json = Map<String, dynamic>.from(item as Map);
+          final qr = json['qrImageUrl'] as String?;
+          if (qr != null && qr.isNotEmpty)
+            json['qrImageUrl'] = Uri.parse(_baseUrl).resolve(qr).toString();
+          return ContactChannel.fromJson(json);
+        })
         .toList(growable: false);
   }
 
@@ -92,10 +96,7 @@ class BookingContactConnectionService {
     } else {
       response = await _client.post(
         uri,
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json',
-        },
+        headers: {...headers, 'Content-Type': 'application/json'},
         body: jsonEncode(body ?? const {}),
       );
     }

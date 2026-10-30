@@ -858,7 +858,10 @@ class BookingWizardController extends ChangeNotifier {
         (profileName ?? '').trim().isNotEmpty) {
       changes['name'] = profileName!.trim();
     }
-    if (_state.messengerType.trim().isEmpty) {
+    if (BookingContactPreference.normalize(_state.messengerType) ==
+        BookingContactPreference.sms) {
+      changes['messengerType'] = BookingContactPreference.whatsapp;
+    } else if (_state.messengerType.trim().isEmpty) {
       changes['messengerType'] = BookingContactPreference.defaultFor(
         languageCode: languageCode,
         authProvider: authProvider,
@@ -1107,6 +1110,8 @@ class BookingWizardController extends ChangeNotifier {
         },
       'customer': {
         'name': _state.customerName.trim(),
+        if (_state.customerEmail.trim().isNotEmpty)
+          'email': _state.customerEmail.trim(),
         'phone':
             _normalizedPhone(
               _state.customerPhone,
@@ -1439,6 +1444,12 @@ class BookingWizardController extends ChangeNotifier {
       orElse: () => error.errors.first,
     );
     final field = first.field;
+    if (field == 'customer.email') {
+      return (
+        step: BookingWizardSteps.customer,
+        messageKey: 'booking_email_invalid',
+      );
+    }
     if (field == 'customer.name') {
       return (
         step: BookingWizardSteps.customer,
@@ -2052,6 +2063,12 @@ class BookingWizardController extends ChangeNotifier {
 
   bool _isContactPreferenceValidFor(BookingWizardState state) {
     if (state.customerName.trim().isEmpty) return false;
+    if (state.customerEmail.trim().isNotEmpty &&
+        (state.customerEmail.trim().length > 254 ||
+            !RegExp(
+              r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
+            ).hasMatch(state.customerEmail.trim())))
+      return false;
     final type = BookingContactPreference.normalize(state.messengerType);
     // Phone-only drafts and already-open older clients remain resumable during
     // the rollout. The current customer UI always applies a channel default,
@@ -2063,7 +2080,11 @@ class BookingWizardController extends ChangeNotifier {
       ).isNotEmpty;
     }
     if (!BookingContactPreference.values.contains(type)) return false;
-    if (type != BookingContactPreference.kakao &&
+    if (![
+          BookingContactPreference.kakao,
+          BookingContactPreference.wechat,
+          BookingContactPreference.telegram,
+        ].contains(type) &&
         state.messengerId.trim().isEmpty) {
       return false;
     }

@@ -127,13 +127,13 @@ class ContactConnectionState {
 List<String> contactChannelOrderForLocale(String languageCode) {
   switch (languageCode) {
     case 'ko':
-      return const ['KAKAO', 'LINE', 'WHATSAPP', 'WECHAT'];
+      return const ['KAKAO', 'LINE', 'WHATSAPP', 'WECHAT', 'TELEGRAM'];
     case 'th':
-      return const ['LINE', 'WHATSAPP', 'WECHAT', 'KAKAO'];
+      return const ['LINE', 'WHATSAPP', 'WECHAT', 'KAKAO', 'TELEGRAM'];
     case 'zh':
-      return const ['WECHAT', 'LINE', 'WHATSAPP', 'KAKAO'];
+      return const ['WECHAT', 'LINE', 'WHATSAPP', 'KAKAO', 'TELEGRAM'];
     default:
-      return const ['WHATSAPP', 'LINE', 'WECHAT', 'KAKAO'];
+      return const ['WHATSAPP', 'LINE', 'WECHAT', 'KAKAO', 'TELEGRAM'];
   }
 }
 

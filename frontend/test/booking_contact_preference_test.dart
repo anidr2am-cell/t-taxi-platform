@@ -147,47 +147,19 @@ void main() {
     );
   });
 
-  testWidgets('shows all four choices and channel-specific inputs', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(375, 812));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(_app(const _ContactHarness()));
-    await tester.pumpAndSettle();
-
-    for (final type in BookingContactPreference.values) {
-      expect(
-        find.byKey(ValueKey('booking-contact-$type'), skipOffstage: false),
-        findsOneWidget,
-      );
-    }
-    expect(find.byKey(const ValueKey('booking-messenger-id')), findsOneWidget);
-    expect(find.byKey(const ValueKey('booking-contact-phone')), findsOneWidget);
-    expect(find.text('LOGIN_ACTION'), findsOneWidget);
-
-    await tester.enterText(
-      find.byKey(const ValueKey('booking-contact-phone')),
-      '010-1234-5678',
-    );
-
-    final card = tester.getSize(
-      find.byKey(const ValueKey('booking-contact-KAKAO')),
-    );
-    expect(card.height, inInclusiveRange(64, 72));
-
-    final whatsapp = find.byKey(
-      const ValueKey('booking-contact-WHATSAPP'),
-      skipOffstage: false,
-    );
-    await tester.ensureVisible(whatsapp);
-    await tester.tap(whatsapp);
-    await tester.pump();
-
-    expect(find.byKey(const ValueKey('booking-messenger-id')), findsNothing);
-    expect(find.byKey(const ValueKey('booking-contact-phone')), findsOneWidget);
-    expect(find.text('010-1234-5678'), findsOneWidget);
-    expect(find.text('LOGIN_ACTION'), findsNothing);
-    expect(tester.takeException(), isNull);
+  testWidgets('dropdown has five choices, no SMS, and preserves phone on selection', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(375,812));
+    addTearDown(()=>tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(const _ContactHarness()));await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('booking-contact-phone')), '01012345678');
+    final field=find.byKey(const ValueKey('booking-messenger-select-KAKAO'));
+    final dropdown=tester.widget<DropdownButtonFormField<String>>(field);
+    expect(dropdown.initialValue,'KAKAO');
+    await tester.tap(field);await tester.pumpAndSettle();
+    expect(find.text('위챗'),findsOneWidget);expect(find.text('텔레그램'),findsOneWidget);expect(find.text('전화·문자'),findsNothing);
+    await tester.tap(find.text('위챗'));await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('booking-messenger-select-WECHAT')),findsOneWidget);
+    expect(find.text('01012345678'),findsOneWidget);expect(tester.takeException(),isNull);
   });
 
   for (final languageCode in AppLocalizations.supportedLanguages) {

@@ -42,6 +42,7 @@ void main() {
       'KAKAO',
       'LINE',
       'WHATSAPP',
+      'WECHAT',
     ]);
   });
 
@@ -66,10 +67,10 @@ void main() {
         ],
         supportedLocales: const [Locale('ko')],
         home: Scaffold(
-          body: BookingMessengerHandoffSection(
+          body: SingleChildScrollView(child: BookingMessengerHandoffSection(
             bookingNumber: 'TX202610020001',
             service: _FakeContactService(channels),
-          ),
+          )),
         ),
       ),
     );

@@ -3,7 +3,7 @@
 /** Transitional create-booking placeholders (contact connection M2); not real messenger data. */
 const TRANSITIONAL_MESSENGER_TYPE = new Set(['PENDING']);
 const TRANSITIONAL_MESSENGER_ID = new Set(['POST_CREATE', 'PENDING']);
-const MESSENGER_TYPES = new Set(['KAKAO', 'LINE', 'WHATSAPP', 'SMS']);
+const MESSENGER_TYPES = new Set(['KAKAO', 'LINE', 'WHATSAPP', 'WECHAT', 'TELEGRAM', 'SMS']);
 
 const LEGACY_MESSENGER_TYPES = new Map([
   ['KAKAO', 'KAKAO'],
@@ -11,6 +11,9 @@ const LEGACY_MESSENGER_TYPES = new Map([
   ['KAKAOTALK', 'KAKAO'],
   ['LINE', 'LINE'],
   ['WHATSAPP', 'WHATSAPP'],
+  ['WECHAT', 'WECHAT'],
+  ['WE CHAT', 'WECHAT'],
+  ['TELEGRAM', 'TELEGRAM'],
   ['SMS', 'SMS'],
   ['PHONE', 'SMS'],
   ['PHONE/SMS', 'SMS'],

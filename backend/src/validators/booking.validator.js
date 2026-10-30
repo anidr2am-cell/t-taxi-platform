@@ -179,10 +179,10 @@ const createBookingSchema = Joi.object({
       return helpers.message('messengerType is required when messengerId is supplied');
     }
     const phone = customer.phone?.trim();
-    if (['KAKAO','LINE','WHATSAPP','SMS'].includes(type) && !/^\+[1-9]\d{6,14}$/.test(phone || '')) {
+    if (['KAKAO','LINE','WHATSAPP','WECHAT','TELEGRAM','SMS'].includes(type) && !/^\+[1-9]\d{6,14}$/.test(phone || '')) {
       return helpers.message('Selected messenger requires an international customer phone number');
     }
-    if (type !== 'KAKAO' && !id) {
+    if (!['KAKAO','WECHAT','TELEGRAM'].includes(type) && !id) {
       return helpers.message('messengerId is required for the selected messengerType');
     }
     if (['WHATSAPP', 'SMS'].includes(type) && !/^\+[1-9]\d{6,14}$/.test(id)) {
