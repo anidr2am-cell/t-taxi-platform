@@ -245,7 +245,7 @@ void main() {
     final detail = sample()
       ..['driverFinancialSummary'] = {
         'currency': 'THB',
-        'driverNetAmount': -1,
+        'driverReceiptAmount': -1,
         'needsConfirmation': true,
       };
     expect(

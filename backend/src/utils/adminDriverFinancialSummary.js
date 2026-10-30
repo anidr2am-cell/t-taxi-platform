@@ -24,8 +24,8 @@ function buildAdminDriverFinancialSummary(row, chargeItems = []) {
   const payoutConflict = manual && (registeredPayout == null || expectedReceipt == null || Math.abs(registeredPayout-expectedReceipt) > 0.009);
   // Never silently replace a different historical commission or waived settlement.
   // ADMIN_MANUAL + commission_exempt means no separate remittance, not zero company commission.
-  const commissionConflict = !manual && ((recordedCommission != null && recordedCommission !== COMPANY_COMMISSION_THB)
-    || [1,true,'1'].includes(row.commission_exempt) || (finalized && recordedCommission == null));
+  const commissionConflict = !manual && ((recordedCommission > 0 && recordedCommission !== COMPANY_COMMISSION_THB)
+    || [1,true,'1'].includes(row.commission_exempt) || (finalized && !(recordedCommission > 0)));
   const valid = row.currency === 'THB' && expectedReceipt != null && sign != null && sign <= expectedReceipt
     && !payoutConflict && !commissionConflict;
   const receipt = valid ? (manual ? registeredPayout : expectedReceipt) : null;
@@ -42,7 +42,7 @@ function buildAdminDriverFinancialSummary(row, chargeItems = []) {
     collectFromCustomerAmount: collectionMode === 'ADMIN_PAYS' || row.payment_status === 'PAID' ? 0
       : collectionMode === 'DRIVER_COLLECTS' && row.payment_status === 'UNPAID' ? total : null,
     adminPayoutAmount: collectionMode === 'ADMIN_PAYS' ? receipt : null,
-    basis: manual ? 'REGISTERED_PAYOUT' : recordedCommission == null ? 'CURRENT_TRIP_RULE_ESTIMATE' : 'RECORDED',
+    basis: manual ? 'REGISTERED_PAYOUT' : !(recordedCommission > 0) ? 'CURRENT_TRIP_RULE_ESTIMATE' : 'RECORDED',
     needsConfirmation: !valid || collectionMode === 'NEEDS_CONFIRMATION' || !['PAID','UNPAID'].includes(row.payment_status),
     confirmationReason: payoutConflict ? 'REGISTERED_PAYOUT_DIFFERS_FROM_200_COMMISSION'
       : commissionConflict ? 'RECORDED_COMMISSION_REQUIRES_REVIEW' : !valid ? 'INCOMPLETE_OR_INCONSISTENT_AMOUNTS' : null,
