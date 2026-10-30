@@ -8,6 +8,7 @@ import 'package:frontend/l10n/app_localizations.dart';
 class Api extends AdminDispatchApiService {
   int previews = 0, sends = 0, confirmations = 0;
   String paymentStatus = "UNPAID";
+  bool confirmationResponseLost = false;
   final bool eligible;
   Api({this.eligible = true});
   @override
@@ -30,6 +31,7 @@ class Api extends AdminDispatchApiService {
   ) async {
     confirmations++;
     paymentStatus = 'PAID';
+    if (confirmationResponseLost) throw Exception('response lost');
     return getReceiptEmailState(n);
   }
 
@@ -82,6 +84,34 @@ Widget host(Api api, {String locale = 'ko'}) => MaterialApp(
   ),
 );
 void main() {
+  testWidgets(
+    'lost payment response refreshes status without repeating confirmation',
+    (t) async {
+      final api = Api()..confirmationResponseLost = true;
+      await t.pumpWidget(host(api));
+      await t.pumpAndSettle();
+      await t.tap(find.text('고객 결제 확인'));
+      await t.pumpAndSettle();
+      await t.enterText(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.byType(TextField),
+        ),
+        '현금 수령 확인',
+      );
+      await t.pump();
+      await t.tap(find.text('결제 수령 확인'));
+      await t.pumpAndSettle();
+      expect(api.confirmations, 1);
+      expect(api.sends, 0);
+      expect(find.text('고객 결제 확인 완료'), findsOneWidget);
+      expect(
+        find.text(AppLocalizations('ko').t('admin_customer_payment_failed')),
+        findsNothing,
+      );
+    },
+  );
+
   for (final locale in ['ko', 'en', 'th', 'ja', 'zh']) {
     testWidgets('payment dialog at 375px in $locale', (t) async {
       await t.binding.setSurfaceSize(const Size(375, 800));

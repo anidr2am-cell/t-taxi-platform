@@ -177,6 +177,10 @@ class _AdminReceiptEmailCardState extends State<AdminReceiptEmailCard> {
               : 'admin_customer_payment_failed',
         );
         await _load(preserveInput: true);
+        if (mounted && _state?['payment']?['status'] == 'PAID') {
+          setState(() => _error = null);
+          widget.onPaymentConfirmed?.call();
+        }
       }
     } finally {
       if (mounted) setState(() => _busy = false);
