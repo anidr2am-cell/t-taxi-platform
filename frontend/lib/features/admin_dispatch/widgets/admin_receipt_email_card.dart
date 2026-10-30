@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
@@ -10,10 +11,12 @@ class AdminReceiptEmailCard extends StatefulWidget {
     required this.bookingNumber,
     required this.api,
     this.onChanged,
+    this.onPaymentConfirmed,
   });
   final String bookingNumber;
   final AdminDispatchApiService api;
   final VoidCallback? onChanged;
+  final VoidCallback? onPaymentConfirmed;
   @override
   State<AdminReceiptEmailCard> createState() => _AdminReceiptEmailCardState();
 }
@@ -85,6 +88,96 @@ class _AdminReceiptEmailCardState extends State<AdminReceiptEmailCard> {
       if (mounted) setState(() => _preview = p);
     } catch (e) {
       if (mounted) setState(() => _error = _errorKey(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _confirmPayment() async {
+    if (_busy || _confirming) return;
+    final payment = Map<String, dynamic>.from(_state!['payment'] as Map);
+    final l = context.l10n;
+    var reason = '';
+    setState(() => _confirming = true);
+    final confirmedReason = await showDialog<String>(
+      context: context,
+      builder: (c) => StatefulBuilder(
+        builder: (c, setDialogState) => AlertDialog(
+          title: Text(l.t('admin_customer_payment_confirm')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l
+                      .t('admin_customer_payment_confirm_body')
+                      .replaceAll('{booking}', widget.bookingNumber)
+                      .replaceAll(
+                        '{amount}',
+                        '฿' +
+                            NumberFormat('#,##0.##').format(payment['amount']),
+                      ),
+                ),
+                const SizedBox(height: AppTokens.spaceMd),
+                TextField(
+                  maxLength: 500,
+                  minLines: 2,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    labelText: l.t('admin_customer_payment_reason'),
+                  ),
+                  onChanged: (v) => setDialogState(() => reason = v.trim()),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(c),
+              child: Text(l.t('admin_receipt_cancel')),
+            ),
+            FilledButton(
+              onPressed: reason.isEmpty ? null : () => Navigator.pop(c, reason),
+              child: Text(l.t('admin_customer_payment_confirm_action')),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _confirming = false);
+    if (confirmedReason == null) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+      _preview = null;
+    });
+    try {
+      final result = await widget.api
+          .confirmCustomerPayment(widget.bookingNumber, {
+            'confirmed': true,
+            'reason': confirmedReason,
+            'expectedAmount': payment['amount'],
+            'expectedCurrency': payment['currency'],
+          });
+      if (!mounted) return;
+      setState(() => _state = result);
+      widget.onPaymentConfirmed?.call();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l.t('admin_customer_payment_success'))),
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(
+          () => _error =
+              e is AdminDispatchApiException &&
+                  e.errorCode == 'CUSTOMER_PAYMENT_CHANGED'
+              ? 'admin_customer_payment_changed'
+              : 'admin_customer_payment_failed',
+        );
+        await _load(preserveInput: true);
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -168,6 +261,21 @@ class _AdminReceiptEmailCardState extends State<AdminReceiptEmailCard> {
             ),
             const SizedBox(height: AppTokens.spaceSm),
             Text(l.t('admin_receipt_intro')),
+            if (state?['payment'] is Map) ...[
+              const SizedBox(height: AppTokens.spaceSm),
+              Text(
+                l.t(
+                  state!['payment']['status'] == 'PAID'
+                      ? 'admin_customer_payment_paid'
+                      : 'admin_customer_payment_unconfirmed',
+                ),
+              ),
+              if (state['payment']['canConfirm'] == true)
+                OutlinedButton(
+                  onPressed: _busy || _confirming ? null : _confirmPayment,
+                  child: Text(l.t('admin_customer_payment_confirm')),
+                ),
+            ],
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.symmetric(

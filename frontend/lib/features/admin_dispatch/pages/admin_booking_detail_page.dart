@@ -1083,7 +1083,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                       _noShowPenaltySection(l10n, detail),
                     ],
                     if (['SETTLEMENT_PENDING','COMPLETED'].contains(detail['status']))
-                      AdminReceiptEmailCard(key:ValueKey('receipt_${widget.bookingNumber}'),bookingNumber:widget.bookingNumber,api:widget.api,onChanged:(){_load();widget.onChanged?.call();}),
+                      AdminReceiptEmailCard(key:ValueKey('receipt_${widget.bookingNumber}'),bookingNumber:widget.bookingNumber,api:widget.api,onPaymentConfirmed:(){setState((){detail['pricing']={...Map<String,dynamic>.from(detail['pricing'] as Map),'paymentStatus':'PAID'};});},onChanged:(){_load();widget.onChanged?.call();}),
                     AdminReviewRequestCard(
                       key: ValueKey(
                         'admin_review_request_${widget.bookingNumber}',

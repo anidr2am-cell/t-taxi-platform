@@ -21,6 +21,11 @@ class AdminReceiptEmailRepository {
       ORDER BY d.id DESC`,[id]);
     return rows;
   }
+  async confirmPayment(conn,row,record,actorId) {
+    await conn.query(`UPDATE bookings SET payment_status='PAID',
+      metadata=JSON_SET(COALESCE(metadata,JSON_OBJECT()),'$.customerPaymentConfirmation',JSON_EXTRACT(?,'$')),
+      updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,[JSON.stringify(record),actorId,row.id]);
+  }
   async approve(conn,row,email,record) {
     await conn.query(`UPDATE bookings SET customer_email=?,metadata=JSON_SET(COALESCE(metadata,JSON_OBJECT()),
       '$.adminReceiptEmail',JSON_EXTRACT(?,'$')) WHERE id=?`,[email,JSON.stringify(record),row.id]);

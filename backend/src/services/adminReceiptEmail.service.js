@@ -38,12 +38,37 @@ class AdminReceiptEmailService {
     const m=meta(row.metadata);const prior=m.adminReceiptEmail;
     const delivery=prior?history.find(h=>Number(h.id)===Number(prior.deliveryId)):history.find(h=>h.type!=='BOOKING_CREATED');
     const reason=this.eligibility(row,history);
-    return {eligible:!reason,reason,email:row.customer_email||'',locale:normalizeLocale(m.locale)||'en',
+    return {payment:{status:row.payment_status,amount:row.total_amount==null?null:Number(row.total_amount),currency:row.currency,canConfirm:['SETTLEMENT_PENDING','COMPLETED'].includes(row.status)&&['UNPAID','PENDING'].includes(row.payment_status)&&row.total_amount!=null&&Number.isFinite(Number(row.total_amount))&&Number(row.total_amount)>=0&&row.currency==='THB',confirmation:m.customerPaymentConfirmation||null},eligible:!reason,reason,email:row.customer_email||'',locale:normalizeLocale(m.locale)||'en',
       configured:Boolean(this.notificationService.adapters.EMAIL?.isConfigured()),
       delivery:delivery?{deliveryId:delivery.id,status:delivery.delivery_status,outcome:delivery.outcome||null}:null,
       approvedAt:prior?.approvedAt||null};
   }
   async get(number,actor){this.authorize(actor);const {row,history}=await this.context(number);return this.state(row,history)}
+  async confirmPayment(number,input,actor){
+    this.authorize(actor);
+    const reason=String(input.reason||'').trim();
+    if(input.confirmed!==true||!reason||reason.length>500)fail('CUSTOMER_PAYMENT_CONFIRM_REQUIRED',400);
+    const conn=await this.pool.getConnection();
+    try{
+      await conn.beginTransaction();
+      const row=await this.repo.booking(conn,number,true);if(!row)fail('BOOKING_NOT_FOUND',404);
+      if(!['SETTLEMENT_PENDING','COMPLETED'].includes(row.status))fail('CUSTOMER_PAYMENT_TRIP_NOT_ENDED');
+      if(row.payment_status!=='PAID'&&!['UNPAID','PENDING'].includes(row.payment_status))fail('CUSTOMER_PAYMENT_STATE_BLOCKED');
+      const amount=row.total_amount==null?NaN:Number(row.total_amount);
+      if(!Number.isFinite(amount)||amount<0||row.currency!=='THB'||typeof input.expectedAmount!=='number'
+        ||amount!==input.expectedAmount||input.expectedCurrency!==row.currency)fail('CUSTOMER_PAYMENT_CHANGED');
+      if(row.payment_status!=='PAID'){
+        const record={confirmedAt:this.now().toISOString(),confirmedByUserId:actor.id,
+          previousStatus:row.payment_status,amount,currency:row.currency,reason};
+        await this.repo.confirmPayment(conn,row,record,actor.id);
+        await this.bookings.insertActivityLog(conn,row.id,{activityType:'CUSTOMER_PAYMENT_CONFIRMED',actorUserId:actor.id,
+          actorRole:actor.role,description:'Administrator confirmed customer payment; no email sent',payload:record});
+      }
+      await conn.commit();
+    }catch(e){await conn.rollback();throw e}finally{conn.release()}
+    // Payment acknowledgement never sends email or changes commission/assignments.
+    return this.get(number,actor);
+  }
   async document(row,input,googleOverride){
     const adapter=this.notificationService.adapters.EMAIL;
     let google=googleOverride;
