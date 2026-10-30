@@ -642,7 +642,10 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
           final view = AdminBookingView.ordered[index];
           final selected = _view == view && !_unassignedOnly;
           return ChoiceChip(
-            label: Text(AdminOperationsUx.viewLabel(l10n, view)),
+            label: SizedBox(
+              width: view == AdminBookingView.completed ? AppTokens.spaceXxl * 3 : null,
+              child: Text(AdminOperationsUx.viewLabel(l10n, view)),
+            ),
             selected: selected,
             onSelected: (_) => _switchView(view),
           );
