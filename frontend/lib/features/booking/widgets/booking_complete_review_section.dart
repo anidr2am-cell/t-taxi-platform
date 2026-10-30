@@ -109,14 +109,21 @@ class BookingCompleteReviewSection extends StatelessWidget {
                     messengerId: review.messengerId,
                     dialCode: review.customerCountryCode,
                     localNumber: review.customerPhone,
-                    idLabel: l10n.t(
-                      BookingContactPreference.normalize(
-                                review.messengerType,
-                              ) ==
-                              'LINE'
-                          ? 'booking_contact_line_id'
-                          : 'booking_contact_kakao_id',
-                    ),
+                    idLabel:
+                        !const ['KAKAO', 'LINE'].contains(
+                          BookingContactPreference.normalize(
+                            review.messengerType,
+                          ),
+                        )
+                        ? 'ID'
+                        : l10n.t(
+                            BookingContactPreference.normalize(
+                                      review.messengerType,
+                                    ) ==
+                                    'LINE'
+                                ? 'booking_contact_line_id'
+                                : 'booking_contact_kakao_id',
+                          ),
                   ),
                 ),
               if (BookingContactPreference.allowsEmergencyPhone(

@@ -9,7 +9,13 @@ import '../models/contact_channel.dart';
 import '../services/booking_contact_connection_service.dart';
 import '../utils/contact_channel_url.dart';
 
-const _handoffChannelCodes = {'KAKAO', 'LINE', 'WHATSAPP'};
+const _handoffChannelCodes = {
+  'KAKAO',
+  'LINE',
+  'WHATSAPP',
+  'WECHAT',
+  'TELEGRAM',
+};
 
 @visibleForTesting
 List<ContactChannel> bookingHandoffChannels(
@@ -78,6 +84,56 @@ class _BookingMessengerHandoffSectionState
     setState(() => _opening = true);
 
     final message = bookingMessengerHandoffMessage(widget.bookingNumber);
+    if (channel.code == 'WECHAT') {
+      await writeClipboardText(message);
+      if (!mounted) return;
+      setState(() => _opening = false);
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(context.l10n.t('booking_contact_wechat')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(context.l10n.t('booking_wechat_qr_help')),
+                const SizedBox(height: AppTokens.spaceSm),
+                if (channel.qrImageUrl?.isNotEmpty == true)
+                  Image.network(
+                    channel.qrImageUrl!,
+                    width: 280,
+                    fit: BoxFit.contain,
+                  ),
+                if (channel.qrImageUrl?.isNotEmpty == true)
+                  TextButton.icon(
+                    onPressed: () async {
+                      final uri = parseAllowedContactChannelUrl(
+                        channel.qrImageUrl!,
+                        allowHttp: allowHttpContactUrlsForEnvironment(),
+                      );
+                      if (uri != null)
+                        await launchUrl(
+                          uri,
+                          mode: LaunchMode.externalApplication,
+                        );
+                    },
+                    icon: const Icon(Icons.open_in_new),
+                    label: Text(context.l10n.t('booking_wechat_open_qr')),
+                  ),
+                SelectableText(message),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(context.l10n.t('close')),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
     Uri? uri;
     if (channel.code == 'WHATSAPP') {
       final phone = channel.phoneNumber?.replaceAll(RegExp(r'\D'), '') ?? '';
