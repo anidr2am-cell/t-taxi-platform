@@ -201,6 +201,15 @@ void main() {
     expect(text, contains('ค่าตอบแทนคนขับสุทธิ: ฿800'));
     expect(text, contains('฿1,100'));
     expect(text, contains('ประมาณการ'));
+    final paid = sample()
+      ..['driverFinancialSummary'] = <String, dynamic>{
+        ...Map<String, dynamic>.from(detail['driverFinancialSummary'] as Map),
+        'paymentStatus': 'PAID',
+        'collectFromCustomerAmount': 0,
+      };
+    final paidText = buildAdminDriverCheckMessages(paid).single.thai;
+    expect(paidText, isNot(contains('เก็บจากลูกค้าโดยตรง')));
+    expect(paidText, contains('ไม่เรียกเก็บซ้ำ'));
     detail['driverFinancialSummary'] = <String, dynamic>{
       ...Map<String, dynamic>.from(detail['driverFinancialSummary'] as Map),
       'collectionMode': 'ADMIN_PAYS',

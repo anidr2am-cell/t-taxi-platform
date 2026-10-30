@@ -42,7 +42,9 @@ String _financialMessage(Map<String, dynamic> detail, AppLocalizations l10n) {
   final mode = summary['collectionMode'];
   return [
     l10n.t(
-      'admin_driver_finance_${mode == 'DRIVER_COLLECTS'
+      'admin_driver_finance_${mode == 'DRIVER_COLLECTS' && summary['paymentStatus'] == 'PAID'
+          ? 'paid'
+          : mode == 'DRIVER_COLLECTS'
           ? 'driver'
           : mode == 'ADMIN_PAYS'
           ? 'admin'
