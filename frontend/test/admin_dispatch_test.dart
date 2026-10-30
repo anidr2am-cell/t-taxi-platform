@@ -61,6 +61,9 @@ class _FakeAdminApi extends AdminDispatchApiService {
   final Object? candidatesError;
 
   @override
+  Future<Map<String,dynamic>> getReceiptEmailState(String bookingNumber) async => {'eligible':false,'reason':'RECEIPT_EMAIL_EXISTING_ATTEMPT','configured':false};
+
+  @override
   Future<Map<String, dynamic>> getReviewRequest(String bookingNumber) async => {'eligible': false};
 
   @override

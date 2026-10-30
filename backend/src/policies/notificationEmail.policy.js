@@ -14,6 +14,9 @@ function emailAudience(notification) {
 }
 function emailPolicyError(notification) {
   const audience = emailAudience(notification);
+  let bookingMetadata=notification.booking_metadata;
+  if(typeof bookingMetadata==='string'){try{bookingMetadata=JSON.parse(bookingMetadata)}catch{bookingMetadata={}}}
+  if(audience==='CUSTOMER' && (notification.type||notification.notificationType)==='BOOKING_CREATED' && bookingMetadata?.adminReceiptEmail?.approvedAt) return 'EMAIL_POLICY_LATE_CONFIRMATION_DISABLED';
   if (audience === 'DRIVER') return 'EMAIL_POLICY_DRIVER_DISABLED';
   if (audience === 'CUSTOMER' && (notification.type || notification.notificationType)==='TRIP_COMPLETED' && !isTripEndEmail(notification)) return 'EMAIL_POLICY_CUSTOMER_TYPE_DISABLED';
   if (audience === 'CUSTOMER' && !CUSTOMER_EMAIL_TYPES.has(notification.type || notification.notificationType)) {

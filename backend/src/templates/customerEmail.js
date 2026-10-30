@@ -14,6 +14,9 @@ function metadata(value) {
   try { return JSON.parse(value) || {}; } catch { return {}; }
 }
 function resolveEmailLocale(notification) {
+  if(metadata(notification.payload).adminReceipt===true && normalizeLocale(metadata(notification.payload).locale)) {
+    return normalizeLocale(metadata(notification.payload).locale);
+  }
   return normalizeLocale(metadata(notification.booking_metadata).locale)
     || normalizeLocale(notification.recipient_locale)
     || normalizeLocale(notification.payload?.locale)

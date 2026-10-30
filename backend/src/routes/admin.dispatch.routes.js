@@ -40,6 +40,14 @@ const { LOCALES, CHANNELS } = require('../utils/reviewRequest.util');
 const { success } = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
 const container = require('../helpers/container');
+const receiptEmailInput=Joi.object({email:Joi.string().trim().email({tlds:{allow:false}}).max(254).required(),locale:Joi.string().valid(...LOCALES).required()}).unknown(false);
+router.get('/bookings/:bookingNumber/receipt-email',adminOnly,validate({params:bookingNumberParamsSchema}),
+  asyncHandler(async(req,res)=>success(res,await container.get('adminReceiptEmailService').get(req.params.bookingNumber,req.user))));
+router.post('/bookings/:bookingNumber/receipt-email/preview',adminOnly,validate({params:bookingNumberParamsSchema,body:receiptEmailInput}),
+  asyncHandler(async(req,res)=>success(res,await container.get('adminReceiptEmailService').preview(req.params.bookingNumber,req.body,req.user))));
+router.post('/bookings/:bookingNumber/receipt-email/send',adminOnly,validate({params:bookingNumberParamsSchema,body:receiptEmailInput.keys({previewHash:Joi.string().hex().length(64).required(),confirmed:Joi.boolean().valid(true).required()})}),
+  asyncHandler(async(req,res)=>success(res,await container.get('adminReceiptEmailService').send(req.params.bookingNumber,req.body,req.user))));
+
 router.get('/bookings/:bookingNumber/review-request', adminOnly,
   validate({ params: bookingNumberParamsSchema }),
   asyncHandler(async (req, res) => success(res, await container.get('reviewRequestService').get(req.params.bookingNumber))));

@@ -89,6 +89,10 @@ class AdminDispatchApiService {
     await prefs.setString(_tokenKey, data['accessToken'] as String);
   }
 
+  Future<Map<String,dynamic>> getReceiptEmailState(String number) async => Map<String,dynamic>.from(await _request('GET','/admin/bookings/$number/receipt-email') as Map);
+  Future<Map<String,dynamic>> previewReceiptEmail(String number,Map<String,dynamic> body) async => Map<String,dynamic>.from(await _request('POST','/admin/bookings/$number/receipt-email/preview',body:body) as Map);
+  Future<Map<String,dynamic>> sendReceiptEmail(String number,Map<String,dynamic> body) async => Map<String,dynamic>.from(await _request('POST','/admin/bookings/$number/receipt-email/send',body:body) as Map);
+
   Future<Map<String, dynamic>> getReviewRequest(String bookingNumber) async =>
       Map<String, dynamic>.from(
         await _request('GET', '/admin/bookings/$bookingNumber/review-request')

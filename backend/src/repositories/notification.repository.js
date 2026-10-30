@@ -72,6 +72,12 @@ class NotificationRepository {
     return result.insertId;
   }
 
+  async insertEmailOnly(conn,data) {
+    const id=await this.insert(conn,data);
+    await conn.query("UPDATE notifications SET channel='EMAIL' WHERE id=?",[id]);
+    return id;
+  }
+
   async insertDelivery(conn, data) {
     const [result] = await conn.query(
       `
@@ -173,10 +179,15 @@ class NotificationRepository {
     const conn = await this.pool.getConnection();
     try {
       await conn.beginTransaction();
-      const [bookings] = await conn.query('SELECT id FROM bookings WHERE id = ? AND deleted_at IS NULL FOR UPDATE', [notification.booking_id]);
+      const [bookings] = await conn.query('SELECT id, metadata FROM bookings WHERE id = ? AND deleted_at IS NULL FOR UPDATE', [notification.booking_id]);
       if (!bookings.length) {
         await conn.commit();
         return { allowed: false, error: 'EMAIL_POLICY_BOOKING_REQUIRED' };
+      }
+      let receiptMetadata=bookings[0].metadata;
+      if(typeof receiptMetadata==='string'){try{receiptMetadata=JSON.parse(receiptMetadata)}catch{receiptMetadata={}}}
+      if(receiptMetadata?.adminReceiptEmail?.notificationId && Number(receiptMetadata.adminReceiptEmail.notificationId)!==Number(notification.id)) {
+        await conn.commit();return {allowed:false,error:'EMAIL_POLICY_SUPERSEDED_BY_ADMIN_RECEIPT'};
       }
       const [[current]] = await conn.query('SELECT delivery_status, attempt_count, last_error FROM notification_deliveries WHERE id = ? FOR UPDATE', [delivery.id]);
       if (!current || ['DELIVERED', 'SKIPPED'].includes(current.delivery_status)
@@ -555,7 +566,7 @@ class NotificationRepository {
   }
 
   buildListFilters(filters) {
-    const where = ['deleted_at IS NULL'];
+    const where = ['deleted_at IS NULL', "NOT (channel='EMAIL' AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(payload,'$.adminReceipt')),'false')='true')"];
     const params = [];
 
     if (filters.userId) {

@@ -18,7 +18,7 @@ function harness({ started = false, failSmtp = false, historical = [] } = {}) {
       async beginTransaction() {},
       async query(sql, params) {
         sqlLog.push(sql);
-        if (sql.startsWith('SELECT id FROM bookings')) {
+        if (sql.startsWith('SELECT id, metadata FROM bookings')) {
           const previous = tail;
           tail = new Promise((resolve) => { releaseLock = resolve; });
           await previous;
