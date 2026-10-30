@@ -54,10 +54,17 @@ String _financialMessage(Map<String, dynamic> detail, AppLocalizations l10n) {
       'total': amount(summary['customerTotalAmount']),
       'collect': amount(summary['collectFromCustomerAmount']),
       'commission': amount(summary['commissionAmount']),
-      'sign': amount(summary['nameSignAmount']),
-      'deduction': amount(summary['companyDeductionAmount']),
-      'net': amount(summary['driverNetAmount']),
+      'advance': amount(summary['nameSignAdvanceAmount']),
+      'reimbursement': amount(summary['nameSignReimbursementAmount']),
+      'receipt': amount(summary['driverReceiptAmount']),
+      'income': amount(summary['driverOperatingIncomeAmount']),
     }),
+    l10n.t('admin_driver_finance_picket_notice'),
+    if (summary['needsConfirmation'] == true &&
+        summary['registeredPayoutAmount'] != null)
+      fill('registered_amount', {
+        'amount': amount(summary['registeredPayoutAmount']),
+      }),
     if (mode == 'ADMIN_PAYS')
       fill('payout', {'amount': amount(summary['adminPayoutAmount'])}),
     fill('status', {
