@@ -2,6 +2,7 @@ const DELIVERY_STATUS = require('../constants/notificationDeliveryStatus');
 const NOTIFICATION_CHANNELS = require('../constants/notificationChannels');
 const config = require('../config/env');
 const fs = require('node:fs');
+const {withReceiptPdf,withoutPdfModel}=require('../templates/customerReceiptPdf');
 const { isCustomerEmail, renderCustomerEmail } = require('../templates/customerEmail');
 const { emailPolicyError, isTripEndEmail } = require('../policies/notificationEmail.policy');
 const { smtpFailureEvidence } = require('../policies/emailAttempt.policy');
@@ -157,10 +158,11 @@ class EmailNotificationAdapter {
       }
       const restored = recipient.emailAttempt?.envelope ? JSON.parse(decrypt(recipient.emailAttempt.envelope)) : null;
       if (restored && restored.to !== to) throw Object.assign(new Error('Recipient changed'), { code: 'EMAIL_RECIPIENT_CHANGED' });
+      const built=await (approved||restored ? withoutPdfModel(this.buildMessage(emailNotification)) : withReceiptPdf(this.buildMessage(emailNotification)));
       const message = {
         from: this.normalizeFrom(),
         to,
-        ...this.buildMessage(emailNotification),
+        ...built,
         ...(approved || {}),
         ...(restored || {}),
         ...(recipient.emailAttempt ? { messageId: recipient.emailAttempt.messageId,

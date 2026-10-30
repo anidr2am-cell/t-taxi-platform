@@ -1,4 +1,5 @@
 const {createHash,randomUUID}=require('node:crypto');
+const {withReceiptPdf,PDF_TEMPLATE_VERSION}=require('../templates/customerReceiptPdf');
 const AppError=require('../utils/AppError');
 const {encrypt}=require('../utils/tokenEncryption.util');
 const {renderCustomerEmail,normalizeLocale}=require('../templates/customerEmail');
@@ -38,12 +39,37 @@ class AdminReceiptEmailService {
     const m=meta(row.metadata);const prior=m.adminReceiptEmail;
     const delivery=prior?history.find(h=>Number(h.id)===Number(prior.deliveryId)):history.find(h=>h.type!=='BOOKING_CREATED');
     const reason=this.eligibility(row,history);
-    return {eligible:!reason,reason,email:row.customer_email||'',locale:normalizeLocale(m.locale)||'en',
+    return {payment:{status:row.payment_status,amount:row.total_amount==null?null:Number(row.total_amount),currency:row.currency,canConfirm:['SETTLEMENT_PENDING','COMPLETED'].includes(row.status)&&['UNPAID','PENDING'].includes(row.payment_status)&&row.total_amount!=null&&Number.isFinite(Number(row.total_amount))&&Number(row.total_amount)>=0&&row.currency==='THB',confirmation:m.customerPaymentConfirmation||null},eligible:!reason,reason,email:row.customer_email||'',locale:normalizeLocale(m.locale)||'en',
       configured:Boolean(this.notificationService.adapters.EMAIL?.isConfigured()),
       delivery:delivery?{deliveryId:delivery.id,status:delivery.delivery_status,outcome:delivery.outcome||null}:null,
       approvedAt:prior?.approvedAt||null};
   }
   async get(number,actor){this.authorize(actor);const {row,history}=await this.context(number);return this.state(row,history)}
+  async confirmPayment(number,input,actor){
+    this.authorize(actor);
+    const reason=String(input.reason||'').trim();
+    if(input.confirmed!==true||!reason||reason.length>500)fail('CUSTOMER_PAYMENT_CONFIRM_REQUIRED',400);
+    const conn=await this.pool.getConnection();
+    try{
+      await conn.beginTransaction();
+      const row=await this.repo.booking(conn,number,true);if(!row)fail('BOOKING_NOT_FOUND',404);
+      if(!['SETTLEMENT_PENDING','COMPLETED'].includes(row.status))fail('CUSTOMER_PAYMENT_TRIP_NOT_ENDED');
+      if(row.payment_status!=='PAID'&&!['UNPAID','PENDING'].includes(row.payment_status))fail('CUSTOMER_PAYMENT_STATE_BLOCKED');
+      const amount=row.total_amount==null?NaN:Number(row.total_amount);
+      if(!Number.isFinite(amount)||amount<0||row.currency!=='THB'||typeof input.expectedAmount!=='number'
+        ||amount!==input.expectedAmount||input.expectedCurrency!==row.currency)fail('CUSTOMER_PAYMENT_CHANGED');
+      if(row.payment_status!=='PAID'){
+        const record={confirmedAt:this.now().toISOString(),confirmedByUserId:actor.id,
+          previousStatus:row.payment_status,amount,currency:row.currency,reason};
+        await this.repo.confirmPayment(conn,row,record,actor.id);
+        await this.bookings.insertActivityLog(conn,row.id,{activityType:'CUSTOMER_PAYMENT_CONFIRMED',actorUserId:actor.id,
+          actorRole:actor.role,description:'Administrator confirmed customer payment; no email sent',payload:record});
+      }
+      await conn.commit();
+    }catch(e){await conn.rollback();throw e}finally{conn.release()}
+    // Payment acknowledgement never sends email or changes commission/assignments.
+    return this.get(number,actor);
+  }
   async document(row,input,googleOverride){
     const adapter=this.notificationService.adapters.EMAIL;
     let google=googleOverride;
@@ -55,10 +81,10 @@ class AdminReceiptEmailService {
       origin_address:row.origin_address,destination_address:row.destination_address,
       payload:{adminReceipt:true,locale:input.locale},created_at:this.now().toISOString()};
     const options={origin:adapter.customerWebOrigin,googleReviewUrl:google};
-    const output=renderCustomerEmail(n,options);
+    const output=await withReceiptPdf(renderCustomerEmail(n,options));
     // Stable across clock ticks; any amount, status, route, language, setting or template change invalidates approval.
     const stable=renderCustomerEmail({...n,created_at:'2000-01-01T00:00:00.000Z'},options);
-    const previewHash=createHash('sha256').update(JSON.stringify({email:input.email,subject:stable.subject,text:stable.text})).digest('hex');
+    const previewHash=createHash('sha256').update(JSON.stringify({email:input.email,subject:stable.subject,text:stable.text,pdfTemplate:PDF_TEMPLATE_VERSION})).digest('hex');
     return {...output,previewHash,email:input.email};
   }
   async preview(number,input,actor){
@@ -80,7 +106,7 @@ class AdminReceiptEmailService {
       if(await this.notifications.findByIdempotencyKey(conn,key))fail('RECEIPT_EMAIL_ALREADY_APPROVED');
       id=await this.notifications.insertEmailOnly(conn,{recipientType:'GUEST_BOOKING',bookingId:row.id,audienceRole:'CUSTOMER',
         eventId:randomUUID(),eventName:'ADMIN_RECEIPT_EMAIL_APPROVED',idempotencyKey:key,notificationType:'TRIP_ENDED',
-        title:doc.subject,body:'Administrator-approved trip document',payload:{adminReceipt:true,locale:parsed.locale,approvedEmail:encrypt(JSON.stringify({to:parsed.email,subject:doc.subject,text:doc.text,html:doc.html}))}});
+        title:doc.subject,body:'Administrator-approved trip document',payload:{adminReceipt:true,locale:parsed.locale,approvedEmail:encrypt(JSON.stringify({to:parsed.email,subject:doc.subject,text:doc.text,html:doc.html,attachments:doc.attachments}))}});
       const deliveryId=await this.notifications.insertDelivery(conn,{notificationId:id,channel:'EMAIL',deliveryStatus:'PENDING'});
       // Supersede old missing-address email rows before the entered address becomes visible.
       await this.repo.approve(conn,row,parsed.email,{approvedAt:this.now().toISOString(),actorUserId:actor.id,

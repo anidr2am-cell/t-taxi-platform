@@ -41,6 +41,9 @@ const { success } = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
 const container = require('../helpers/container');
 const receiptEmailInput=Joi.object({email:Joi.string().trim().email({tlds:{allow:false}}).max(254).required(),locale:Joi.string().valid(...LOCALES).required()}).unknown(false);
+router.post('/bookings/:bookingNumber/customer-payment/confirm',adminOnly,
+  validate({params:bookingNumberParamsSchema,body:Joi.object({confirmed:Joi.boolean().valid(true).required(),reason:Joi.string().trim().min(1).max(500).required(),expectedAmount:Joi.number().min(0).required(),expectedCurrency:Joi.string().valid('THB').required()}).unknown(false)}),
+  asyncHandler(async(req,res)=>success(res,await container.get('adminReceiptEmailService').confirmPayment(req.params.bookingNumber,req.body,req.user))));
 router.get('/bookings/:bookingNumber/receipt-email',adminOnly,validate({params:bookingNumberParamsSchema}),
   asyncHandler(async(req,res)=>success(res,await container.get('adminReceiptEmailService').get(req.params.bookingNumber,req.user))));
 router.post('/bookings/:bookingNumber/receipt-email/preview',adminOnly,validate({params:bookingNumberParamsSchema,body:receiptEmailInput}),
