@@ -104,6 +104,18 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(opened.single.toString(), 'https://t.me/TRider_taxi');
+        await tester.tap(
+          find.text(AppLocalizations(locale).t('landing_support_cta')),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('booking-support-WECHAT')));
+        await tester.pumpAndSettle();
+        expect(
+          find.text(AppLocalizations(locale).t('support_close_button')),
+          findsOneWidget,
+        );
+        expect(opened.length, 1);
+        expect(tester.takeException(), isNull);
       },
     );
   testWidgets(

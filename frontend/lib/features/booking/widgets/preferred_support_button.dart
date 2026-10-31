@@ -113,7 +113,7 @@ class _PreferredSupportButtonState extends State<PreferredSupportButton> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: Text(context.l10n.t('close')),
+              child: Text(context.l10n.t('support_close_button')),
             ),
           ],
         ),
