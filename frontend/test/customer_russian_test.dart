@@ -25,6 +25,10 @@ void main() {
       BookingContactPreference.normalizeInternationalPhone('+7', '9161234567'),
       '+79161234567',
     );
+    expect(
+      BookingContactPreference.normalizeInternationalPhone('+7', '8 (916) 123-45-67'),
+      '+79161234567',
+    );
   });
 
   test(
