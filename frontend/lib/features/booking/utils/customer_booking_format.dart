@@ -79,6 +79,9 @@ class CustomerBookingFormat {
 
   static String _formatDateTime(String languageCode, DateTime value) {
     final lang = languageCode.toLowerCase();
+    if (lang == 'ru') {
+      return '${_two(value.day)}.${_two(value.month)}.${value.year} ${_two(value.hour)}:${_two(value.minute)}';
+    }
     if (lang == 'ko') {
       final period = value.hour < 12 ? '오전' : '오후';
       final hour = value.hour % 12 == 0 ? 12 : value.hour % 12;

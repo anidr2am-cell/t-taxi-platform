@@ -6,6 +6,7 @@ import 'package:frontend/l10n/app_localizations.dart';
 import 'package:frontend/providers/booking_provider.dart';
 import 'package:frontend/features/booking/models/booking_wizard_state.dart';
 import 'package:frontend/features/booking/utils/booking_contact_preference.dart';
+import 'package:frontend/features/booking/utils/customer_booking_format.dart';
 import 'package:frontend/features/booking/widgets/step_customer_info.dart';
 import 'support/booking_wizard_test_helpers.dart';
 
@@ -14,6 +15,7 @@ void main() {
     expect(AppLocalizations.customerSupportedLanguages, contains('ru'));
     expect(AppLocalizations.supportedLanguages, isNot(contains('ru')));
     expect(AppLocalizations.languageNames['ru'], 'Русский');
+    expect(CustomerBookingFormat.pickupDateTime(AppLocalizations('ru'), '2026-11-10T23:40:00+07:00'), '10.11.2026 23:40');
     expect(
       LocaleState(
         entryUri: Uri.parse('https://example.test/booking?lang=ru'),
