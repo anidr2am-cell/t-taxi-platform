@@ -11,15 +11,15 @@ const CATEGORIES = ['airport', 'golf', 'travel', 'faq'];
 const LANGUAGES = ['ko', 'en', 'ja', 'zh', 'ru', 'th'];
 const HREFLANG = { ko: 'ko', en: 'en', ja: 'ja', zh: 'zh-Hans', ru: 'ru', th: 'th' };
 const LANGUAGE_NAMES = { ko: '한국어', en: 'English', ja: '日本語', zh: '中文', ru: 'Русский', th: 'ไทย' };
-// The booking application does not support Russian. Keep that transition explicit.
-const bookingLanguage = (lang) => lang === 'ru' ? 'en' : lang;
+// The customer booking application supports every published blog language.
+const bookingLanguage = (lang) => lang;
 const DEFAULT_OG_IMAGE = `${BLOG_ORIGIN}/blog/assets/og-default.png`;
 const UI = {
   ko: { blog: '블로그', title: 'TRider 블로그', intro: '태국 공항 이동과 여행에 필요한 정보를 확인하세요.', updated: '최종 업데이트', related: '관련 글', categories: '카테고리', all: '전체', cta: '✈️ 공항 이동 차량 · 24시간 예약', book: '지금 예약하기', support: '카카오톡 상담', supportUrl: 'https://open.kakao.com/o/suG4krMi' },
   en: { blog: 'Blog', title: 'TRider Blog', intro: 'Practical guides for airport transfers and travel in Thailand.', updated: 'Last updated', related: 'Related articles', categories: 'Categories', all: 'All posts', cta: '✈️ Fixed-price airport transfers · Book 24/7', book: 'Book now', support: 'WhatsApp', supportUrl: 'https://wa.me/66815693445' },
   ja: { blog: 'ブログ', title: 'TRiderブログ', intro: 'タイの空港送迎と旅行に役立つ情報をご案内します。', updated: '最終更新', related: '関連記事', categories: 'カテゴリー', all: 'すべての記事', cta: '✈️ 定額の空港送迎・24時間予約', book: '今すぐ予約', support: 'LINEで相談', supportUrl: 'https://lin.ee/55A9phq' },
   zh: { blog: '博客', title: 'TRider博客', intro: '查看泰国机场接送和旅行实用信息。', updated: '最后更新', related: '相关文章', categories: '分类', all: '全部文章', cta: '✈️ 固定价格机场接送 · 24小时预约', book: '立即预约', support: 'WhatsApp咨询', supportUrl: 'https://wa.me/66815693445' },
-  ru: { blog: 'Блог', title: 'Блог TRider', intro: 'Практические советы о трансферах из аэропортов и поездках по Таиланду.', updated: 'Обновлено', related: 'Читайте также', categories: 'Категории', all: 'Все статьи', cta: '✈️ Трансферы в аэропорт и из аэропорта · Онлайн-бронирование', book: 'Забронировать на английском', support: 'WhatsApp', supportUrl: 'https://wa.me/66815693445' },
+  ru: { blog: 'Блог', title: 'Блог TRider', intro: 'Практические советы о трансферах из аэропортов и поездках по Таиланду.', updated: 'Обновлено', related: 'Читайте также', categories: 'Категории', all: 'Все статьи', cta: '✈️ Трансферы в аэропорт и из аэропорта · Онлайн-бронирование', book: 'Забронировать на русском', support: 'WhatsApp', supportUrl: 'https://wa.me/66815693445' },
   th: { blog: 'บล็อก', title: 'บล็อก TRider', intro: 'ข้อมูลการเดินทางและบริการรับส่งสนามบินในประเทศไทย', updated: 'อัปเดตล่าสุด', related: 'บทความที่เกี่ยวข้อง', categories: 'หมวดหมู่', all: 'บทความทั้งหมด', cta: '✈️ รถรับส่งสนามบินราคาเหมาจ่าย · จองได้ 24 ชั่วโมง', book: 'จองเลย', support: 'WhatsApp', supportUrl: 'https://wa.me/66815693445' },
 };
 const SERVICE_CTA = {
@@ -159,7 +159,7 @@ function page({ title, description, canonical, lang = 'ko', body, image, jsonLd 
 </head>
 <body>
   <header class="site-header"><div class="header-inner"><a class="brand" href="${listPath(lang)}">TRider</a><a class="book-button" href="${escapeHtml(bookingHref)}">${UI[lang].book}</a></div></header>
-  ${lang === 'ru' ? '<p class="booking-language-note" lang="ru">Статьи доступны на русском. Форма бронирования откроется на английском; обслуживание на русском не гарантируется.</p>' : ''}
+  ${lang === 'ru' ? '<p class="booking-language-note" lang="ru">Форма бронирования доступна на русском. Язык общения с поддержкой уточняйте при обращении.</p>' : ''}
   ${body}
   <footer>© TRider · Thailand transfer guide</footer>
 </body>

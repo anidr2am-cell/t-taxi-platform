@@ -25,16 +25,16 @@ test('all blog headers, article CTAs and inline booking links preserve page lang
  for(const post of posts){
   const html=read(blog,post.slug),links=[...html.matchAll(/href="([^"#]+)"/g)].map(m=>new URL(m[1].replaceAll('&amp;','&'),'https://trider.taxi'));
   const booking=links.filter(u=>u.origin==='https://trider.taxi'&&['/','/booking'].includes(u.pathname));
-  assert(booking.length>=2,post.slug);for(const url of booking){assert.equal(url.pathname,'/booking',post.slug);assert.equal(url.searchParams.get('lang'),post.lang==='ru'?'en':post.lang,post.slug);}
+  assert(booking.length>=2,post.slug);for(const url of booking){assert.equal(url.pathname,'/booking',post.slug);assert.equal(url.searchParams.get('lang'),post.lang,post.slug);}
  }
- for(const lang of ['en','ja','zh']) assert.ok(read(blog,`lang/${lang}`).includes(`/booking?lang=${lang}`));
+ for(const lang of ['en','ja','zh','ru']) assert.ok(read(blog,`lang/${lang}`).includes(`/booking?lang=${lang}`));
 });
 test('guarantees disappear from published body, list, related cards, titles, metadata and JSON-LD; legacy slugs remain',()=>{
  function audit(dir){for(const item of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,item.name);if(item.isDirectory())audit(p);else if(item.name.endsWith('.html')){
   // The published URL/translation identity is intentionally unchanged.
   const html=fs.readFileSync(p,'utf8').replaceAll(/pattaya-golf-price-match-guarantee(?:-(?:en|ja|zh))?/g,'legacy-golf-guide');assert.doesNotMatch(html,forbidden,p);
  }}}audit(blog);
- for(const suffix of ['','-en','-ja','-zh','-ru']){const slug='pattaya-golf-price-match-guarantee'+suffix,html=read(blog,slug);assert.ok(html.includes('https://trider.taxi/blog/'+slug));assert.match(html,/"@type":"Article"/);assert.match(html,/2026-10-30/);}
+ for(const suffix of ['','-en','-ja','-zh','-ru']){const slug='pattaya-golf-price-match-guarantee'+suffix,html=read(blog,slug);assert.ok(html.includes('https://trider.taxi/blog/'+slug));assert.match(html,/"@type":"Article"/);const updated=fs.readFileSync(path.join(root,'blog/posts',slug+'.md'),'utf8').match(/^updated:\s*(\S+)/m)[1];assert.ok(html.includes('"dateModified":"'+updated+'"'));}
  const sitemap=fs.readFileSync(path.join(blog,'sitemap-blog.xml'),'utf8');for(const post of posts)assert.ok(sitemap.includes('/blog/'+post.slug+'</loc>'),post.slug);
 });
 test.after(()=>fs.rmSync(temp,{recursive:true,force:true}));
@@ -71,7 +71,7 @@ test('airport and localized golf guides preset the correct service without chang
  const golfLabels={ko:/골프장/,en:/Golf course/,ja:/ゴルフ場/,zh:/高尔夫球场/,ru:/гольфа/};
  const dropoffLabels={ko:/공항 샌딩/,en:/to the airport/,ja:/空港への/,zh:/送机/,ru:/в аэропорт/};
  for(const post of topicPosts){
-  const service=post.category==='golf'?'GOLF_TRANSFER':'AIRPORT_DROPOFF',lang=post.lang==='ru'?'en':post.lang;
+  const service=post.category==='golf'?'GOLF_TRANSFER':'AIRPORT_DROPOFF',lang=post.lang;
   assert.equal(post.bookingService,service,post.slug);
   const page=read(blog,post.slug),expectedTopic='/booking?service='+service+'&amp;lang='+lang;
   assert.ok(page.includes('class="book-button" href="'+expectedTopic+'"'),post.slug);
@@ -85,7 +85,7 @@ test('airport and localized golf guides preset the correct service without chang
  }
  for(const post of posts.filter(p=>![pickupSlug,guideSlug,...topicPosts.map(p=>p.slug)].includes(p.slug))){
   const page=read(blog,post.slug);
-  const bookingLang=post.lang==='ru'?'en':post.lang;
+  const bookingLang=post.lang;
   assert.ok(page.includes('class="book-button" href="/booking?lang='+bookingLang+'"'),post.slug);
   assert.ok(page.includes('class="cta-primary" href="/booking?lang='+bookingLang+'"'),post.slug);
  }

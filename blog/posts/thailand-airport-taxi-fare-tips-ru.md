@@ -6,7 +6,7 @@ lang: ru
 category: travel
 translationKey: thailand-airport-taxi-fare-tips
 date: 2026-10-28
-updated: 2026-10-28
+updated: 2026-11-01
 related:
   - thailand-airport-taxi-booking-guide-ru
   - trider-airport-transfer-faq-ru
@@ -70,4 +70,4 @@ TRider указывает стоимость трансфера за автом�
 - [Суварнабхуми — Бангкок](/blog/suvarnabhumi-to-bangkok-city-ru).
 - [Паттайя — аэропорты Бангкока](/blog/pattaya-to-airport-transfer-ru).
 
-Когда маршрут и багаж определены, [проверьте стоимость трансфера TRider](/booking?lang=en). Форма бронирования работает на английском. Цель проверки цены — подходящий автомобиль и понятная общая сумма поездки.
+Когда маршрут и багаж определены, [проверьте стоимость трансфера TRider](/booking?lang=ru). Форма бронирования работает на русском. Цель проверки цены — подходящий автомобиль и понятная общая сумма поездки.
