@@ -53,6 +53,7 @@ class FlightTimeFormat {
     String? isoUtc, {
     required String amLabel,
     required String pmLabel,
+    bool use24Hour = false,
   }) {
     if (isoUtc == null || isoUtc.isEmpty) return '—';
 
@@ -67,6 +68,7 @@ class FlightTimeFormat {
       minute: bangkok.minute,
       amLabel: amLabel,
       pmLabel: pmLabel,
+      use24Hour: use24Hour,
     );
     return '$date $time';
   }

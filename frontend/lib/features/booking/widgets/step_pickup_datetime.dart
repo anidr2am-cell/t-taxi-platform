@@ -192,6 +192,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
       minute: value.minute,
       amLabel: amLabel,
       pmLabel: pmLabel,
+      use24Hour: l10n.languageCode == 'ru',
     );
     return '$date $time';
   }
@@ -394,13 +395,13 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
           const SizedBox(height: 8),
           Text(
             '${l10n.t('flight_lookup_departure')}: '
-            '${FlightTimeFormat.formatBangkokDisplay(result.departure.scheduledAt, amLabel: amLabel, pmLabel: pmLabel)}',
+            '${FlightTimeFormat.formatBangkokDisplay(result.departure.scheduledAt, amLabel: amLabel, pmLabel: pmLabel, use24Hour: l10n.languageCode == 'ru')}',
             style: TextStyle(color: AppTokens.textSecondary, height: 1.4),
           ),
           const SizedBox(height: 4),
           Text(
             '${l10n.t('flight_lookup_arrival')}: '
-            '${FlightTimeFormat.formatBangkokDisplay(result.arrival.scheduledAt, amLabel: amLabel, pmLabel: pmLabel)}',
+            '${FlightTimeFormat.formatBangkokDisplay(result.arrival.scheduledAt, amLabel: amLabel, pmLabel: pmLabel, use24Hour: l10n.languageCode == 'ru')}',
             style: TextStyle(color: AppTokens.textSecondary, height: 1.4),
           ),
           if (result.arrival.estimatedAt != null &&
@@ -408,7 +409,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
             const SizedBox(height: 4),
             Text(
               '${l10n.t('flight_lookup_estimated_arrival')}: '
-              '${FlightTimeFormat.formatBangkokDisplay(result.arrival.estimatedAt, amLabel: amLabel, pmLabel: pmLabel)}',
+              '${FlightTimeFormat.formatBangkokDisplay(result.arrival.estimatedAt, amLabel: amLabel, pmLabel: pmLabel, use24Hour: l10n.languageCode == 'ru')}',
               style: TextStyle(color: AppTokens.textSecondary, height: 1.4),
             ),
           ],
@@ -507,6 +508,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
       minute: selected.minute,
       amLabel: l10n.t('pickup_time_am'),
       pmLabel: l10n.t('pickup_time_pm'),
+      use24Hour: l10n.languageCode == 'ru',
     );
     if (_manualTimeController.text != display) {
       _manualTimeController.text = display;
@@ -537,6 +539,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
             minute: minute,
             amLabel: l10n.t('pickup_time_am'),
             pmLabel: l10n.t('pickup_time_pm'),
+            use24Hour: l10n.languageCode == 'ru',
           );
         }
       }
@@ -657,6 +660,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
                       minute: 30,
                       amLabel: l10n.t('pickup_time_am'),
                       pmLabel: l10n.t('pickup_time_pm'),
+                      use24Hour: l10n.languageCode == 'ru',
                     ),
                   ).copyWith(
                     errorText: _manualTimeErrorKey != null
@@ -749,7 +753,9 @@ class _FlightPickupConflictCopy {
   _FlightPickupConflictCopy(this.languageCode);
   final String languageCode;
   AppLocalizations get _l10n => AppLocalizations(languageCode);
-  String warning(int minutes) => _l10n.t('flight_pickup_conflict_warning').replaceAll('{minutes}', '$minutes');
+  String warning(int minutes) => _l10n
+      .t('flight_pickup_conflict_warning')
+      .replaceAll('{minutes}', '$minutes');
   String get useManualTime => _l10n.t('flight_pickup_keep_manual');
   String get useFlightTime => _l10n.t('flight_pickup_use_arrival');
   String get finalPickupLabel => _l10n.t('flight_pickup_final_time');
