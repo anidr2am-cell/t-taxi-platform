@@ -46,6 +46,8 @@ class _PickupTimePickerSheetState extends State<PickupTimePickerSheet> {
   late int _minute;
   late final TextEditingController _manualController;
   String? _manualErrorKey;
+  bool _use24Hour = false;
+  bool _hourModeInitialized = false;
 
   @override
   void initState() {
@@ -61,6 +63,20 @@ class _PickupTimePickerSheetState extends State<PickupTimePickerSheet> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final nextUse24Hour = context.l10n.languageCode == 'ru';
+    if (!_hourModeInitialized) {
+      _use24Hour = nextUse24Hour;
+      _hourController.dispose();
+      _hourController = FixedExtentScrollController(initialItem: _hourIndex);
+      _hourModeInitialized = true;
+    } else if (_use24Hour != nextUse24Hour) {
+      _use24Hour = nextUse24Hour;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _hourController.hasClients) {
+          _hourController.jumpToItem(_hourIndex);
+        }
+      });
+    }
     _manualController.text = _displayValue(context);
   }
 
@@ -71,6 +87,7 @@ class _PickupTimePickerSheetState extends State<PickupTimePickerSheet> {
       minute: _currentMinute(),
       amLabel: l10n.t('pickup_time_am'),
       pmLabel: l10n.t('pickup_time_pm'),
+      use24Hour: _use24Hour,
     );
   }
 
@@ -79,6 +96,7 @@ class _PickupTimePickerSheetState extends State<PickupTimePickerSheet> {
   }
 
   int _currentMinute() => _minute;
+  int get _hourIndex => _use24Hour ? _currentHour24() : _hour12 - 1;
 
   void _syncManualField() {
     _manualController.text = _displayValue(context);
@@ -100,7 +118,7 @@ class _PickupTimePickerSheetState extends State<PickupTimePickerSheet> {
       _pm = PickupTimeFormat.isPm(parsed.hour24);
       _hour12 = PickupTimeFormat.hour12From24(parsed.hour24);
       _minute = parsed.minute;
-      _hourController.jumpToItem(_hour12 - 1);
+      _hourController.jumpToItem(_hourIndex);
       _minuteController.jumpToItem(_minute);
       _manualErrorKey = null;
       _manualController.text = _displayValue(context);
@@ -137,13 +155,15 @@ class _PickupTimePickerSheetState extends State<PickupTimePickerSheet> {
                 ),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+                  child: Text(
+                    MaterialLocalizations.of(context).cancelButtonLabel,
+                  ),
                 ),
                 FilledButton(
-                  onPressed: () => Navigator.pop(
-                    context,
-                    (hour24: _currentHour24(), minute: _currentMinute()),
-                  ),
+                  onPressed: () => Navigator.pop(context, (
+                    hour24: _currentHour24(),
+                    minute: _currentMinute(),
+                  )),
                   child: Text(MaterialLocalizations.of(context).okButtonLabel),
                 ),
               ],
@@ -159,14 +179,21 @@ class _PickupTimePickerSheetState extends State<PickupTimePickerSheet> {
                       itemExtent: 36,
                       onSelectedItemChanged: (index) {
                         setState(() {
-                          _hour12 = index + 1;
+                          if (_use24Hour) {
+                            _pm = PickupTimeFormat.isPm(index);
+                            _hour12 = PickupTimeFormat.hour12From24(index);
+                          } else {
+                            _hour12 = index + 1;
+                          }
                           _syncManualField();
                         });
                       },
                       children: List.generate(
-                        12,
+                        _use24Hour ? 24 : 12,
                         (index) => Center(
-                          child: Text('${index + 1}'.padLeft(2, '0')),
+                          child: Text(
+                            '${_use24Hour ? index : index + 1}'.padLeft(2, '0'),
+                          ),
                         ),
                       ),
                     ),
@@ -190,34 +217,35 @@ class _PickupTimePickerSheetState extends State<PickupTimePickerSheet> {
                           .toList(),
                     ),
                   ),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _PeriodChip(
-                          label: l10n.t('pickup_time_am'),
-                          selected: !_pm,
-                          onTap: () {
-                            setState(() {
-                              _pm = false;
-                              _syncManualField();
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        _PeriodChip(
-                          label: l10n.t('pickup_time_pm'),
-                          selected: _pm,
-                          onTap: () {
-                            setState(() {
-                              _pm = true;
-                              _syncManualField();
-                            });
-                          },
-                        ),
-                      ],
+                  if (!_use24Hour)
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _PeriodChip(
+                            label: l10n.t('pickup_time_am'),
+                            selected: !_pm,
+                            onTap: () {
+                              setState(() {
+                                _pm = false;
+                                _syncManualField();
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          _PeriodChip(
+                            label: l10n.t('pickup_time_pm'),
+                            selected: _pm,
+                            onTap: () {
+                              setState(() {
+                                _pm = true;
+                                _syncManualField();
+                              });
+                            },
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -229,17 +257,21 @@ class _PickupTimePickerSheetState extends State<PickupTimePickerSheet> {
             const SizedBox(height: 4),
             TextField(
               controller: _manualController,
-              decoration: WizardCompact.inputDecoration(
-                label: l10n.t('pickup_time'),
-                hint: PickupTimeFormat.formatDisplay(
-                  hour24: 9,
-                  minute: 30,
-                  amLabel: l10n.t('pickup_time_am'),
-                  pmLabel: l10n.t('pickup_time_pm'),
-                ),
-              ).copyWith(
-                errorText: _manualErrorKey != null ? l10n.t(_manualErrorKey!) : null,
-              ),
+              decoration:
+                  WizardCompact.inputDecoration(
+                    label: l10n.t('pickup_time'),
+                    hint: PickupTimeFormat.formatDisplay(
+                      hour24: 9,
+                      minute: 30,
+                      amLabel: l10n.t('pickup_time_am'),
+                      pmLabel: l10n.t('pickup_time_pm'),
+                      use24Hour: _use24Hour,
+                    ),
+                  ).copyWith(
+                    errorText: _manualErrorKey != null
+                        ? l10n.t(_manualErrorKey!)
+                        : null,
+                  ),
               onSubmitted: (_) => _applyManualInput(),
               onChanged: (_) {
                 if (_manualErrorKey != null) {

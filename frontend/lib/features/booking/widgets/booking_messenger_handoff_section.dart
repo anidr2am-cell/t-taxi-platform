@@ -127,7 +127,7 @@ class _BookingMessengerHandoffSectionState
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text(context.l10n.t('close')),
+              child: Text(context.l10n.t('support_close_button')),
             ),
           ],
         ),

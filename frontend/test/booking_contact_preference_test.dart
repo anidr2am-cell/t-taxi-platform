@@ -182,7 +182,9 @@ void main() {
         final field = tester.widget<TextField>(
           find.byKey(const ValueKey('booking-contact-phone')),
         );
-        expect(field.decoration?.helperMaxLines, 4);
+        expect(field.decoration?.helperText, isNull);
+        expect(tester.widget<Text>(helper).maxLines, isNull);
+        expect(tester.getSize(helper).width, greaterThan(250));
       },
     );
   }

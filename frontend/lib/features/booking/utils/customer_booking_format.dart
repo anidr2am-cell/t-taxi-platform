@@ -3,11 +3,11 @@ import '../../../l10n/app_localizations.dart';
 class CustomerBookingFormat {
   static String vehicle(AppLocalizations l10n, String? code) {
     if (code == null) return '-';
-    if (l10n.languageCode != 'ru') return code;
     final key = 'cx_vehicle_${code.toUpperCase()}';
     final translated = l10n.t(key);
     return translated == key ? code : translated;
   }
+
   CustomerBookingFormat._();
 
   static String money(num amount, String currency) {
