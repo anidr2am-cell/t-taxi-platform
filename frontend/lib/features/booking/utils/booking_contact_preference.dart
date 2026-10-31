@@ -44,6 +44,7 @@ class BookingContactPreference {
     'th' => '+66',
     'ja' => '+81',
     'zh' => '+86',
+    'ru' => '+7',
     _ => '+66',
   };
 

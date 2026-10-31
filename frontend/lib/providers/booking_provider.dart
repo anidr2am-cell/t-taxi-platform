@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../config/app_config.dart';
+import '../l10n/app_localizations.dart';
 
 class BookingState extends ChangeNotifier {
   ServiceType? serviceType;
@@ -247,7 +248,7 @@ class LocaleState extends ChangeNotifier {
 
   LocaleState({Uri? entryUri}) {
     final code = entryUri?.queryParameters['lang'];
-    if (const ['ko', 'en', 'zh', 'ja', 'th'].contains(code)) {
+    if (AppLocalizations.customerSupportedLanguages.contains(code)) {
       _languageCode = code!;
     }
   }
