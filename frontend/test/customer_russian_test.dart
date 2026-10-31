@@ -16,7 +16,7 @@ void main() {
     expect(AppLocalizations.supportedLanguages, isNot(contains('ru')));
     expect(AppLocalizations.languageNames['ru'], 'Русский');
     expect(CustomerBookingFormat.vehicle(AppLocalizations('ru'), 'SEDAN'), 'Седан');
-    expect(CustomerBookingFormat.vehicle(AppLocalizations('en'), 'SEDAN'), 'SEDAN');
+    expect(CustomerBookingFormat.vehicle(AppLocalizations('en'), 'SEDAN'), 'Sedan');
     expect(CustomerBookingFormat.pickupDateTime(AppLocalizations('ru'), '2026-11-10T23:40:00+07:00'), '10.11.2026 23:40');
     expect(
       LocaleState(

@@ -123,11 +123,11 @@ class _BookingContactPreferenceSectionState
         const SizedBox(height: AppTokens.spaceMd),
         if (showsPhone) ...[
           Text(
-            isKakao
+            '${BookingContactPreference.requiresPhone(type) ? '${l10n.t('field_required')} ' : ''}${isKakao
                 ? l10n.t('booking_contact_kakao_phone_required')
                 : (isPhone || BookingContactPreference.requiresPhone(type))
                 ? l10n.t('booking_contact_phone_required')
-                : l10n.t('booking_contact_emergency_phone_optional'),
+                : l10n.t('booking_contact_emergency_phone_optional')}',
             style: const TextStyle(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: AppTokens.spaceXs),
@@ -139,7 +139,13 @@ class _BookingContactPreferenceSectionState
                 child: DropdownButtonFormField<String>(
                   key: const ValueKey('booking-phone-dial-code'),
                   initialValue:
-                      const ['+66', '+82', '+81', '+86', '+7'].contains(dialCode)
+                      const [
+                        '+66',
+                        '+82',
+                        '+81',
+                        '+86',
+                        '+7',
+                      ].contains(dialCode)
                       ? dialCode
                       : '+66',
                   items: const ['+66', '+82', '+81', '+86', '+7']
@@ -159,23 +165,24 @@ class _BookingContactPreferenceSectionState
                   key: const ValueKey('booking-contact-phone'),
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: BookingContactPreference.requiresPhone(type)
-                        ? '${l10n.t('field_required')} ${l10n.t('phone')}'
-                        : l10n.t('phone'),
-                    hintText: l10n.t('booking_contact_phone_hint'),
-                    helperText: isKakao
-                        ? l10n.t('booking_contact_kakao_phone_help')
-                        : type == BookingContactPreference.line
-                        ? l10n.t('contact_phone_required_help')
-                        : null,
-                    helperMaxLines: 4,
-                  ),
+                  decoration: InputDecoration(labelText: l10n.t('phone')),
                   onChanged: widget.onPhoneChanged,
                 ),
               ),
             ],
           ),
+          const SizedBox(height: AppTokens.spaceXs),
+          Text(l10n.t('booking_contact_phone_hint')),
+          if (isKakao || type == BookingContactPreference.line) ...[
+            const SizedBox(height: AppTokens.spaceXs),
+            Text(
+              l10n.t(
+                isKakao
+                    ? 'booking_contact_kakao_phone_help'
+                    : 'contact_phone_required_help',
+              ),
+            ),
+          ],
         ],
         if (!isPhone) ...[
           if (showsPhone) const SizedBox(height: AppTokens.spaceMd),

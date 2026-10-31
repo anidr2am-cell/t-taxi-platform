@@ -55,21 +55,23 @@ class CustomerPaymentInstructionsCard extends StatelessWidget {
             Text(l10n.t('payment_details_contact_admin'))
           else if (currency == 'KRW') ...[
             AppUi.summaryRow(
-              label: l10n.t('admin_settings_bank_name'),
+              label: l10n.t('customer_payment_bank_name'),
               value: '${instructions['bankName'] ?? '-'}',
             ),
             AppUi.summaryRow(
-              label: l10n.t('admin_settings_account_name'),
+              label: l10n.t('customer_payment_account_holder'),
               value: '${instructions['accountName'] ?? '-'}',
             ),
             AppUi.summaryRow(
-              label: l10n.t('admin_settings_account_number'),
+              label: l10n.t('customer_payment_account_number'),
               value: '${instructions['accountNumber'] ?? '-'}',
             ),
           ] else if (qrUrl.isNotEmpty)
             Center(
               child: Image.network(
-                qrUrl.startsWith('http') ? qrUrl : '${AppConfig.apiBaseUrl}$qrUrl',
+                qrUrl.startsWith('http')
+                    ? qrUrl
+                    : '${AppConfig.apiBaseUrl}$qrUrl',
                 width: 220,
                 height: 220,
                 fit: BoxFit.contain,

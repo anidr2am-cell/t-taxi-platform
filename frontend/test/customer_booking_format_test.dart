@@ -40,7 +40,7 @@ void main() {
     );
     expect(
       CustomerBookingFormat.paymentMethod(l10n, 'FUTURE_PROVIDER'),
-      'Payment method unavailable',
+      'Please confirm the payment method',
     );
     expect(
       CustomerBookingFormat.paymentMethod(l10n, 'FUTURE_PROVIDER'),
