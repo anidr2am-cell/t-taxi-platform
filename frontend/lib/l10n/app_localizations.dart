@@ -9719,7 +9719,7 @@ class AppLocalizations {
       "admin_email_confirm": "확인",
       "admin_email_close": "닫기",
       "admin_email_confirm_retry":
-          "미수락 증거를 확인했습니다. 같은 수신자·본문의 메일 1건만 복구합니다. 예약당 최대 2통 정책은 유지됩니다.",
+          "미수락 증거를 확인했습니다. 같은 수신자·본문의 메일 1건만 복구합니다. 예약당 최대 3통 정책은 유지됩니다.",
       "admin_email_confirm_record": "이 작업은 확인 기록만 남깁니다. 메일은 발송하지 않습니다.",
       "admin_email_RETRY_APPROVED": "미수락 메일 승인 복구",
       "admin_email_ACCEPTED_CONFIRMED": "공급자 수락 확인",
@@ -9758,7 +9758,7 @@ class AppLocalizations {
       "admin_email_confirm": "Confirm",
       "admin_email_close": "Close",
       "admin_email_confirm_retry":
-          "I verified non-acceptance. Recover this email once with the same recipient and content. The two-email booking limit remains.",
+          "I verified non-acceptance. Recover this email once with the same recipient and content. The three-email booking limit remains.",
       "admin_email_confirm_record":
           "This only records your review. No email will be sent.",
       "admin_email_RETRY_APPROVED": "Approve recovery",
@@ -9796,7 +9796,7 @@ class AppLocalizations {
       "admin_email_cancel": "取消",
       "admin_email_confirm": "确认",
       "admin_email_close": "关闭",
-      "admin_email_confirm_retry": "已核实未受理证据。仅恢复一次相同收件人和正文的邮件，每笔预约最多两封的限制不变。",
+      "admin_email_confirm_retry": "已核实未受理证据。仅恢复一次相同收件人和正文的邮件，每笔预约最多三封的限制不变。",
       "admin_email_confirm_record": "此操作仅保存确认记录，不发送邮件。",
       "admin_email_RETRY_APPROVED": "批准恢复未受理邮件",
       "admin_email_ACCEPTED_CONFIRMED": "已确认服务商受理",
@@ -9834,7 +9834,7 @@ class AppLocalizations {
       "admin_email_confirm": "確認",
       "admin_email_close": "閉じる",
       "admin_email_confirm_retry":
-          "未受理の証拠を確認しました。同じ宛先・本文のメールを1回だけ復旧します。予約ごとに最大2通の制限は維持されます。",
+          "未受理の証拠を確認しました。同じ宛先・本文のメールを1回だけ復旧します。予約ごとに最大3通の制限は維持されます。",
       "admin_email_confirm_record": "確認記録のみ保存します。メールは送信しません。",
       "admin_email_RETRY_APPROVED": "未受理メールの復旧を承認",
       "admin_email_ACCEPTED_CONFIRMED": "配信事業者の受理を確認",
@@ -9873,7 +9873,7 @@ class AppLocalizations {
       "admin_email_confirm": "ยืนยัน",
       "admin_email_close": "ปิด",
       "admin_email_confirm_retry":
-          "ตรวจสอบหลักฐานแล้วว่าไม่ได้รับการยอมรับ กู้คืนอีเมลเดิมหนึ่งครั้งโดยใช้ผู้รับและเนื้อหาเดิม ยังคงจำกัดไม่เกินสองฉบับต่อการจอง",
+          "ตรวจสอบหลักฐานแล้วว่าไม่ได้รับการยอมรับ กู้คืนอีเมลเดิมหนึ่งครั้งโดยใช้ผู้รับและเนื้อหาเดิม ยังคงจำกัดไม่เกินสามฉบับต่อการจอง",
       "admin_email_confirm_record": "บันทึกผลตรวจสอบเท่านั้น ไม่มีการส่งอีเมล",
       "admin_email_RETRY_APPROVED": "อนุมัติกู้คืนอีเมล",
       "admin_email_ACCEPTED_CONFIRMED": "ยืนยันว่าผู้ให้บริการรับแล้ว",

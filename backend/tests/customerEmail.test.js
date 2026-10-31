@@ -48,6 +48,22 @@ test('repository selects booking locale and amount without selecting contact fie
  const Repo=require('../src/repositories/notification.repository');let sql='';const repo=new Repo({async query(q){sql=q;return [[{id:1,payload:'{}'}]]}});await repo.findById(1);assert(sql.includes('b.metadata AS booking_metadata'));assert(sql.includes('b.total_amount AS booking_total_amount'));assert(!sql.includes('customer_phone'));assert(!sql.includes('driver_phone'));
 });
 
+for(const locale of ['ko','en','th','ja','zh'])test(`assignment confirmation includes allowlisted driver/vehicle details only: ${locale}`,()=>{
+ const r=renderCustomerEmail({...base,type:'DRIVER_ASSIGNED',booking_metadata:{locale},booking_vehicle_type:'SEDAN',
+  assigned_vehicle_type:'SUV',assigned_driver_name:'QA Driver <test>',assigned_vehicle_model:'QA Fortuner',assigned_vehicle_color:'White',assigned_vehicle_plate:'QA-1234',
+  driver_phone:'PRIVATE_PHONE',driver_email:'PRIVATE_EMAIL',customer_phone:'PRIVATE_CUSTOMER',payload:{driverPhone:'PRIVATE_PAYLOAD'}});
+ const t=copy[locale];assert.equal(r.subject,t.messages.DRIVER_ASSIGNED.subject);
+ for(const value of [t.driverName,t.vehicleModel,t.vehicleColor,t.vehiclePlate,t.assignmentNote,t.vehicles.SUV,'QA Driver <test>','QA Fortuner','White','QA-1234'])assert(r.text.includes(value));
+ assert(r.html.includes('QA Driver &lt;test&gt;'));assert(!r.text.includes('PRIVATE_'));assert(!r.html.includes('PRIVATE_'));assert(!r.receiptPdfModel);
+ const missing=renderCustomerEmail({...base,type:'DRIVER_ASSIGNED',booking_metadata:{locale}});assert(missing.text.includes(t.assignmentMissing));assert(!missing.text.includes('undefined'));assert(!missing.text.includes(': null'));
+});
+
+test('assignment details come from the active assignment and its vehicle, never driver contacts',async()=>{
+ const Repo=require('../src/repositories/notification.repository');let sql='';await new Repo({async query(q){sql=q;return [[{id:1,payload:'{}'}]]}}).findById(1);
+ for(const part of ['x.is_active=1','x.deleted_at IS NULL','dv.id=ba.driver_vehicle_id','dr.name AS assigned_driver_name','dv.plate_number AS assigned_vehicle_plate'])assert(sql.includes(part));
+ assert(!/dr\.(phone|email)/.test(sql));
+});
+
 test('every actual customer event type has a translated email in all five locales',()=>{
  const source=fs.readFileSync(path.join(__dirname,'../src/services/notification.service.js'),'utf8');
  const types=[...source.matchAll(/addCustomer\(NOTIFICATION_TYPES\.([A-Z_]+)\)/g)].map(x=>x[1]);
