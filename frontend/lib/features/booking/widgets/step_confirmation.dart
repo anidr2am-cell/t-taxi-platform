@@ -164,7 +164,7 @@ class StepConfirmation extends StatelessWidget {
               ),
             AppUi.summaryRow(
               label: l10n.t('vehicle'),
-              value: state.selectedVehicle ?? '-',
+              value: CustomerBookingFormat.vehicle(l10n, state.selectedVehicle),
             ),
           ],
         ),
