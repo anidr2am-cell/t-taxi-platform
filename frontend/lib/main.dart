@@ -6,6 +6,9 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/navigation/app_navigator.dart';
+import 'core/seo/booking_search_metadata.dart';
+import 'core/seo/booking_search_metadata_bridge_stub.dart'
+    if (dart.library.js_interop) 'core/seo/booking_search_metadata_bridge_web.dart';
 import 'core/analytics/analytics_consent_provider.dart';
 import 'core/analytics/ga4_booking_analytics_sink.dart';
 import 'core/analytics/ga4_bridge_stub.dart'
@@ -47,6 +50,11 @@ import 'widgets/analytics_consent_banner.dart';
 
 const bool _enableE2ERoutes = bool.fromEnvironment('TRIDE_ENABLE_E2E_ROUTES');
 final Ga4RouteObserver _ga4RouteObserver = Ga4RouteObserver();
+final BookingSearchMetadataObserver _bookingSearchMetadataObserver =
+    BookingSearchMetadataObserver(
+      initialPath: kIsWeb ? Uri.base.path : '',
+      onMetadataChanged: BookingSearchMetadataBridge.apply,
+    );
 final Map<String, WidgetBuilder> _landingUtilityRoutes = {
   '/booking/lookup': (_) => GuestBookingLookupPage(
     enableCustomerTools: true,
@@ -107,11 +115,19 @@ class TTaxiApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final locale = context.watch<LocaleState>();
+    if (kIsWeb) {
+      _bookingSearchMetadataObserver.setLanguage(locale.languageCode);
+    }
 
     return MaterialApp(
       navigatorKey: appNavigatorKey,
-      navigatorObservers: [_ga4RouteObserver],
-      title: 'T-Rider',
+      navigatorObservers: [
+        _ga4RouteObserver,
+        if (kIsWeb) _bookingSearchMetadataObserver,
+      ],
+      onGenerateTitle: (_) => kIsWeb
+          ? _bookingSearchMetadataObserver.metadata?.title ?? 'T-Rider'
+          : 'T-Rider',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       builder: (context, child) {
