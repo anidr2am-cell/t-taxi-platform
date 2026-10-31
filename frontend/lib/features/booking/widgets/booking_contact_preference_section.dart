@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
-import '../../auth/widgets/social_brand_icons.dart';
+import 'booking_messenger_icon.dart';
 import '../models/booking_wizard_state.dart';
 import '../utils/booking_contact_preference.dart';
 
@@ -63,27 +63,7 @@ class _BookingContactPreferenceSectionState
   String _label(AppLocalizations l10n, String type) =>
       l10n.t(BookingContactPreference.labelKey(type));
 
-  Widget _icon(String type) => switch (type) {
-    BookingContactPreference.kakao => const KakaoBrandIcon(
-      size: 24,
-      style: SocialBrandIconStyle.appIcon,
-    ),
-    BookingContactPreference.line => const LineBrandIcon(
-      size: 24,
-      style: SocialBrandIconStyle.appIcon,
-    ),
-    BookingContactPreference.whatsapp => Image.asset(
-      'assets/images/brands/whatsapp_app_icon.png',
-      width: 24,
-      height: 24,
-      fit: BoxFit.contain,
-    ),
-    BookingContactPreference.telegram => const Icon(
-      Icons.send_outlined,
-      color: AppTokens.primary,
-    ),
-    _ => const Icon(Icons.chat_outlined, color: AppTokens.primary),
-  };
+  Widget _icon(String type) => bookingMessengerIcon(type);
 
   @override
   Widget build(BuildContext context) {
