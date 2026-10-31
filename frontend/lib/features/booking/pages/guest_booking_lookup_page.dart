@@ -751,37 +751,6 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         ),
         const SizedBox(height: AppTokens.spaceMd),
         _actionSummary(result),
-        if (BookingStatusDisplay.customerGuidance(
-              l10n,
-              result.status,
-              reassignmentInProgress: result.reassignmentInProgress,
-            ) !=
-            null) ...[
-          const SizedBox(height: AppTokens.spaceMd),
-          AppUi.surfaceCard(
-            backgroundColor: AppTokens.infoLight,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.info_outline, color: AppTokens.info, size: 22),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    BookingStatusDisplay.customerGuidance(
-                      l10n,
-                      result.status,
-                      reassignmentInProgress: result.reassignmentInProgress,
-                    )!,
-                    style: const TextStyle(
-                      color: AppTokens.textSecondary,
-                      height: 1.45,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
         const SizedBox(height: AppTokens.spaceMd),
         GuestBookingCancelSection(
           booking: result,
@@ -978,8 +947,14 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     if (driverName == null || driverName.isEmpty) {
       return l10n.t('customer_driver_pending');
     }
+    final vehicleType = result.vehicleType?.trim();
     final vehicle =
-        [result.vehicleType, result.vehicleColor, result.vehiclePlateNumber]
+        [
+              if (vehicleType != null && vehicleType.isNotEmpty)
+                CustomerBookingFormat.vehicle(l10n, vehicleType),
+              result.vehicleColor,
+              result.vehiclePlateNumber,
+            ]
             .whereType<String>()
             .map((item) => item.trim())
             .where((item) => item.isNotEmpty)
