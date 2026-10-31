@@ -57,6 +57,16 @@ test('airport and localized golf guides preset the correct service without chang
  assert.match(guide,/<aside class="cta"><strong>✈️ Airport pickup/);
  assert.ok(guide.includes('address-based distance charge'));
  assert.doesNotMatch(guide,/with no extra charges/);
+ const checklist=read(blog,'thailand-airport-taxi-booking-guide-en');
+ const checklistLinks=[...checklist.matchAll(/href="(\/booking[^\"]*)"/g)].map(m=>new URL(m[1].replaceAll('&amp;','&'),'https://trider.taxi'));
+ assert.equal(checklistLinks.length,3);
+ for(const url of checklistLinks){assert.equal(url.searchParams.get('lang'),'en');assert.equal(url.searchParams.has('service'),false);assert.equal(url.searchParams.has('utm_source'),false);}
+ assert.match(checklist,/Airport pickup: airport to accommodation/);
+ assert.match(checklist,/Airport drop-off: accommodation to airport/);
+ assert.ok(checklist.includes('https://wa.me/66815693445'));
+ assert.ok(checklist.includes('/blog/pattaya-to-airport-transfer-en'));
+ assert.match(checklist,/final total/);
+ assert.doesNotMatch(checklist,/child seat|unlimited waiting|with no extra charges/i);
  const topicPosts=posts.filter(p=>p.category==='golf'||p.translationKey==='pattaya-to-airport-transfer');
  const golfLabels={ko:/골프장/,en:/Golf course/,ja:/ゴルフ場/,zh:/高尔夫球场/,ru:/гольфа/};
  const dropoffLabels={ko:/공항 샌딩/,en:/to the airport/,ja:/空港への/,zh:/送机/,ru:/в аэропорт/};
