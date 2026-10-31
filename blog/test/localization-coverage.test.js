@@ -41,17 +41,27 @@ test('every Korean topic has exactly one English, Japanese, Chinese and Russian 
   }
  }
 });
-test('Russian pages have Russian navigation and an explicit English booking transition',()=>{
+test('Russian articles, lists and categories open the Russian customer booking form',()=>{
  const list=read('lang/ru');
  assert.ok(list.includes('Русский'));
- for(const post of posts.filter(p=>p.data.lang==='ru')){
-  const html=read(post.data.slug);
+ const russianPosts=posts.filter(p=>p.data.lang==='ru');
+ const paths=[...russianPosts.map(p=>p.data.slug),'lang/ru',...['airport','golf','travel','faq'].map(c=>'lang/ru/category/'+c)];
+ for(const pagePath of paths){
+  const html=read(pagePath);
   assert.ok(html.includes('<html lang="ru">'));
-  assert.ok(html.includes('Форма бронирования откроется на английском'));
-  assert.ok(html.includes('Забронировать на английском'));
-  assert.doesNotMatch(html,/href="\/booking[^"\s]*lang=ru/);
-  assert.ok(list.includes(`/blog/${post.data.slug}`));
+  assert.ok(html.includes('Форма бронирования доступна на русском'));
+  assert.ok(html.includes('Забронировать на русском'));
+  assert.ok(html.includes('Язык общения с поддержкой уточняйте при обращении'));
+  const links=[...html.matchAll(/href="(\/booking[^"\s]*)"/g)];
+  assert.ok(links.length>0,pagePath);
+  for(const [,href] of links)assert.equal(new URL(href.replaceAll('&amp;','&'),'https://trider.taxi').searchParams.get('lang'),'ru',pagePath);
+  assert.doesNotMatch(html,/на английском|форма или сотрудники работают на русском языке/i);
  }
+ for(const post of russianPosts)assert.ok(list.includes(`/blog/${post.data.slug}`));
+ const faq=read('trider-airport-transfer-faq-ru');
+ const schemas=[...faq.matchAll(/<script type="application\/ld\+json">([^<]+)<\/script>/g)].map(m=>JSON.parse(m[1]));
+ const answer=schemas.find(s=>s['@type']==='FAQPage').mainEntity.find(q=>q.name==='Когда и на каком языке можно забронировать?')?.acceptedAnswer?.text;
+ assert.ok(answer?.includes('на русском'), 'FAQ structured answer must agree with the Russian form');
  const sitemap=fs.readFileSync(path.join(out,'sitemap-blog.xml'),'utf8');
  for(const post of posts)assert.ok(sitemap.includes(`<loc>https://trider.taxi/blog/${post.data.slug}</loc>`));
  assert.ok(sitemap.includes('hreflang="ru"'));
