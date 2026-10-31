@@ -127,7 +127,7 @@ class TTaxiApp extends StatelessWidget {
         );
       },
       locale: Locale(locale.languageCode),
-      supportedLocales: AppLocalizations.supportedLanguages
+      supportedLocales: AppLocalizations.customerSupportedLanguages
           .map((code) => Locale(code))
           .toList(),
       localizationsDelegates: [

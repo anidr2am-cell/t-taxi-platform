@@ -78,7 +78,7 @@ class BookingCompleteReviewSection extends StatelessWidget {
               if (review.selectedVehicle != null)
                 AppUi.summaryRow(
                   label: l10n.t('vehicle'),
-                  value: review.selectedVehicle!,
+                  value: CustomerBookingFormat.vehicle(l10n, review.selectedVehicle),
                 ),
               if (review.customerName.trim().isNotEmpty)
                 AppUi.summaryRow(

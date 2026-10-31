@@ -240,7 +240,7 @@ class _AdminScreenState extends State<AdminScreen> {
                 onPressed: _logout,
                 icon: const Icon(Icons.logout),
               ),
-            const LanguageSelector(),
+            const LanguageSelector(supportedLanguages: AppLocalizations.supportedLanguages),
           ],
         ),
         drawer: compactNav

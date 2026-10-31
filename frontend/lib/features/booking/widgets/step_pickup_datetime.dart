@@ -747,68 +747,12 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
 
 class _FlightPickupConflictCopy {
   _FlightPickupConflictCopy(this.languageCode);
-
   final String languageCode;
-
-  String warning(int minutes) {
-    switch (languageCode) {
-      case 'ko':
-        return '입력하신 픽업 시간과 항공편 도착 예정 시간이 $minutes분 차이납니다.';
-      case 'zh':
-        return '您输入的接送时间与航班预计到达时间相差 $minutes 分钟。';
-      case 'ja':
-        return '入力したピックアップ時間とフライト到着予定時間が $minutes 分異なります。';
-      case 'th':
-        return 'เวลารับที่คุณกรอกกับเวลาถึงตามกำหนดของเที่ยวบินต่างกัน $minutes นาที';
-      default:
-        return 'Your pickup time and the flight scheduled arrival differ by $minutes minutes.';
-    }
-  }
-
-  String get useManualTime {
-    switch (languageCode) {
-      case 'ko':
-        return '직접 입력한 시간 사용';
-      case 'zh':
-        return '使用我输入的时间';
-      case 'ja':
-        return '入力した時間を使用';
-      case 'th':
-        return 'ใช้เวลาที่กรอกเอง';
-      default:
-        return 'Keep my entered time';
-    }
-  }
-
-  String get useFlightTime {
-    switch (languageCode) {
-      case 'ko':
-        return '항공편 시간 기준으로 변경';
-      case 'zh':
-        return '按航班到达时间更改';
-      case 'ja':
-        return 'フライト到着時間に変更';
-      case 'th':
-        return 'เปลี่ยนตามเวลาเที่ยวบิน';
-      default:
-        return 'Use flight arrival time';
-    }
-  }
-
-  String get finalPickupLabel {
-    switch (languageCode) {
-      case 'ko':
-        return '최종 픽업 요청시간';
-      case 'zh':
-        return '最终接送请求时间';
-      case 'ja':
-        return '最終ピックアップ希望時間';
-      case 'th':
-        return 'เวลารับสุดท้ายที่ขอ';
-      default:
-        return 'Final pickup request time';
-    }
-  }
+  AppLocalizations get _l10n => AppLocalizations(languageCode);
+  String warning(int minutes) => _l10n.t('flight_pickup_conflict_warning').replaceAll('{minutes}', '$minutes');
+  String get useManualTime => _l10n.t('flight_pickup_keep_manual');
+  String get useFlightTime => _l10n.t('flight_pickup_use_arrival');
+  String get finalPickupLabel => _l10n.t('flight_pickup_final_time');
 }
 
 class _PickerRow extends StatelessWidget {

@@ -62,7 +62,7 @@ class BookingRepository {
       const [users] = await conn.query('SELECT locale FROM users WHERE id = ?', [userId]);
       locale = requestedLocale || users[0]?.locale;
     }
-    locale = LOCALES.includes(locale) ? locale : 'ko';
+    locale = [...LOCALES, 'ru'].includes(locale) ? locale : 'ko';
     if (userId) await conn.query('UPDATE users SET locale = ? WHERE id = ?', [locale, userId]);
     return locale;
   }

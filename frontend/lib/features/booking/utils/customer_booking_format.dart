@@ -1,6 +1,13 @@
 import '../../../l10n/app_localizations.dart';
 
 class CustomerBookingFormat {
+  static String vehicle(AppLocalizations l10n, String? code) {
+    if (code == null) return '-';
+    if (l10n.languageCode != 'ru') return code;
+    final key = 'cx_vehicle_${code.toUpperCase()}';
+    final translated = l10n.t(key);
+    return translated == key ? code : translated;
+  }
   CustomerBookingFormat._();
 
   static String money(num amount, String currency) {
@@ -79,6 +86,9 @@ class CustomerBookingFormat {
 
   static String _formatDateTime(String languageCode, DateTime value) {
     final lang = languageCode.toLowerCase();
+    if (lang == 'ru') {
+      return '${_two(value.day)}.${_two(value.month)}.${value.year} ${_two(value.hour)}:${_two(value.minute)}';
+    }
     if (lang == 'ko') {
       final period = value.hour < 12 ? '오전' : '오후';
       final hour = value.hour % 12 == 0 ? 12 : value.hour % 12;

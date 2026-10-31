@@ -44,6 +44,7 @@ class BookingContactPreference {
     'th' => '+66',
     'ja' => '+81',
     'zh' => '+86',
+    'ru' => '+7',
     _ => '+66',
   };
 
@@ -127,6 +128,9 @@ class BookingContactPreference {
         countryDialCodes[dialCode.trim().toUpperCase()] ?? dialCode;
     var dial = resolvedDial.replaceAll(RegExp(r'\D'), '');
     var local = localNumber.replaceAll(RegExp(r'\D'), '');
+    if (dial == '7' && local.length == 11 && local.startsWith('8')) {
+      local = local.substring(1);
+    }
     if (local.startsWith('0')) local = local.substring(1);
     if (dial.isEmpty || local.isEmpty) return '';
     final normalized = '+$dial$local';

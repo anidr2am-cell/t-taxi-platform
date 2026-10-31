@@ -6,7 +6,9 @@ import 'language_name_label.dart';
 import 'package:provider/provider.dart';
 
 class LanguageSelector extends StatelessWidget {
-  const LanguageSelector({super.key});
+  const LanguageSelector({super.key, this.supportedLanguages = AppLocalizations.customerSupportedLanguages});
+
+  final List<String> supportedLanguages;
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +17,7 @@ class LanguageSelector extends StatelessWidget {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.language, color: Colors.white),
       onSelected: (code) => context.read<LocaleState>().setLanguage(code),
-      itemBuilder: (context) => AppLocalizations.supportedLanguages
+      itemBuilder: (context) => supportedLanguages
           .map((code) => PopupMenuItem(
                 value: code,
                 child: Row(

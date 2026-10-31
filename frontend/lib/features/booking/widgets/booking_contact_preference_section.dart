@@ -139,10 +139,10 @@ class _BookingContactPreferenceSectionState
                 child: DropdownButtonFormField<String>(
                   key: const ValueKey('booking-phone-dial-code'),
                   initialValue:
-                      const ['+66', '+82', '+81', '+86'].contains(dialCode)
+                      const ['+66', '+82', '+81', '+86', '+7'].contains(dialCode)
                       ? dialCode
                       : '+66',
-                  items: const ['+66', '+82', '+81', '+86']
+                  items: const ['+66', '+82', '+81', '+86', '+7']
                       .map(
                         (value) =>
                             DropdownMenuItem(value: value, child: Text(value)),

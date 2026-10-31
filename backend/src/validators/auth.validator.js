@@ -1,6 +1,6 @@
 const Joi = require('joi');
 
-const localeSchema = Joi.string().valid('ko', 'en', 'th', 'ja', 'zh');
+const localeSchema = Joi.string().valid('ko', 'en', 'th', 'ja', 'zh', 'ru');
 
 const registerSchema = Joi.object({
   email: Joi.string().trim().lowercase().email().required(),
