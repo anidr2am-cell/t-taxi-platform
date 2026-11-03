@@ -32,6 +32,18 @@ class AdminReceiptEmailRepository {
       updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,
       [record.choice==='PAID'?'PAID':row.payment_status,JSON.stringify(record),actorId,row.id]);
   }
+  async approveBookingEmail(conn,row,email,record) {
+    // Lock order is booking -> deliveries, the same as claimCustomerEmail.
+    await conn.query(`UPDATE notification_deliveries d JOIN notifications n ON n.id=d.notification_id LEFT JOIN users u ON u.id=n.user_id
+      SET d.delivery_status='SKIPPED',d.last_error='EMAIL_POLICY_SUPERSEDED_BY_ADMIN_BOOKING'
+      WHERE n.booking_id=? AND n.type='BOOKING_CREATED' AND d.channel='EMAIL' AND d.id<>?
+        AND COALESCE(n.audience_role,IF(n.recipient_type='GUEST_BOOKING','CUSTOMER',u.role))='CUSTOMER'
+        AND d.delivery_status<>'DELIVERED'
+        AND NOT EXISTS(SELECT 1 FROM notification_email_attempts a WHERE a.delivery_id=d.id)`,[row.id,record.deliveryId]);
+    await conn.query(`UPDATE bookings SET customer_email=?,metadata=JSON_SET(COALESCE(metadata,JSON_OBJECT()),
+      '$.adminBookingConfirmationEmail',JSON_EXTRACT(?,'$')),updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+      [email,JSON.stringify(record),record.actorUserId,row.id]);
+  }
   async approve(conn,row,email,record) {
     await conn.query(`UPDATE bookings SET customer_email=?,metadata=JSON_SET(COALESCE(metadata,JSON_OBJECT()),
       '$.adminReceiptEmail',JSON_EXTRACT(?,'$')) WHERE id=?`,[email,JSON.stringify(record),row.id]);

@@ -19,6 +19,11 @@ class AppLocalizations {
 
   static final Map<String, Map<String, String>> _translations = {
     'en': {
+      "admin_booking_email_title": "Booking email",
+      "admin_booking_email_intro": "Send the booking email missed because no email address was provided. Check the address and preview before approving one send. Previewing does not save or send anything.",
+      "admin_booking_email_confirm_title": "Confirm booking email",
+      "admin_booking_email_confirm_body": "Save {email} on this booking and send the previewed booking email once. Please check the address.",
+      "admin_booking_email_blocked": "Already sent or delivery needs review. Check the email review list. After the trip, use the receipt / statement email.",
       "admin_driver_brief_requests": "Customer requests",
       "admin_driver_brief_female": "Female driver requested",
       "admin_driver_finance_short_amounts": "Customer total: {total} · Collect: {collect}\nCompany commission: {commission}\nDriver receipt: {receipt} · Trip earnings: {income}",
@@ -2147,6 +2152,11 @@ class AppLocalizations {
       'guest_lookup_booking_number_hint': 'TX202607010001',
     },
     'ko': {
+      "admin_booking_email_title": "예약 안내 이메일",
+      "admin_booking_email_intro": "이메일 누락으로 받지 못한 예약 안내를 보낼 수 있습니다. 주소와 내용을 미리 확인한 뒤 1회 발송을 승인하세요. 미리보기만으로는 저장·발송하지 않습니다.",
+      "admin_booking_email_confirm_title": "예약 안내 메일 발송 확인",
+      "admin_booking_email_confirm_body": "{email}을 이 예약에 저장하고 미리보기 내용으로 예약 안내 메일을 1회 발송합니다. 주소를 확인해 주세요.",
+      "admin_booking_email_blocked": "이미 발송했거나 발송 결과 확인이 필요한 예약입니다. 메일 확인 필요 목록을 확인하세요. 운행 종료 후에는 영수증·이용명세를 이용하세요.",
       "admin_driver_brief_requests": "고객 요청사항",
       "admin_driver_brief_female": "여성 기사 요청",
       "admin_driver_finance_short_amounts": "고객 요금: {total} · 고객 수금: {collect}\n회사 수수료: {commission}\n기사 수령액: {receipt} · 운행 수익: {income}",
@@ -3714,6 +3724,11 @@ class AppLocalizations {
       'customer_driver_location_retry': '다시 시도',
     },
     'zh': {
+      "admin_booking_email_title": "预约通知邮件",
+      "admin_booking_email_intro": "未填写邮箱而未收到预约通知时，可在此补发。确认地址并预览后批准一次发送。仅预览不会保存或发送。",
+      "admin_booking_email_confirm_title": "确认发送预约通知",
+      "admin_booking_email_confirm_body": "将 {email} 保存到本预约，并发送一次预览中的预约通知。请确认邮箱地址。",
+      "admin_booking_email_blocked": "已发送或需要核实投递结果，请查看待核实邮件列表。行程结束后请使用收据或行程明细邮件。",
       "admin_driver_brief_requests": "客户要求",
       "admin_driver_brief_female": "要求女司机",
       "admin_driver_finance_short_amounts": "客户费用：{total} · 向客户收取：{collect}\n公司佣金：{commission}\n司机收款：{receipt} · 行程收入：{income}",
@@ -4799,6 +4814,11 @@ class AppLocalizations {
       'thb': 'THB',
     },
     'ja': {
+      "admin_booking_email_title": "予約案内メール",
+      "admin_booking_email_intro": "メールアドレス未入力で届かなかった予約案内を送信できます。宛先とプレビューを確認し、1回の送信を承認してください。プレビューだけでは保存・送信されません。",
+      "admin_booking_email_confirm_title": "予約案内メールの送信確認",
+      "admin_booking_email_confirm_body": "{email} をこの予約に保存し、プレビューの予約案内を1回送信します。アドレスをご確認ください。",
+      "admin_booking_email_blocked": "送信済み、または送信結果の確認が必要です。メール確認一覧をご確認ください。運行終了後は領収書・利用明細メールをご利用ください。",
       "admin_driver_brief_requests": "お客様のご要望",
       "admin_driver_brief_female": "女性ドライバー希望",
       "admin_driver_finance_short_amounts": "お客様料金：{total} · 集金：{collect}\n会社手数料：{commission}\nドライバー受取額：{receipt} · 運行収益：{income}",
@@ -5922,6 +5942,11 @@ class AppLocalizations {
       'thb': 'THB',
     },
     'th': {
+      "admin_booking_email_title": "อีเมลแจ้งรายละเอียดการจอง",
+      "admin_booking_email_intro": "ส่งอีเมลการจองที่ลูกค้าไม่ได้รับเนื่องจากไม่ได้ระบุอีเมล ตรวจสอบที่อยู่และตัวอย่างก่อนอนุมัติส่งหนึ่งครั้ง การดูตัวอย่างจะไม่บันทึกหรือส่งอีเมล",
+      "admin_booking_email_confirm_title": "ยืนยันส่งอีเมลการจอง",
+      "admin_booking_email_confirm_body": "บันทึก {email} ในการจองนี้และส่งอีเมลตามตัวอย่างหนึ่งครั้ง กรุณาตรวจสอบที่อยู่อีเมล",
+      "admin_booking_email_blocked": "ส่งแล้วหรือยังต้องตรวจสอบผลการส่ง กรุณาดูรายการอีเมลที่ต้องตรวจสอบ หลังจบทริปให้ใช้อีเมลใบเสร็จหรือรายละเอียดการใช้บริการ",
       "admin_driver_brief_requests": "คำขอของลูกค้า",
       "admin_driver_brief_female": "ขอคนขับผู้หญิง",
       "admin_driver_finance_short_amounts": "ค่าบริการลูกค้า: {total} · เก็บจากลูกค้า: {collect}\nค่าคอมมิชชันบริษัท: {commission}\nยอดรับของคนขับ: {receipt} · รายได้หลังหักค่าป้าย: {income}",

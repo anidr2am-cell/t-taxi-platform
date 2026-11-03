@@ -186,6 +186,10 @@ class NotificationRepository {
       }
       let receiptMetadata=bookings[0].metadata;
       if(typeof receiptMetadata==='string'){try{receiptMetadata=JSON.parse(receiptMetadata)}catch{receiptMetadata={}}}
+      if(notification.type==='BOOKING_CREATED' && receiptMetadata?.adminBookingConfirmationEmail?.notificationId
+        && Number(receiptMetadata.adminBookingConfirmationEmail.notificationId)!==Number(notification.id)) {
+        await conn.commit();return {allowed:false,error:'EMAIL_POLICY_SUPERSEDED_BY_ADMIN_BOOKING'};
+      }
       if(receiptMetadata?.adminReceiptEmail?.notificationId && Number(receiptMetadata.adminReceiptEmail.notificationId)!==Number(notification.id)) {
         await conn.commit();return {allowed:false,error:'EMAIL_POLICY_SUPERSEDED_BY_ADMIN_RECEIPT'};
       }
