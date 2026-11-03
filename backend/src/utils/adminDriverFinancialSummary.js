@@ -9,7 +9,15 @@ function buildAdminDriverFinancialSummary(row, chargeItems = []) {
   let metadata = {};
   try { metadata = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : (row.metadata || {}); } catch (_) {}
   const method = String(metadata?.customerPayment?.method ?? row.payment_method ?? '').trim().toUpperCase();
-  const collectionMode = ['PAY_DRIVER','PAY_DRIVER_AT_DESTINATION'].includes(method) ? 'DRIVER_COLLECTS'
+  const requiresCollectionDecision = ['ONLINE','BANK_TRANSFER','CARD','CREDIT_CARD'].includes(method);
+  const decision = metadata.driverCollectionDecision;
+  const decisionValid = decision && Number(decision.amount) === Number(row.total_amount) && decision.currency === row.currency;
+  const collectionDecisionRequired = requiresCollectionDecision && !(decisionValid &&
+    (decision.choice === 'PAID' && row.payment_status === 'PAID' ||
+      decision.choice === 'CUSTOMER_DIRECT' && ['UNPAID','PENDING'].includes(row.payment_status)));
+  const collectionMode = collectionDecisionRequired ? 'NEEDS_CONFIRMATION'
+    : requiresCollectionDecision && decision.choice === 'CUSTOMER_DIRECT' ? 'DRIVER_COLLECTS'
+    : ['PAY_DRIVER','PAY_DRIVER_AT_DESTINATION'].includes(method) ? 'DRIVER_COLLECTS'
     : ['ADMIN_COLLECTED','ONLINE','BANK_TRANSFER','CARD','CREDIT_CARD'].includes(method) ? 'ADMIN_PAYS' : 'NEEDS_CONFIRMATION';
   const manual = row.booking_source === 'ADMIN_MANUAL';
   const total = money(row.total_amount);
@@ -31,6 +39,7 @@ function buildAdminDriverFinancialSummary(row, chargeItems = []) {
   const receipt = valid ? (manual ? registeredPayout : expectedReceipt) : null;
   const operatingIncome = receipt != null ? money(receipt - sign) : null;
   return {
+    collectionDecisionRequired, requiresCollectionDecision, collectionDecision: decisionValid ? decision : null,
     collectionMode, paymentMethod: method || null, paymentStatus: row.payment_status ?? null,
     currency: row.currency ?? null, customerTotalAmount: total,
     commissionAmount: row.currency === 'THB' ? COMPANY_COMMISSION_THB : null, recordedCommissionAmount: recordedCommission,
@@ -40,7 +49,7 @@ function buildAdminDriverFinancialSummary(row, chargeItems = []) {
     driverNetAmount: receipt, driverReceiptAmount: receipt, driverOperatingIncomeAmount: operatingIncome,
     registeredPayoutAmount: manual ? registeredPayout : null,
     collectFromCustomerAmount: collectionMode === 'ADMIN_PAYS' || row.payment_status === 'PAID' ? 0
-      : collectionMode === 'DRIVER_COLLECTS' && row.payment_status === 'UNPAID' ? total : null,
+      : collectionMode === 'DRIVER_COLLECTS' && ['UNPAID','PENDING'].includes(row.payment_status) ? total : null,
     adminPayoutAmount: collectionMode === 'ADMIN_PAYS' ? receipt : null,
     basis: manual ? 'REGISTERED_PAYOUT' : !(recordedCommission > 0) ? 'CURRENT_TRIP_RULE_ESTIMATE' : 'RECORDED',
     needsConfirmation: !valid || collectionMode === 'NEEDS_CONFIRMATION' || !['PAID','UNPAID'].includes(row.payment_status),

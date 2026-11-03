@@ -53,6 +53,25 @@ Widget host({String language = 'ko', Future<void> Function(String)? copy}) =>
     );
 
 void main() {
+  test('unselected online payment never generates copy text', () {
+    final d = sample()..['driverFinancialSummary'] = {'collectionDecisionRequired':true};
+    expect(buildAdminDriverCheckMessages(d), isEmpty);
+  });
+  for (final choice in ['PAID','CUSTOMER_DIRECT']) {
+    testWidgets('explicit collection choice requires confirmation $choice', (tester) async {
+      String? saved;
+      final d = sample()..['driverFinancialSummary'] = {'requiresCollectionDecision':true,'collectionDecisionRequired':true,'paymentStatus':'UNPAID'};
+      await tester.pumpWidget(MaterialApp(locale: const Locale('ko'), supportedLocales: const [Locale('ko')],
+        localizationsDelegates: [AppLocalizationsDelegate('ko'),GlobalMaterialLocalizations.delegate,GlobalWidgetsLocalizations.delegate,GlobalCupertinoLocalizations.delegate],
+        home: Scaffold(body: SingleChildScrollView(child: AdminDriverCheckCards(detail:d,onDecision:(v)async{saved=v;})))));
+      await tester.pumpAndSettle();
+      expect(find.byType(SelectableText), findsNothing);
+      await tester.tap(find.text(choice=='PAID'?'결제 완료':'고객 직접 결제'));
+      await tester.pumpAndSettle();expect(saved,isNull);
+      await tester.tap(find.text('확인 후 저장'));await tester.pumpAndSettle();expect(saved,choice);
+    });
+  }
+
   test(
     'sign copy preserves explicit name and handles missing or disabled signs',
     () {
@@ -226,7 +245,7 @@ void main() {
         'needsConfirmation': false,
       };
     final text = buildAdminDriverCheckMessages(detail).single.thai;
-    expect(text, contains('เก็บจากลูกค้าโดยตรง'));
+    expect(text, contains('คนขับต้องเก็บค่าโดยสารจากลูกค้าโดยตรง'));
     expect(text, contains('ค่าคอมมิชชันบริษัท: ฿200'));
     expect(text, contains('ยอดเงินที่คนขับได้รับ (รวมเงินคืนค่าป้าย): ฿900'));
     expect(text, contains('฿1,100'));
@@ -241,7 +260,7 @@ void main() {
         'collectFromCustomerAmount': 0,
       };
     final paidText = buildAdminDriverCheckMessages(paid).single.thai;
-    expect(paidText, isNot(contains('เก็บจากลูกค้าโดยตรง')));
+    expect(paidText, isNot(contains('คนขับต้องเก็บค่าโดยสารจากลูกค้าโดยตรง')));
     expect(paidText, contains('ไม่เรียกเก็บซ้ำ'));
     detail['driverFinancialSummary'] = <String, dynamic>{
       ...Map<String, dynamic>.from(detail['driverFinancialSummary'] as Map),
@@ -252,7 +271,7 @@ void main() {
       'basis': 'REGISTERED_PAYOUT',
     };
     final admin = buildAdminDriverCheckMessages(detail).single.thai;
-    expect(admin, contains('ไม่เรียกเก็บเงินลูกค้า'));
+    expect(admin, contains('ห้ามเรียกเก็บเงินจากลูกค้า'));
     expect(admin, contains('คนขับรับจากลูกค้า: ฿0'));
     expect(admin, contains('ยอดที่ผู้ดูแลจะจ่ายให้คนขับ: ฿900'));
     expect(admin, contains('ลูกค้าชำระแล้ว'));

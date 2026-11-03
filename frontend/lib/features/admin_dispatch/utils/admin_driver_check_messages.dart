@@ -85,6 +85,9 @@ String _financialMessage(Map<String, dynamic> detail, AppLocalizations l10n) {
 List<AdminDriverCheckMessage> buildAdminDriverCheckMessages(
   Map<String, dynamic> detail,
 ) {
+  if (_map(detail['driverFinancialSummary'])['collectionDecisionRequired'] ==
+      true)
+    return [];
   final raw = _text(detail['scheduledPickupAt']);
   final parsed = parseBackendServiceDateTime(raw);
   final bangkok = parsed?.toUtc().add(const Duration(hours: 7));
