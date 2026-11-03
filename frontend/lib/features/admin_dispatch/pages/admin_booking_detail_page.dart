@@ -1057,7 +1057,21 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                     ),
                     const SizedBox(height: AppTokens.spaceMd),
                     if (!['SETTLEMENT_PENDING','COMPLETED','CANCELLED','NO_SHOW'].contains(detail['status']))
-                      AdminReceiptEmailCard(key:ValueKey('booking_email_${widget.bookingNumber}'),bookingNumber:widget.bookingNumber,api:widget.api,bookingConfirmation:true,onChanged:_load),
+                      ExpansionTile(
+                        key: ValueKey('booking_email_section_${widget.bookingNumber}'),
+                        tilePadding: EdgeInsets.zero,
+                        title: Text(l10n.t('admin_booking_email_title')),
+                        children: [
+                          AdminReceiptEmailCard(
+                            key: ValueKey('booking_email_${widget.bookingNumber}'),
+                            bookingNumber: widget.bookingNumber,
+                            api: widget.api,
+                            bookingConfirmation: true,
+                            showTitle: false,
+                            onChanged: _load,
+                          ),
+                        ],
+                      ),
                     AdminDriverCheckCards(
                       detail: detail,
                       onDecision: (choice) async {

@@ -15,7 +15,9 @@ class AdminReceiptEmailCard extends StatefulWidget {
     this.onChanged,
     this.onPaymentConfirmed,
     this.bookingConfirmation = false,
+    this.showTitle = true,
   });
+  final bool showTitle;
   final bool bookingConfirmation;
   final String bookingNumber;
   final AdminDispatchApiService api;
@@ -278,14 +280,15 @@ class _AdminReceiptEmailCardState extends State<AdminReceiptEmailCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              l.t(
-                widget.bookingConfirmation
-                    ? 'admin_booking_email_title'
-                    : 'admin_receipt_title',
+            if (widget.showTitle)
+              Text(
+                l.t(
+                  widget.bookingConfirmation
+                      ? 'admin_booking_email_title'
+                      : 'admin_receipt_title',
+                ),
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
             const SizedBox(height: AppTokens.spaceSm),
             Text(
               l.t(
