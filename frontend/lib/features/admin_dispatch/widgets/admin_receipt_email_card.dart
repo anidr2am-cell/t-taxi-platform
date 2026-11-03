@@ -29,6 +29,7 @@ class AdminReceiptEmailCard extends StatefulWidget {
 
 class _AdminReceiptEmailCardState extends State<AdminReceiptEmailCard> {
   final _email = TextEditingController();
+  final _emailStorage = PageStorageBucket();
   Map<String, dynamic>? _state, _preview;
   String _locale = 'en';
   bool _busy = false;
@@ -287,7 +288,7 @@ class _AdminReceiptEmailCardState extends State<AdminReceiptEmailCard> {
     final eligible = state?['eligible'] == true;
     final delivery = state?['delivery'];
     final accepted = delivery is Map && delivery['status'] == 'DELIVERED';
-    return Padding(
+    final content = Padding(
       padding: const EdgeInsets.only(top: AppTokens.spaceMd),
       child: AppUi.surfaceCard(
         child: Column(
@@ -432,5 +433,8 @@ class _AdminReceiptEmailCardState extends State<AdminReceiptEmailCard> {
         ),
       ),
     );
+    return widget.bookingConfirmation
+        ? PageStorage(bucket: _emailStorage, child: content)
+        : content;
   }
 }

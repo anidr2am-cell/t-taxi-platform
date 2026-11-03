@@ -74,6 +74,51 @@ Widget host(BookingApi a, {String lang = 'ko'}) => MaterialApp(
   ),
 );
 void main() {
+  testWidgets(
+    'expanded card isolates input/preview scroll storage from the tile boolean',
+    (t) async {
+      final a = BookingApi();
+      await t.pumpWidget(
+        MaterialApp(
+          locale: const Locale('ko'),
+          supportedLocales: const [Locale('ko')],
+          localizationsDelegates: [
+            AppLocalizationsDelegate('ko'),
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: ExpansionTile(
+                key: const PageStorageKey('booking-email-section'),
+                title: const Text('Email'),
+                children: [
+                  AdminReceiptEmailCard(
+                    bookingNumber: 'TX209901010201',
+                    api: a,
+                    bookingConfirmation: true,
+                    showTitle: false,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      expect(find.byType(TextField), findsNothing);
+      await t.tap(find.text('Email'));
+      await t.pumpAndSettle();
+      expect(t.takeException(), isNull);
+      await t.enterText(find.byType(TextField), 'qa@example.invalid');
+      await t.tap(find.text('미리보기'));
+      await t.pumpAndSettle();
+      expect(t.takeException(), isNull);
+      expect(find.text('QA booking details'), findsOneWidget);
+    },
+  );
+
   test(
     'booking email API builds the exact registered paths with admin authentication',
     () async {
