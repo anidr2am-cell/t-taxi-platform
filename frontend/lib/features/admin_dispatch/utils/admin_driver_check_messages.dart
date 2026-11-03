@@ -50,32 +50,21 @@ String _financialMessage(Map<String, dynamic> detail, AppLocalizations l10n) {
           ? 'admin'
           : 'unknown'}',
     ),
-    fill('lines', {
+    fill('short_amounts', {
       'total': amount(summary['customerTotalAmount']),
       'collect': amount(summary['collectFromCustomerAmount']),
       'commission': amount(summary['commissionAmount']),
-      'advance': amount(summary['nameSignAdvanceAmount']),
-      'reimbursement': amount(summary['nameSignReimbursementAmount']),
       'receipt': amount(summary['driverReceiptAmount']),
       'income': amount(summary['driverOperatingIncomeAmount']),
     }),
-    l10n.t('admin_driver_finance_picket_notice'),
+    if (summary['nameSignAdvanceAmount'] is num &&
+        summary['nameSignAdvanceAmount'] > 0)
+      fill('short_sign', {'advance': amount(summary['nameSignAdvanceAmount'])}),
     if (summary['needsConfirmation'] == true &&
         summary['registeredPayoutAmount'] != null)
       fill('registered_amount', {
         'amount': amount(summary['registeredPayoutAmount']),
       }),
-    if (mode == 'ADMIN_PAYS')
-      fill('payout', {'amount': amount(summary['adminPayoutAmount'])}),
-    fill('status', {
-      'status': summary['paymentStatus'] == 'PAID'
-          ? l10n.t('admin_driver_finance_paid')
-          : l10n.t('admin_driver_finance_unpaid'),
-    }),
-    if (summary['basis'] == 'CURRENT_TRIP_RULE_ESTIMATE')
-      l10n.t('admin_driver_finance_estimate'),
-    if (summary['basis'] == 'REGISTERED_PAYOUT')
-      l10n.t('admin_driver_finance_registered'),
     if (summary.isEmpty || summary['needsConfirmation'] == true)
       l10n.t('admin_driver_finance_confirm'),
   ].join('\n');
@@ -86,8 +75,9 @@ List<AdminDriverCheckMessage> buildAdminDriverCheckMessages(
   Map<String, dynamic> detail,
 ) {
   if (_map(detail['driverFinancialSummary'])['collectionDecisionRequired'] ==
-      true)
+      true) {
     return [];
+  }
   final raw = _text(detail['scheduledPickupAt']);
   final parsed = parseBackendServiceDateTime(raw);
   final bangkok = parsed?.toUtc().add(const Duration(hours: 7));
@@ -143,7 +133,17 @@ List<AdminDriverCheckMessage> buildAdminDriverCheckMessages(
     final flight = _map(detail['flight']);
     final flightNumber = _text(flight['flightNumber']);
     final options = _map(detail['options']);
+    final requests = [
+      _text(detail['specialRequests']),
+      _text(luggage['specialItems']),
+      if (options['preferFemaleDriver'] == true)
+        l10n.t('admin_driver_brief_female'),
+    ].where((v) => v.isNotEmpty).toSet().join(' / ');
     final values = {
+      'requests': requests.isEmpty
+          ? ''
+          : '${l10n.t('admin_driver_brief_requests')}: $requests',
+
       'finance': _financialMessage(detail, l10n),
       'booking': value(_text(detail['bookingNumber'])),
       'service':
