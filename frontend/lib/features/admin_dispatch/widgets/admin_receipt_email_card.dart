@@ -14,7 +14,11 @@ class AdminReceiptEmailCard extends StatefulWidget {
     required this.api,
     this.onChanged,
     this.onPaymentConfirmed,
+    this.bookingConfirmation = false,
+    this.showTitle = true,
   });
+  final bool showTitle;
+  final bool bookingConfirmation;
   final String bookingNumber;
   final AdminDispatchApiService api;
   final VoidCallback? onChanged;
@@ -25,6 +29,7 @@ class AdminReceiptEmailCard extends StatefulWidget {
 
 class _AdminReceiptEmailCardState extends State<AdminReceiptEmailCard> {
   final _email = TextEditingController();
+  final _emailStorage = PageStorageBucket();
   Map<String, dynamic>? _state, _preview;
   String _locale = 'en';
   bool _busy = false;
@@ -44,7 +49,9 @@ class _AdminReceiptEmailCardState extends State<AdminReceiptEmailCard> {
 
   Future<void> _load({bool preserveInput = false}) async {
     try {
-      final d = await widget.api.getReceiptEmailState(widget.bookingNumber);
+      final d = await (widget.bookingConfirmation
+          ? widget.api.getBookingEmailState(widget.bookingNumber)
+          : widget.api.getReceiptEmailState(widget.bookingNumber));
       if (!mounted) return;
       setState(() {
         _state = d;
@@ -83,10 +90,10 @@ class _AdminReceiptEmailCardState extends State<AdminReceiptEmailCard> {
       _preview = null;
     });
     try {
-      final p = await widget.api.previewReceiptEmail(widget.bookingNumber, {
-        'email': _email.text.trim(),
-        'locale': _locale,
-      });
+      final body = {'email': _email.text.trim(), 'locale': _locale};
+      final p = await (widget.bookingConfirmation
+          ? widget.api.previewBookingEmail(widget.bookingNumber, body)
+          : widget.api.previewReceiptEmail(widget.bookingNumber, body));
       if (mounted) setState(() => _preview = p);
     } catch (e) {
       if (mounted) setState(() => _error = _errorKey(e));
@@ -196,10 +203,20 @@ class _AdminReceiptEmailCardState extends State<AdminReceiptEmailCard> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        title: Text(l.t('admin_receipt_confirm_title')),
+        title: Text(
+          l.t(
+            widget.bookingConfirmation
+                ? 'admin_booking_email_confirm_title'
+                : 'admin_receipt_confirm_title',
+          ),
+        ),
         content: Text(
           l
-              .t('admin_receipt_confirm_body')
+              .t(
+                widget.bookingConfirmation
+                    ? 'admin_booking_email_confirm_body'
+                    : 'admin_receipt_confirm_body',
+              )
               .replaceAll('{email}', _email.text.trim()),
         ),
         actions: [
@@ -223,17 +240,33 @@ class _AdminReceiptEmailCardState extends State<AdminReceiptEmailCard> {
       _error = null;
     });
     try {
-      final s = await widget.api.sendReceiptEmail(widget.bookingNumber, {
+      final body = {
         'email': _email.text.trim(),
         'locale': _locale,
         'previewHash': preview!['previewHash'],
         'confirmed': true,
-      });
+      };
+      final s = await (widget.bookingConfirmation
+          ? widget.api.sendBookingEmail(widget.bookingNumber, body)
+          : widget.api.sendReceiptEmail(widget.bookingNumber, body));
       if (!mounted) return;
       setState(() {
         _state = s;
         _preview = null;
       });
+      if (widget.bookingConfirmation) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              l.t(
+                s['delivery']?['status'] == 'DELIVERED'
+                    ? 'admin_receipt_accepted'
+                    : 'admin_receipt_failed',
+              ),
+            ),
+          ),
+        );
+      }
       widget.onChanged?.call();
     } catch (e) {
       if (mounted) {
@@ -255,19 +288,30 @@ class _AdminReceiptEmailCardState extends State<AdminReceiptEmailCard> {
     final eligible = state?['eligible'] == true;
     final delivery = state?['delivery'];
     final accepted = delivery is Map && delivery['status'] == 'DELIVERED';
-    return Padding(
+    final content = Padding(
       padding: const EdgeInsets.only(top: AppTokens.spaceMd),
       child: AppUi.surfaceCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              l.t('admin_receipt_title'),
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            if (widget.showTitle)
+              Text(
+                l.t(
+                  widget.bookingConfirmation
+                      ? 'admin_booking_email_title'
+                      : 'admin_receipt_title',
+                ),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
             const SizedBox(height: AppTokens.spaceSm),
-            Text(l.t('admin_receipt_intro')),
-            if (state?['payment'] is Map) ...[
+            Text(
+              l.t(
+                widget.bookingConfirmation
+                    ? 'admin_booking_email_intro'
+                    : 'admin_receipt_intro',
+              ),
+            ),
+            if (!widget.bookingConfirmation && state?['payment'] is Map) ...[
               const SizedBox(height: AppTokens.spaceSm),
               Text(
                 l.t(
@@ -301,6 +345,8 @@ class _AdminReceiptEmailCardState extends State<AdminReceiptEmailCard> {
                   l.t(
                     accepted
                         ? 'admin_receipt_accepted'
+                        : widget.bookingConfirmation
+                        ? 'admin_booking_email_blocked'
                         : 'admin_receipt_blocked',
                   ),
                 ),
@@ -387,5 +433,8 @@ class _AdminReceiptEmailCardState extends State<AdminReceiptEmailCard> {
         ),
       ),
     );
+    return widget.bookingConfirmation
+        ? PageStorage(bucket: _emailStorage, child: content)
+        : content;
   }
 }
