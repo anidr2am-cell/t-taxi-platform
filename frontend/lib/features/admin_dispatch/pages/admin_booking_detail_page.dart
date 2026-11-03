@@ -1058,7 +1058,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                     const SizedBox(height: AppTokens.spaceMd),
                     if (!['SETTLEMENT_PENDING','COMPLETED','CANCELLED','NO_SHOW'].contains(detail['status']))
                       ExpansionTile(
-                        key: ValueKey('booking_email_section_${widget.bookingNumber}'),
+                        key: PageStorageKey('booking_email_section_${widget.bookingNumber}'),
                         tilePadding: EdgeInsets.zero,
                         title: Text(l10n.t('admin_booking_email_title')),
                         children: [

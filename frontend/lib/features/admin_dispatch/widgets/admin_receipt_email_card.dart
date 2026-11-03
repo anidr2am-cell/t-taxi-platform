@@ -253,6 +253,19 @@ class _AdminReceiptEmailCardState extends State<AdminReceiptEmailCard> {
         _state = s;
         _preview = null;
       });
+      if (widget.bookingConfirmation) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              l.t(
+                s['delivery']?['status'] == 'DELIVERED'
+                    ? 'admin_receipt_accepted'
+                    : 'admin_receipt_failed',
+              ),
+            ),
+          ),
+        );
+      }
       widget.onChanged?.call();
     } catch (e) {
       if (mounted) {
