@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -70,6 +74,44 @@ Widget host(BookingApi a, {String lang = 'ko'}) => MaterialApp(
   ),
 );
 void main() {
+  test(
+    'booking email API builds the exact registered paths with admin authentication',
+    () async {
+      SharedPreferences.setMockInitialValues({'admin_access_token': 'QA_ONLY'});
+      final calls = <String>[];
+      final api = AdminDispatchApiService(
+        baseUrl: 'https://preview.example.invalid',
+        client: MockClient((r) async {
+          calls.add('${r.method} ${r.url}');
+          expect(
+            r.headers['Authorization'] ?? r.headers['authorization'],
+            'Bearer QA_ONLY',
+          );
+          return http.Response(
+            jsonEncode({'success': true, 'data': <String, dynamic>{}}),
+            200,
+          );
+        }),
+      );
+      await api.getBookingEmailState('TX209901010201');
+      await api.previewBookingEmail('TX209901010201', {
+        'email': 'qa@example.invalid',
+        'locale': 'ko',
+      });
+      await api.sendBookingEmail('TX209901010201', {
+        'email': 'qa@example.invalid',
+        'locale': 'ko',
+        'previewHash': 'QA',
+        'confirmed': true,
+      });
+      expect(calls, [
+        'GET https://preview.example.invalid/api/v1/admin/bookings/TX209901010201/booking-email',
+        'POST https://preview.example.invalid/api/v1/admin/bookings/TX209901010201/booking-email/preview',
+        'POST https://preview.example.invalid/api/v1/admin/bookings/TX209901010201/booking-email/send',
+      ]);
+    },
+  );
+
   for (final lang in AppLocalizations.supportedLanguages)
     testWidgets('booking email card fits 375px in $lang', (t) async {
       await t.binding.setSurfaceSize(const Size(375, 1000));

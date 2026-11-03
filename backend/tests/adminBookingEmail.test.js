@@ -49,3 +49,11 @@ test('repository only changes contact/email metadata and old customer EMAIL deli
  const Repo=require('../src/repositories/adminReceiptEmail.repository'),calls=[];await new Repo({}).approveBookingEmail({query:async(sql,args)=>{calls.push({sql,args});return [{}]}},{id:1},input.email,{actorUserId:77,deliveryId:9});
  assert.equal(calls.length,2);assert(calls[0].sql.includes("d.channel='EMAIL'"));assert(calls[0].sql.includes("n.type='BOOKING_CREATED'"));assert(calls[0].sql.includes("='CUSTOMER'"));assert(calls[0].sql.includes('NOT EXISTS'));assert(!/commission_|driver_id|payment_status|total_amount\s*=/.test(calls[1].sql));
 });
+
+test('approved booking mail uses frozen address and content with a mock transport only',async()=>{
+ const h=harness(),p=await h.service.preview(h.row.booking_number,input,actor);await h.service.send(h.row.booking_number,{...input,confirmed:true,previewHash:p.previewHash},actor);
+ const {EmailNotificationAdapter}=require('../src/services/notificationDelivery.adapters');const sent=[];
+ const adapter=new EmailNotificationAdapter({smtp:{host:'smtp.example.invalid',fromEmail:'qa@example.invalid'},transport:{sendMail:async(m)=>{sent.push(m);return {messageId:'QA_ONLY',accepted:[m.to]}}}});
+ const result=await adapter.send({type:'BOOKING_CREATED',audience_role:'CUSTOMER',recipient_type:'GUEST_BOOKING',recipient_email:'other@example.invalid',booking_number:h.row.booking_number,booking_total_amount:9999,payload:h.notifications[0].payload});
+ assert.equal(result.status,'DELIVERED');assert.equal(sent.length,1);assert.equal(sent[0].to,input.email);assert.equal(sent[0].text,p.text);assert.equal(sent[0].subject,p.subject);
+});
