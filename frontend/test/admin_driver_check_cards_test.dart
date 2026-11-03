@@ -53,22 +53,93 @@ Widget host({String language = 'ko', Future<void> Function(String)? copy}) =>
     );
 
 void main() {
+  for (final lang in AppLocalizations.supportedLanguages) {
+    testWidgets('collection selector fits 375px in $lang', (tester) async {
+      tester.view.physicalSize = const Size(375, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final d = sample()
+        ..['driverFinancialSummary'] = {
+          'requiresCollectionDecision': true,
+          'collectionDecisionRequired': true,
+          'paymentStatus': 'UNPAID',
+        };
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: Locale(lang),
+          supportedLocales: [Locale(lang)],
+          localizationsDelegates: [
+            AppLocalizationsDelegate(lang),
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: AdminDriverCheckCards(detail: d, onDecision: (_) async {}),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text(AppLocalizations(lang).t('admin_collection_paid')),
+        findsOneWidget,
+      );
+      expect(
+        find.text(AppLocalizations(lang).t('admin_collection_direct')),
+        findsOneWidget,
+      );
+    });
+  }
   test('unselected online payment never generates copy text', () {
-    final d = sample()..['driverFinancialSummary'] = {'collectionDecisionRequired':true};
+    final d = sample()
+      ..['driverFinancialSummary'] = {'collectionDecisionRequired': true};
     expect(buildAdminDriverCheckMessages(d), isEmpty);
   });
-  for (final choice in ['PAID','CUSTOMER_DIRECT']) {
-    testWidgets('explicit collection choice requires confirmation $choice', (tester) async {
+  for (final choice in ['PAID', 'CUSTOMER_DIRECT']) {
+    testWidgets('explicit collection choice requires confirmation $choice', (
+      tester,
+    ) async {
       String? saved;
-      final d = sample()..['driverFinancialSummary'] = {'requiresCollectionDecision':true,'collectionDecisionRequired':true,'paymentStatus':'UNPAID'};
-      await tester.pumpWidget(MaterialApp(locale: const Locale('ko'), supportedLocales: const [Locale('ko')],
-        localizationsDelegates: [AppLocalizationsDelegate('ko'),GlobalMaterialLocalizations.delegate,GlobalWidgetsLocalizations.delegate,GlobalCupertinoLocalizations.delegate],
-        home: Scaffold(body: SingleChildScrollView(child: AdminDriverCheckCards(detail:d,onDecision:(v)async{saved=v;})))));
+      final d = sample()
+        ..['driverFinancialSummary'] = {
+          'requiresCollectionDecision': true,
+          'collectionDecisionRequired': true,
+          'paymentStatus': 'UNPAID',
+        };
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('ko'),
+          supportedLocales: const [Locale('ko')],
+          localizationsDelegates: [
+            AppLocalizationsDelegate('ko'),
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: AdminDriverCheckCards(
+                detail: d,
+                onDecision: (v) async {
+                  saved = v;
+                },
+              ),
+            ),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
       expect(find.byType(SelectableText), findsNothing);
-      await tester.tap(find.text(choice=='PAID'?'결제 완료':'고객 직접 결제'));
-      await tester.pumpAndSettle();expect(saved,isNull);
-      await tester.tap(find.text('확인 후 저장'));await tester.pumpAndSettle();expect(saved,choice);
+      await tester.tap(find.text(choice == 'PAID' ? '결제 완료' : '고객 직접 결제'));
+      await tester.pumpAndSettle();
+      expect(saved, isNull);
+      await tester.tap(find.text('확인 후 저장'));
+      await tester.pumpAndSettle();
+      expect(saved, choice);
     });
   }
 

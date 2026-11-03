@@ -117,7 +117,10 @@ class _AdminDriverCheckCardsState extends State<AdminDriverCheckCards> {
             ),
           ],
           const SizedBox(height: AppTokens.spaceSm),
-          for (final message in buildAdminDriverCheckMessages(detail))
+          for (final message
+              in (_saving
+                  ? <AdminDriverCheckMessage>[]
+                  : buildAdminDriverCheckMessages(detail)))
             ExpansionTile(
               initiallyExpanded: true,
               key: ValueKey('adminDriverCheck-${message.id}'),
