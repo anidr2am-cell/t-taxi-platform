@@ -1056,7 +1056,21 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                       child: _operationsSummarySection(l10n, detail),
                     ),
                     const SizedBox(height: AppTokens.spaceMd),
-                    AdminDriverCheckCards(detail: detail),
+                    AdminDriverCheckCards(
+                      detail: detail,
+                      onDecision: (choice) async {
+                        final summary = detail['driverFinancialSummary'] as Map;
+                        await widget.api
+                            .decideDriverCollection(widget.bookingNumber, {
+                              'choice': choice,
+                              'confirmed': true,
+                              'expectedAmount': summary['customerTotalAmount'],
+                              'expectedCurrency': summary['currency'],
+                              'expectedStatus': summary['paymentStatus'],
+                            });
+                        await _load();
+                      },
+                    ),
                     const SizedBox(height: AppTokens.spaceMd),
                     _notesSection(l10n),
                     const SizedBox(height: AppTokens.spaceMd),

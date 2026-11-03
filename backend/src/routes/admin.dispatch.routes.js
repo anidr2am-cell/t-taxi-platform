@@ -41,6 +41,9 @@ const { success } = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
 const container = require('../helpers/container');
 const receiptEmailInput=Joi.object({email:Joi.string().trim().email({tlds:{allow:false}}).max(254).required(),locale:Joi.string().valid(...LOCALES).required()}).unknown(false);
+router.post('/bookings/:bookingNumber/driver-collection',adminOnly,
+  validate({params:bookingNumberParamsSchema,body:Joi.object({choice:Joi.string().valid('PAID','CUSTOMER_DIRECT').required(),confirmed:Joi.boolean().valid(true).required(),expectedAmount:Joi.number().min(0).required(),expectedCurrency:Joi.string().valid('THB').required(),expectedStatus:Joi.string().valid('UNPAID','PENDING','PAID').required()}).unknown(false)}),
+  asyncHandler(async(req,res)=>success(res,await container.get('adminReceiptEmailService').decideDriverCollection(req.params.bookingNumber,req.body,req.user))));
 router.post('/bookings/:bookingNumber/customer-payment/confirm',adminOnly,
   validate({params:bookingNumberParamsSchema,body:Joi.object({confirmed:Joi.boolean().valid(true).required(),reason:Joi.string().trim().min(1).max(500).required(),expectedAmount:Joi.number().min(0).required(),expectedCurrency:Joi.string().valid('THB').required()}).unknown(false)}),
   asyncHandler(async(req,res)=>success(res,await container.get('adminReceiptEmailService').confirmPayment(req.params.bookingNumber,req.body,req.user))));
