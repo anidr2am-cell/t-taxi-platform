@@ -13,7 +13,7 @@ class DriverRepository {
     this.pool = pool;
   }
 
-  async listForAdminAssignment({ archived = false } = {}) {
+  async listForAdminAssignment({ archived = false, driverId = null } = {}) {
     const [rows] = await this.pool.query(
       `
         SELECT
@@ -91,9 +91,10 @@ class DriverRepository {
           AND dv.deleted_at IS NULL
         WHERE d.deleted_at IS NULL
           AND d.is_archived = ?
+          AND (? IS NULL OR d.id = ?)
         ORDER BY d.name ASC
       `,
-      [archived ? 1 : 0],
+      [archived ? 1 : 0, driverId, driverId],
     );
     return rows;
   }
