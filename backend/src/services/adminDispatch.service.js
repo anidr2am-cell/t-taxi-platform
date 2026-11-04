@@ -412,6 +412,7 @@ class AdminDispatchService {
       typeName: row.vehicle_type_name ?? null,
       plateNumber: row.vehicle_plate ?? null,
       modelName: row.vehicle_model ?? null,
+      color: row.vehicle_color ?? null,
     };
   }
 
@@ -896,6 +897,57 @@ class AdminDispatchService {
     } finally {
       conn.release();
     }
+  }
+
+  // Read-only admin detail. Do not expose identity documents or bank details.
+  async getDriverDetail(driverId) {
+    let rows = await this.driverRepository.listForAdminAssignment({ driverId });
+    if (!rows.length) rows = await this.driverRepository.listForAdminAssignment({ driverId, archived: true });
+    if (!rows.length) throw new AppError("Driver not found", { statusCode: 404, errorCode: ERROR_CODES.NOT_FOUND });
+    const row = rows[0];
+    const blocked = await this.commissionSettlementService.driverHasBlockingSettlement(row.id);
+    const vehicles = await this.driverRepository.listVehiclesByDriverId(row.id);
+    return {
+      ...this.mapDriverListItem(row, blocked),
+      vehicles: vehicles.map(v => ({
+        vehicleId: v.id, typeCode: v.vehicle_type_code, modelName: v.model_name,
+        plateNumber: v.plate_number, color: v.color, isPrimary: Boolean(v.is_primary),
+        isActive: Boolean(v.is_active), approvalStatus: v.approval_status,
+      })),
+    };
+  }
+
+  // Every read is bound to the CURRENT assignment's exact vehicle, never an
+  // arbitrary photo from another vehicle or an application document.
+  async getCustomerBriefPhotos(bookingNumber, fileId = null) {
+    const [rows] = await this.pool.query(`
+      SELECT f.id, f.file_path, f.mime_type, f.original_filename
+      FROM bookings b
+      INNER JOIN booking_driver_assignments a ON a.booking_id = b.id
+        AND a.is_active = 1 AND a.deleted_at IS NULL
+      INNER JOIN driver_vehicles v ON v.id = a.driver_vehicle_id
+        AND v.driver_id = a.driver_id AND v.deleted_at IS NULL
+      INNER JOIN files f ON f.id IN (
+        SELECT vf.file_id FROM driver_vehicle_files vf
+          WHERE vf.driver_vehicle_id = v.id AND vf.category = 'DRIVER_VEHICLE_PHOTO'
+        UNION
+        SELECT af.file_id FROM driver_application_files af
+          INNER JOIN driver_applications da ON da.id = af.driver_application_id
+          WHERE da.approved_driver_id = v.driver_id AND da.status = 'APPROVED'
+            AND da.deleted_at IS NULL AND da.vehicle_plate_number = v.plate_number
+            AND af.category = 'DRIVER_VEHICLE_PHOTO'
+      ) AND f.deleted_at IS NULL
+        AND f.mime_type IN ('image/jpeg','image/png','image/webp')
+      WHERE b.booking_number = ? AND b.deleted_at IS NULL
+        AND (? IS NULL OR f.id = ?)
+      ORDER BY f.id
+    `, [bookingNumber, fileId, fileId]);
+    if (fileId !== null) {
+      if (!rows.length) throw new AppError("Photo not found", { statusCode: 404, errorCode: ERROR_CODES.NOT_FOUND });
+      return rows[0];
+    }
+    return rows.map(f => ({ fileId: f.id, mimeType: f.mime_type,
+      url: `/api/v1/admin/bookings/${encodeURIComponent(bookingNumber)}/customer-brief/photos/${f.id}` }));
   }
 
   async listDrivers(query = {}) {

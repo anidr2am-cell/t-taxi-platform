@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -306,6 +307,24 @@ class AdminDispatchApiService {
       body: body,
     );
     return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<Map<String, dynamic>> getDriverDetail(int id) async =>
+      Map<String, dynamic>.from(await _request('GET', '/admin/drivers/$id') as Map);
+
+  Future<List<dynamic>> getCustomerBriefPhotos(String number) async =>
+      List<dynamic>.from(await _request('GET', '/admin/bookings/$number/customer-brief/photos') as List);
+
+  Future<Uint8List> getCustomerBriefPhoto(String number, int fileId) async {
+    final token = await getSavedToken();
+    if (token == null || token.isEmpty) throw const AdminDispatchApiException('Unauthorized');
+    final uri = Uri.parse('$_base/admin/bookings/$number/customer-brief/photos/$fileId');
+    final headers = {'Authorization': 'Bearer $token'};
+    final response = await (_client == null ? http.get(uri, headers: headers) : _client.get(uri, headers: headers));
+    if (response.statusCode != 200 || !(response.headers['content-type'] ?? '').startsWith('image/')) {
+      throw const AdminDispatchApiException('Photo unavailable');
+    }
+    return response.bodyBytes;
   }
 
   Future<List<dynamic>> listDrivers({

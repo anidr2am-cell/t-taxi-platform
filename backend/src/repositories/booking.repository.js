@@ -2370,6 +2370,7 @@ class BookingRepository {
           d.status AS driver_status,
           dv.plate_number AS vehicle_plate,
           dv.model_name AS vehicle_model,
+          dv.color AS vehicle_color,
           vt.code AS vehicle_type_code,
           vt.name AS vehicle_type_name
         FROM booking_driver_assignments bda

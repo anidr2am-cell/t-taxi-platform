@@ -4,6 +4,7 @@ import '../../admin/widgets/admin_selection_area.dart';
 import 'package:flutter/material.dart';
 import '../widgets/admin_review_request_card.dart';
 import '../widgets/admin_driver_check_cards.dart';
+import '../widgets/admin_customer_brief_card.dart';
 
 import '../../booking/utils/booking_status_display.dart';
 import '../../booking/utils/review_tags.dart';
@@ -1072,6 +1073,8 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                           ),
                         ],
                       ),
+                    AdminCustomerBriefCard(detail: detail, api: widget.api),
+                    const SizedBox(height: AppTokens.spaceMd),
                     AdminDriverCheckCards(
                       detail: detail,
                       onDecision: (choice) async {

@@ -290,4 +290,13 @@ router.post(
   bookingContactConnectionController.adminRetryContactDispatch,
 );
 
+router.get('/drivers/:id', adminOnly, validate({ params: driverIdParamsSchema }), adminController.getDriverDetail);
+router.get('/bookings/:bookingNumber/customer-brief/photos', adminOnly,
+  validate({ params: bookingNumberParamsSchema }), adminController.getCustomerBriefPhotos);
+router.get('/bookings/:bookingNumber/customer-brief/photos/:fileId', adminOnly,
+  (req, res, next) => {
+    if (!/^TX\d{12}$/.test(req.params.bookingNumber) || !/^[1-9]\d*$/.test(req.params.fileId))
+      return res.status(400).json({ success: false, message: 'Invalid photo request' });
+    next();
+  }, adminController.getCustomerBriefPhoto);
 module.exports = router;

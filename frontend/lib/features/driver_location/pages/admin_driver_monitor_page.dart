@@ -8,6 +8,7 @@ import '../../../widgets/app_ui.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../admin_dispatch/services/admin_dispatch_api_service.dart';
 import '../../admin_dispatch/pages/admin_booking_detail_page.dart';
+import '../../admin_dispatch/widgets/admin_driver_detail_dialog.dart';
 import '../../driver/utils/driver_backend_datetime.dart';
 import '../models/driver_location.dart';
 import '../services/driver_location_api_service.dart';
@@ -607,7 +608,10 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                             final suspension = driver['suspension'];
 
                             return AppUi.adminQueueCard(
-                              onTap: () => setState(() => _selected = location),
+                              onTap: () {
+                                setState(() => _selected = location);
+                                showDialog<void>(context: context, builder: (_) => AdminDriverDetailDialog(driverId: driverId, api: _dispatchApi));
+                              },
                               backgroundColor: selected
                                   ? AppTokens.primaryLight
                                   : AppTokens.surface,
