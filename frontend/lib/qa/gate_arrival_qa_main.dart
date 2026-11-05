@@ -50,7 +50,7 @@ class GateArrivalQaApp extends StatelessWidget {
               const Text(
                 '격리 QA · 실제 기사·고객 알림 없음 / QA ONLY · No live push or email',
               ),
-              if (Uri.base.queryParameters['view'] == 'driver')
+              if ((Uri.base.queryParameters['view'] == 'driver' || Uri.base.path.startsWith('/driver')))
                 DriverArrivalReadinessCard(api: QaDriverApi())
               else if (Uri.base.queryParameters['view'] == 'admin')
                 const AdminGateArrivalLink(bookingNumber: 'TX209901010217')

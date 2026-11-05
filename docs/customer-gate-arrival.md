@@ -21,3 +21,9 @@ Do not send real notifications or customer email during QA. The isolated `tools/
 Before any production release: verify Firebase web build config and VAPID, backend FCM credentials, active web device registration; test a dedicated QA handset in background/locked mode on Android and iPhone, inspect Thai message and click target. Never report push fully operational from a successful HTTP POST alone. Any missing config/handset validation is a release blocker for claiming reliable push readiness.
 
 Production deployment requires separate approval. Follow existing backup + Drive checksum/count verification, backend then frontend --no-deps; never restart DB/proxy. No migration. Roll back code/images using recorded predeployment images; retain notification history. Do not replay successful alerts or customer emails.
+
+## Firebase web setup (2026-11-05)
+
+Edward approved registering `T-Rider Driver Web` and generating the first public VAPID key in project `t-rider-a7dee`. Existing mobile apps and Hosting were not changed. Public configuration is kept outside Git in `C:/Users/COMAL/.trider-keys/firebase-web-public-config.json`; never place a service-account private key in frontend arguments. The production build accepts the seven `FIREBASE_WEB_*` variables shown in `.env.production.example`. These variables have NOT been written to the production environment. Backend FCM configuration was checked read-only and is configured for the same project.
+
+The HTTPS QA page at `/driver` uses a QA-only manifest/name and device registration into its own QA database. No production device/booking record is created. Browser/device permission registration and actual locked-phone delivery must be verified separately; configuration creation alone is not proof of delivery.

@@ -5,6 +5,8 @@ param(
 
   [string]$SocketUrl = '',
 
+  [string]$FirebasePublicConfigPath = '',
+
   [ValidateSet('lib/main.dart', 'lib/qa/admin_manual_qa_main.dart', 'lib/qa/gate_arrival_qa_main.dart')]
   [string]$Target = 'lib/main.dart'
 )
@@ -47,6 +49,22 @@ $flutterArgs = @(
 )
 if (-not [string]::IsNullOrWhiteSpace($SocketUrl)) {
   $flutterArgs += "--dart-define=SOCKET_URL=$SocketUrl"
+}
+
+if (-not [string]::IsNullOrWhiteSpace($FirebasePublicConfigPath)) {
+  $firebasePublic = Get-Content -LiteralPath $FirebasePublicConfigPath -Raw | ConvertFrom-Json
+  $allowedFirebaseFields = @('apiKey','appId','messagingSenderId','projectId','authDomain','storageBucket','vapidKey')
+  if (@($firebasePublic.PSObject.Properties.Name | Where-Object { $_ -notin $allowedFirebaseFields }).Count -gt 0) {
+    throw 'Only public Firebase web fields are allowed. Do not supply service-account credentials.'
+  }
+  foreach ($field in @('apiKey','appId','messagingSenderId','projectId','vapidKey')) {
+    if ([string]::IsNullOrWhiteSpace($firebasePublic.$field)) { throw "Missing public Firebase field: $field" }
+  }
+  if ($firebasePublic.appId -notmatch ':web:') { throw 'A Firebase Web app ID is required; Android/iOS app IDs are not valid.' }
+  if ($firebasePublic.vapidKey -notmatch '^[A-Za-z0-9_-]{87}$') { throw 'Invalid public Web Push key format.' }
+  $defineNames = @{apiKey='API_KEY';appId='APP_ID';messagingSenderId='MESSAGING_SENDER_ID';projectId='PROJECT_ID';authDomain='AUTH_DOMAIN';storageBucket='STORAGE_BUCKET';vapidKey='VAPID_KEY'}
+  foreach ($field in $allowedFirebaseFields) { $flutterArgs += "--dart-define=FIREBASE_$($defineNames[$field])=$($firebasePublic.$field)" }
+  Write-Host 'Public Firebase web configuration supplied (values hidden).'
 }
 
 Push-Location $frontendDir

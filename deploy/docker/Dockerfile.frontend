@@ -37,6 +37,13 @@ ARG API_BASE_URL
 ARG SOCKET_URL
 ARG KAKAO_REST_API_KEY
 ARG LINE_LOGIN_CHANNEL_ID
+ARG FIREBASE_API_KEY
+ARG FIREBASE_APP_ID
+ARG FIREBASE_MESSAGING_SENDER_ID
+ARG FIREBASE_PROJECT_ID
+ARG FIREBASE_AUTH_DOMAIN
+ARG FIREBASE_STORAGE_BUCKET
+ARG FIREBASE_VAPID_KEY
 ARG GA4_MEASUREMENT_ID
 
 RUN test -n "$APP_ENV" \
@@ -85,11 +92,25 @@ RUN EFFECTIVE_API_BASE_URL="${API_BASE_URL:-http://localhost:3100}" \
         --dart-define=APP_ENV=${APP_ENV} \
         --dart-define=API_BASE_URL=${EFFECTIVE_API_BASE_URL} \
         --dart-define=SOCKET_URL=${SOCKET_URL} \
+        --dart-define="FIREBASE_API_KEY=${FIREBASE_API_KEY}" \
+        --dart-define="FIREBASE_APP_ID=${FIREBASE_APP_ID}" \
+        --dart-define="FIREBASE_MESSAGING_SENDER_ID=${FIREBASE_MESSAGING_SENDER_ID}" \
+        --dart-define="FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}" \
+        --dart-define="FIREBASE_AUTH_DOMAIN=${FIREBASE_AUTH_DOMAIN}" \
+        --dart-define="FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET}" \
+        --dart-define="FIREBASE_VAPID_KEY=${FIREBASE_VAPID_KEY}" \
         $KAKAO_DEFINE $LINE_DEFINE $GA4_DEFINE; \
     else \
       flutter build web --release --no-wasm-dry-run \
         --dart-define=APP_ENV=${APP_ENV} \
         --dart-define=API_BASE_URL=${EFFECTIVE_API_BASE_URL} \
+        --dart-define="FIREBASE_API_KEY=${FIREBASE_API_KEY}" \
+        --dart-define="FIREBASE_APP_ID=${FIREBASE_APP_ID}" \
+        --dart-define="FIREBASE_MESSAGING_SENDER_ID=${FIREBASE_MESSAGING_SENDER_ID}" \
+        --dart-define="FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}" \
+        --dart-define="FIREBASE_AUTH_DOMAIN=${FIREBASE_AUTH_DOMAIN}" \
+        --dart-define="FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET}" \
+        --dart-define="FIREBASE_VAPID_KEY=${FIREBASE_VAPID_KEY}" \
         $KAKAO_DEFINE $LINE_DEFINE $GA4_DEFINE; \
     fi \
     && cp /tmp/flutter_service_worker_cleanup.js build/web/flutter_service_worker.js

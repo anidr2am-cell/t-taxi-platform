@@ -7,6 +7,7 @@ const NotificationRepository=require('/qa/src/repositories/notification.reposito
 const Arrival=require('/qa/src/services/customerGateArrival.service');
 const {formatInstantAsServiceDateTime}=require('/qa/src/utils/serviceDateTime.util');
 const sql=[
+ `CREATE TABLE IF NOT EXISTS qa_notification_devices(id BIGINT PRIMARY KEY,fcm_token TEXT,updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`,
  `CREATE TABLE IF NOT EXISTS bookings(id BIGINT PRIMARY KEY,booking_number VARCHAR(32),status VARCHAR(32),service_type_code VARCHAR(32),scheduled_pickup_at DATETIME)`,
  `CREATE TABLE IF NOT EXISTS booking_charge_items(id BIGINT PRIMARY KEY,booking_id BIGINT,charge_type VARCHAR(32),deleted_at DATETIME NULL)`,
  `CREATE TABLE IF NOT EXISTS drivers(id BIGINT PRIMARY KEY,user_id BIGINT,status VARCHAR(32),deleted_at DATETIME NULL)`,
@@ -25,6 +26,13 @@ init().then(()=>http.createServer(async(req,res)=>{
  res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('X-Preview-Backend','tride-gate-arrival-20261105-backend');res.setHeader('Cache-Control','no-store');
  const url=new URL(req.url,'http://qa'),path=url.pathname;const reply=(code,data)=>{res.statusCode=code;res.end(JSON.stringify({success:code<400,data}));};
  try{
+  if(path==='/api/v1/notifications/devices'&&req.method==='POST') {
+    if(req.headers.authorization!=='Bearer qa-only')return reply(403,{qaOnly:true});
+    let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>8192)return reply(413,{qaOnly:true});}
+    const body=JSON.parse(raw);if(typeof body.token!=='string'||!body.token.length)return reply(422,{qaOnly:true});
+    await pool.query('INSERT INTO qa_notification_devices(id,fcm_token) VALUES(1,?) ON DUPLICATE KEY UPDATE fcm_token=VALUES(fcm_token),updated_at=CURRENT_TIMESTAMP',[body.token]);
+    return reply(200,{deviceId:1});
+  }
   if(path==='/api/v1/health')return reply(200,{qaOnly:true});
   if(path==='/qa/reset'&&req.method==='POST'){await pool.query('DELETE FROM notification_deliveries');await pool.query('DELETE FROM notifications');return reply(200,{reset:true});}
   if(path==='/qa/inbox'){const [items]=await pool.query("SELECT id notificationId,type notificationType,title,body,payload,read_at readAt FROM notifications ORDER BY id DESC");return reply(200,{items});}
