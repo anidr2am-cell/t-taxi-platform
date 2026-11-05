@@ -55,6 +55,17 @@ test('queued alert for an old assignment is skipped during recovery',async()=>{
   await service.processDeliveries(1);
   assert.deepEqual(results,[{status:'SKIPPED',error:'PERMANENT_GATE_ARRIVAL_ASSIGNMENT_CHANGED'}]);
 });
+test('MariaDB JSON text is converted into the driver inbox object contract',async()=>{
+  const Repository=require('../src/repositories/notification.repository');
+  const NotificationService=require('../src/services/notification.service');
+  const repo=new Repository({query:async()=>[[{id:1,type:'CUSTOMER_GATE_ARRIVED',
+    title:'ลูกค้าถึงประตู 7 แล้ว',body:'QA',payload:'{"bookingNumber":"TX209901010217","gate":"7"}',read_at:null}]]});
+  const rows=await repo.findNotifications({userId:20},{limit:20,offset:0});
+  const item=new NotificationService({},repo,{}, {}, {}, {}).mapListItem(rows[0]);
+  assert.equal(typeof item.payload,'object');
+  assert.equal(item.payload.bookingNumber,'TX209901010217');
+  assert.equal(item.read,false);
+});
 test('confirmation email has localized authenticated lookup link, no bearer secrets; ended mail unchanged',()=>{
   for(const locale of ['ko','en','th','ja','zh']){
     const n={type:'DRIVER_ASSIGNED',booking_number:'TX202611050001',booking_metadata:{locale}};

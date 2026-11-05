@@ -35,7 +35,7 @@ init().then(()=>http.createServer(async(req,res)=>{
   }
   if(path==='/api/v1/health')return reply(200,{qaOnly:true});
   if(path==='/qa/reset'&&req.method==='POST'){await pool.query('DELETE FROM notification_deliveries');await pool.query('DELETE FROM notifications');return reply(200,{reset:true});}
-  if(path==='/qa/inbox'){const [items]=await pool.query("SELECT id notificationId,type notificationType,title,body,payload,read_at readAt FROM notifications ORDER BY id DESC");return reply(200,{items});}
+  if(path==='/qa/inbox'){const rows=await notifications.notificationRepository.findNotifications({userId:20,recipientType:'USER',audienceRole:'DRIVER'},{limit:20,offset:0});return reply(200,{items:rows.map(row=>notifications.mapListItem(row))});}
   if(path==='/qa/db-check'){const [[n]]=await pool.query('SELECT COUNT(*) count FROM notifications');const [[a]]=await pool.query('SELECT driver_id driverId,is_active isActive FROM booking_driver_assignments WHERE id=10');const [[b]]=await pool.query('SELECT status FROM bookings WHERE id=1');const [deliveries]=await pool.query('SELECT channel,delivery_status status,last_error error FROM notification_deliveries');return reply(200,{notifications:n.count,assignment:a,booking:b,deliveries});}
   if(path==='/api/v1/bookings/TX209901010217/gate-arrival'&&['GET','POST'].includes(req.method))return reply(200,await service.run('TX209901010217',null,req.headers['x-guest-access-token'],req.method==='POST'));
   return reply(404,{qaOnly:true});

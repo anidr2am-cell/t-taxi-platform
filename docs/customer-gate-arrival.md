@@ -29,3 +29,5 @@ Edward approved registering `T-Rider Driver Web` and generating the first public
 The HTTPS QA page at `/driver` uses a QA-only manifest/name and device registration into its own QA database. No production device/booking record is created. Browser/device permission registration and actual locked-phone delivery must be verified separately; configuration creation alone is not proof of delivery.
 
 The default FCM adapter correctly reads `config/env.firebase`; a regression check confirms this without printing credentials. No default sender behavior or historical SKIPPED deliveries were changed.
+
+A real QA handset registered successfully and Edward confirmed sound/notification delivery with the screen off (one approved test only). An isolated inbox serialization issue was then reproduced: raw MariaDB JSON text reached the widget. The QA endpoint now uses the production notification repository and mapper, and browser verification confirms the Thai inbox title/body render. The production inbox already uses that normalization. No extra push was sent for this fix.
