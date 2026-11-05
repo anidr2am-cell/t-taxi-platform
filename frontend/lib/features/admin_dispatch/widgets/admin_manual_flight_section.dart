@@ -46,6 +46,7 @@ class _AdminManualFlightSectionState extends State<AdminManualFlightSection> {
   String? _lookupErrorCode;
   bool _lookupConfirmed = false;
   int _searchGeneration = 0;
+  String? _flightDate;
 
   int? _pickupTimeConflictMinutes;
   DateTime? _flightArrivalBangkok;
@@ -87,12 +88,41 @@ class _AdminManualFlightSectionState extends State<AdminManualFlightSection> {
   }
 
   String? get _pickupDateYmd {
-    final raw = widget.pickupDateIsoOrBangkokDate?.trim();
+    final raw = (_flightDate ?? widget.pickupDateIsoOrBangkokDate)?.trim();
     if (raw == null || raw.isEmpty) return null;
     if (raw.length >= 10 && raw[4] == '-' && raw[7] == '-') {
       return raw.substring(0, 10);
     }
     return null;
+  }
+
+  Future<void> _pickFlightDate() async {
+    final utc = DateTime.now().toUtc().add(const Duration(hours: 7));
+    final today = DateTime(utc.year, utc.month, utc.day);
+    final initial = DateTime.tryParse(_pickupDateYmd ?? '') ?? today;
+    final date = await showDatePicker(
+      context: context,
+      initialDate: initial.isBefore(today) ? today : initial,
+      firstDate: today,
+      lastDate: DateTime(today.year + 2),
+    );
+    if (date == null || !mounted) return;
+    _clearLookupState();
+    setState(
+      () => _flightDate =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}',
+    );
+  }
+
+  void _useArrival({required int delayMinutes}) {
+    final result = _lookupResult;
+    if (result == null) return;
+    final arrival = bangkokWallClockFromFlightIso(
+      result.arrival.estimatedAt ?? result.arrival.scheduledAt,
+    );
+    if (arrival == null) return;
+    _confirmFlightLookup();
+    widget.onPickupAtApply?.call(arrival.add(Duration(minutes: delayMinutes)));
   }
 
   void _clearLookupState() {
@@ -273,7 +303,8 @@ class _AdminManualFlightSectionState extends State<AdminManualFlightSection> {
           selected: _selectedPickupSource == _PickupTimeSource.flight,
           onTap: _selectFlightPickupTime,
         ),
-        if (_selectedPickupSource != null && widget.pickupAtBangkok != null) ...[
+        if (_selectedPickupSource != null &&
+            widget.pickupAtBangkok != null) ...[
           const SizedBox(height: AppTokens.spaceSm),
           Text(
             key: const Key('adminFlightPickupFinalSummary'),
@@ -289,7 +320,8 @@ class _AdminManualFlightSectionState extends State<AdminManualFlightSection> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final canSearch = _controller.text.trim().isNotEmpty &&
+    final canSearch =
+        _controller.text.trim().isNotEmpty &&
         _pickupDateYmd != null &&
         !_lookingUp &&
         widget.enabled;
@@ -300,10 +332,19 @@ class _AdminManualFlightSectionState extends State<AdminManualFlightSection> {
         children: [
           Text(
             l10n.t('flight_number'),
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
+          const SizedBox(height: AppTokens.spaceSm),
+          OutlinedButton.icon(
+            key: const Key('adminFlightDate'),
+            onPressed: widget.enabled ? _pickFlightDate : null,
+            icon: const Icon(Icons.calendar_today_outlined),
+            label: Text(_pickupDateYmd ?? l10n.t('flight_departure_date')),
+          ),
+          const SizedBox(height: AppTokens.spaceSm),
+          Text(l10n.t('flight_departure_date_help')),
           const SizedBox(height: AppTokens.spaceSm),
           TextField(
             key: const Key('adminManualFlightNumber'),
@@ -339,7 +380,7 @@ class _AdminManualFlightSectionState extends State<AdminManualFlightSection> {
             Padding(
               padding: const EdgeInsets.only(top: AppTokens.spaceSm),
               child: Text(
-                l10n.t('admin_manual_booking_flight_pickup_date_required'),
+                l10n.t('flight_first_date_required'),
                 style: const TextStyle(color: AppTokens.textSecondary),
               ),
             ),
@@ -371,12 +412,34 @@ class _AdminManualFlightSectionState extends State<AdminManualFlightSection> {
                     ? _confirmFlightLookup
                     : null,
                 icon: Icon(
-                  _lookupConfirmed ? Icons.check_circle : Icons.check_circle_outline,
+                  _lookupConfirmed
+                      ? Icons.check_circle
+                      : Icons.check_circle_outline,
                   size: 18,
-                  color: _lookupConfirmed ? AppTokens.success : AppTokens.primary,
+                  color: _lookupConfirmed
+                      ? AppTokens.success
+                      : AppTokens.primary,
                 ),
                 label: Text(l10n.t('flight_lookup_confirm')),
               ),
+            ),
+          ],
+          if (_lookupResult != null) ...[
+            TextButton.icon(
+              key: const Key('adminFlightUseArrival'),
+              onPressed: widget.enabled
+                  ? () => _useArrival(delayMinutes: 0)
+                  : null,
+              icon: const Icon(Icons.schedule),
+              label: Text(l10n.t('flight_first_use_arrival')),
+            ),
+            TextButton.icon(
+              key: const Key('adminFlightUseBuffer'),
+              onPressed: widget.enabled
+                  ? () => _useArrival(delayMinutes: 50)
+                  : null,
+              icon: const Icon(Icons.flight_land),
+              label: Text(l10n.t('flight_first_use_buffer')),
             ),
           ],
           if (_lookupConfirmed && _pickupTimeConflictMinutes != null) ...[

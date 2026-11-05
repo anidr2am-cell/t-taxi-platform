@@ -119,4 +119,28 @@ void main() {
     expect(find.byKey(const Key('adminFlightLookupError')), findsOneWidget);
     expect(find.byKey(const Key('adminManualFlightNumber')), findsOneWidget);
   });
+  testWidgets('flight can be looked up without pickup date/time and arrival selected', (tester) async {
+    DateTime? applied;
+    final client = MockClient((request) async => http.Response(jsonEncode({'data': {
+      'flightNumber':'TG123',
+      'departure':{'airportCode':'ICN','scheduledAt':'2026-11-10T13:00:00Z'},
+      'arrival':{'airportCode':'BKK','scheduledAt':'2026-11-10T19:30:00Z'}
+    }}),200));
+    await tester.pumpWidget(_wrap(AdminManualFlightSection(
+      flightNumber:'TG123', pickupDateIsoOrBangkokDate:null, pickupAtBangkok:null,
+      flightLookupApi:_flightApi(client), onFlightNumberChanged:(_) {},
+      onPickupAtApply:(v)=>applied=v)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('adminFlightDate')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('adminFlightSearchButton')));
+    await tester.pumpAndSettle();
+    expect(applied,isNull);
+    final arrival=find.byKey(const Key('adminFlightUseArrival'));
+    await tester.ensureVisible(arrival);await tester.tap(arrival);await tester.pumpAndSettle();
+    expect(applied,DateTime(2026,11,11,2,30));
+  });
+
 }

@@ -10393,6 +10393,14 @@ class AppLocalizations {
     },
   };
   static const Map<String, String> _customerRussianTranslations = {
+      "flight_first_use_arrival": "Использовать время прилёта для встречи",
+      "flight_first_use_buffer": "Встреча через 50 минут после прилёта",
+      "flight_first_arrival_applied":
+          "Время прилёта применено. Дату и время встречи можно изменить ниже.",
+      "flight_first_manual": "Или укажите дату и время вручную",
+      "flight_first_manual_help":
+          "Можно указать время без поиска рейса. Всё время встречи указано по Таиланду.",
+      "flight_first_date_required": "Для поиска выберите дату вылета рейса.",
       "gate_arrival_title": "Уведомление у выхода 7",
       "gate_arrival_intro":
           "Получите весь багаж и подойдите к выходу 7 снаружи зала прилёта. Уведомление получит только назначенный водитель.",
@@ -11133,7 +11141,60 @@ class AppLocalizations {
     },
   };
 
+  static const Map<String, Map<String, String>> _flightFirstText = {
+    "ko": {
+      "flight_first_use_arrival": "항공편 도착 시각을 픽업 일시로 사용",
+      "flight_first_use_buffer": "도착 50분 후를 픽업 일시로 사용",
+      "flight_first_arrival_applied":
+          "도착 시각이 픽업 일시에 반영됐습니다. 아래에서 직접 수정할 수 있습니다.",
+      "flight_first_manual": "또는 픽업 일시 직접 입력",
+      "flight_first_manual_help":
+          "항공편을 조회하지 않아도 직접 입력할 수 있습니다. 모든 픽업 일시는 태국 시간입니다.",
+      "flight_first_date_required": "항공편 출발일을 선택한 후 조회해 주세요.",
+    },
+    "en": {
+      "flight_first_use_arrival": "Use flight arrival as pickup time",
+      "flight_first_use_buffer": "Use 50 minutes after arrival",
+      "flight_first_arrival_applied":
+          "Arrival time applied. You can edit the pickup date and time below.",
+      "flight_first_manual": "Or enter pickup date and time manually",
+      "flight_first_manual_help":
+          "You can enter a pickup time without a flight search. All pickup times are in Thailand time.",
+      "flight_first_date_required":
+          "Select the flight departure date to search.",
+    },
+    "th": {
+      "flight_first_use_arrival": "ใช้เวลาที่เที่ยวบินถึงเป็นเวลารับ",
+      "flight_first_use_buffer": "ใช้เวลา 50 นาทีหลังเที่ยวบินถึง",
+      "flight_first_arrival_applied":
+          "ตั้งเวลารับตามเวลาเที่ยวบินถึงแล้ว สามารถแก้ไขวันและเวลาด้านล่างได้",
+      "flight_first_manual": "หรือระบุวันและเวลารับเอง",
+      "flight_first_manual_help":
+          "สามารถระบุเวลารับเองโดยไม่ต้องค้นหาเที่ยวบิน เวลารับทั้งหมดเป็นเวลาไทย",
+      "flight_first_date_required": "เลือกวันออกเดินทางของเที่ยวบินก่อนค้นหา",
+    },
+    "ja": {
+      "flight_first_use_arrival": "便の到着時刻をお迎え日時に設定",
+      "flight_first_use_buffer": "到着50分後をお迎え日時に設定",
+      "flight_first_arrival_applied": "到着時刻を反映しました。下の欄でお迎え日時を変更できます。",
+      "flight_first_manual": "または、お迎え日時を手入力",
+      "flight_first_manual_help": "便を検索せずに入力することもできます。お迎え日時はすべてタイ時間です。",
+      "flight_first_date_required": "フライトの出発日を選んで検索してください。",
+    },
+    "zh": {
+      "flight_first_use_arrival": "使用航班抵达时间作为接机时间",
+      "flight_first_use_buffer": "使用航班抵达50分钟后的时间",
+      "flight_first_arrival_applied": "已按抵达时间设置接机时间，可在下方修改。",
+      "flight_first_manual": "或手动填写接机日期和时间",
+      "flight_first_manual_help": "也可不查询航班，直接填写。所有接机时间均为泰国当地时间。",
+      "flight_first_date_required": "请先选择航班出发日期再查询。",
+    },
+
+  };
+
   String t(String key) {
+    final flightFirst = _flightFirstText[languageCode]?[key];
+    if (flightFirst != null) return flightFirst;
     final gateText = _gateArrivalText[languageCode]?[key];
     if (gateText != null) return gateText;
     if (languageCode == 'ru') {
