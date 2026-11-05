@@ -796,3 +796,7 @@ container.register("adminBookingEmailService",(c)=>new (require('../services/adm
   c.get('notificationRepository'),c.get('bookingRepository'),c.get('notificationService'),
 ));
 module.exports = container;
+
+container.register('customerGateArrivalService', (c) => new (require('../services/customerGateArrival.service'))(
+  database.pool, c.get('bookingRepository'), c.get('bookingService'), c.get('notificationService'),
+));

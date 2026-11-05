@@ -18,6 +18,7 @@ import '../widgets/booking_messenger_handoff_section.dart';
 import '../widgets/customer_payment_instructions_card.dart';
 import '../../driver_location/widgets/guest_driver_tracking_section.dart';
 import '../widgets/airport_meeting_guide_card.dart';
+import '../widgets/gate_arrival_action.dart';
 import '../widgets/guest_booking_cancel_section.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../auth/models/social_login_return_context.dart';
@@ -421,6 +422,11 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                   serviceTypeCode: widget.serviceTypeCode,
                   originAirportCode: widget.originAirportCode,
                   nameSignRequested: widget.nameSignRequested,
+                  arrivalAction: GateArrivalAction(
+                    bookingNumber: widget.result.bookingNumber,
+                    guestToken: widget.result.guestAccessToken,
+                    customerToken: _customerAccessToken,
+                  ),
                   vehicleInfo: widget.meetingVehicleInfo,
                 ),
               ],

@@ -268,5 +268,10 @@ class NotificationDeviceRegistrationService {
     await prefs.setInt(key, deviceId);
   }
 
+  void dispose() {
+    _refreshSubscription?.cancel();
+    _refreshSubscription = null;
+  }
+
   static String _guestDeviceIdKey(int bookingId) => 'notification_device_id_guest_$bookingId';
 }

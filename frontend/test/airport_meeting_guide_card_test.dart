@@ -157,7 +157,7 @@ void main() {
     expect(sends, 1);
   });
 
-  testWidgets('Gate 7 step 2 shows Korean warning text in error color', (
+  testWidgets('Gate 7 arrival notification step 3 is emphasized after moving to Gate 7', (
     tester,
   ) async {
     const warning = '기사에게 픽업 알림을 보냅니다. 꼭 수하물을 찾으신 후에 알림을 보내주시기 바랍니다';
@@ -206,7 +206,7 @@ void main() {
     expect(find.text('Tell driver I’m ready'), findsNothing);
   });
 
-  testWidgets('lookup keeps pickup alert disabled in active pickup statuses', (
+  testWidgets('lookup exposes new arrival flow but never enables it without authorized API status', (
     tester,
   ) async {
     for (final status in ['DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED']) {
@@ -247,7 +247,7 @@ void main() {
 
         expect(
           find.text(
-            'Pickup notification becomes available after a driver is assigned.',
+            'Gate 7 arrival alert',
           ),
           findsOneWidget,
           reason: status,

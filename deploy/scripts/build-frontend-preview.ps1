@@ -5,7 +5,7 @@ param(
 
   [string]$SocketUrl = '',
 
-  [ValidateSet('lib/main.dart', 'lib/qa/admin_manual_qa_main.dart')]
+  [ValidateSet('lib/main.dart', 'lib/qa/admin_manual_qa_main.dart', 'lib/qa/gate_arrival_qa_main.dart')]
   [string]$Target = 'lib/main.dart'
 )
 

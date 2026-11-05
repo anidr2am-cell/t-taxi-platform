@@ -1,3 +1,4 @@
+import '../widgets/admin_gate_arrival_link.dart';
 import '../widgets/admin_receipt_email_card.dart';
 import '../../admin/widgets/admin_copy_button.dart';
 import '../../admin/widgets/admin_selection_area.dart';
@@ -1073,6 +1074,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                           ),
                         ],
                       ),
+                    if (detail['serviceType']?['code'] == 'AIRPORT_PICKUP' && detail['flight']?['airportIata'] == 'BKK' && detail['options']?['nameSign'] != true) AdminGateArrivalLink(bookingNumber:widget.bookingNumber),
                     AdminCustomerBriefCard(detail: detail, api: widget.api),
                     const SizedBox(height: AppTokens.spaceMd),
                     AdminDriverCheckCards(

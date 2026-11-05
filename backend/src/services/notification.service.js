@@ -708,6 +708,18 @@ class NotificationService {
     const deliveries = await this.notificationRepository.findDeliveriesByNotificationId(notificationId);
     const recipient = { userId: notification.user_id, bookingId: notification.booking_id };
 
+    if (notification.type === 'CUSTOMER_GATE_ARRIVED') {
+      const current = await this.notificationRepository.isGateArrivalCurrent(notification);
+      if (!current) {
+        for (const delivery of deliveries) {
+          if (delivery.delivery_status === DELIVERY_STATUS.PENDING || delivery.delivery_status === DELIVERY_STATUS.FAILED) {
+            await this.recordDeliveryResult(notificationId, delivery, { status: DELIVERY_STATUS.SKIPPED, error: 'PERMANENT_GATE_ARRIVAL_ASSIGNMENT_CHANGED' });
+          }
+        }
+        return;
+      }
+    }
+
     for (const delivery of deliveries) {
       if (delivery.delivery_status === DELIVERY_STATUS.DELIVERED
         || delivery.delivery_status === DELIVERY_STATUS.SKIPPED) {

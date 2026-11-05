@@ -37,6 +37,7 @@ class AirportMeetingGuideCard extends StatelessWidget {
     this.vehicleInfo,
     this.onNotifyPickup,
     this.pickupAlertSent = false,
+    this.arrivalAction,
   });
 
   final String? serviceTypeCode;
@@ -45,6 +46,7 @@ class AirportMeetingGuideCard extends StatelessWidget {
   final AirportMeetingVehicleInfo? vehicleInfo;
   final Future<void> Function()? onNotifyPickup;
   final bool pickupAlertSent;
+  final Widget? arrivalAction;
 
   static bool shouldShow({
     required String? serviceTypeCode,
@@ -87,9 +89,9 @@ class AirportMeetingGuideCard extends StatelessWidget {
           ]
         : [
             'airport_meeting_step_luggage',
+            'airport_meeting_step_gate_7',
             'airport_meeting_step_notify_driver',
             'airport_meeting_step_vehicle_number',
-            'airport_meeting_step_gate_7',
             'airport_meeting_step_board',
           ];
 
@@ -133,15 +135,17 @@ class AirportMeetingGuideCard extends StatelessWidget {
             ],
             _Steps(
               stepKeys: stepKeys,
-              emphasizedStepIndex: nameSignRequested ? null : 1,
+              emphasizedStepIndex: nameSignRequested ? null : 2,
             ),
             const SizedBox(height: AppTokens.spaceMd),
             _VehicleBlock(info: vehicleInfo),
             const SizedBox(height: AppTokens.spaceMd),
-            _PickupNotificationAction(
-              onNotifyPickup: onNotifyPickup,
-              pickupAlertSent: pickupAlertSent,
-            ),
+            if (!nameSignRequested)
+              arrivalAction ??
+                  _PickupNotificationAction(
+                    onNotifyPickup: onNotifyPickup,
+                    pickupAlertSent: pickupAlertSent,
+                  ),
           ],
         ),
       ),

@@ -10393,6 +10393,26 @@ class AppLocalizations {
     },
   };
   static const Map<String, String> _customerRussianTranslations = {
+      "gate_arrival_title": "Уведомление у выхода 7",
+      "gate_arrival_intro":
+          "Получите весь багаж и подойдите к выходу 7 снаружи зала прилёта. Уведомление получит только назначенный водитель.",
+      "gate_arrival_button": "Багаж получен, я у выхода 7",
+      "gate_arrival_confirm_title": "Вы с багажом снаружи у выхода 7?",
+      "gate_arrival_confirm_body":
+          "Назначенному водителю придёт уведомление на тайском. Если вы ещё не там, нажмите «Отмена».",
+      "gate_arrival_sent":
+          "Уведомление записано. Это не подтверждает получение водителем или его выезд. Если ответа нет, свяжитесь с поддержкой.",
+      "gate_arrival_unavailable":
+          "Доступно после назначения водителя, за 24 часа до и в течение 24 часов после подачи.",
+      "gate_arrival_error":
+          "Не удалось проверить уведомление. Повторите проверку или свяжитесь с поддержкой.",
+      "gate_arrival_refresh": "Проверить снова",
+      "gate_arrival_support": "Поддержка",
+      "gate_arrival_cancel": "Отмена",
+      "gate_arrival_send": "Сообщить о прибытии",
+      "gate_arrival_read":
+          "В списке водителя уведомление отмечено прочитанным. Это не подтверждает его выезд.",
+      "gate_arrival_link": "Ссылка для уведомления о прибытии",
       "customer_payment_bank_name": "Банк",
       "customer_payment_account_holder": "Владелец счёта",
       "customer_payment_account_number": "Номер счёта",
@@ -10971,7 +10991,133 @@ class AppLocalizations {
     "wizard_vehicle_prerequisites": "Сначала укажите услугу, маршрут, время подачи и пассажиров.",
   };
 
+  static const Map<String, Map<String, String>> _gateArrivalText = {
+    "ko": {
+      "gate_arrival_title": "7번 게이트 도착 알림",
+      "gate_arrival_intro":
+          "수하물을 모두 찾고 입국층 7번 게이트 밖에 도착한 뒤 눌러 주세요. 배정 기사에게만 알림을 보냅니다.",
+      "gate_arrival_button": "짐 찾고 7번 게이트에 도착했어요",
+      "gate_arrival_confirm_title": "7번 게이트 밖에 도착하셨나요?",
+      "gate_arrival_confirm_body":
+          "예약을 맡은 기사에게 태국어 알림을 보냅니다. 아직 도착하지 않았다면 취소해 주세요.",
+      "gate_arrival_sent":
+          "도착 알림이 접수되었습니다. 기사 수신·출발이 확인된 것은 아닙니다. 응답이 없으면 고객센터에 연락해 주세요.",
+      "gate_arrival_unavailable":
+          "현재는 알림을 보낼 수 없습니다. 기사 배정 후 픽업 전후 24시간 안에 이용해 주세요.",
+      "gate_arrival_error": "알림 상태를 확인하지 못했습니다. 다시 확인하거나 고객센터로 연락해 주세요.",
+      "gate_arrival_refresh": "다시 확인",
+      "gate_arrival_support": "고객센터",
+      "gate_arrival_cancel": "취소",
+      "gate_arrival_send": "도착 알리기",
+      "gate_arrival_read": "기사 알림 목록에서 읽음 처리되었습니다. 출발 확인은 아닙니다.",
+      "gate_arrival_link": "고객 도착 알림 링크",
+    },
+    "en": {
+      "gate_arrival_title": "Gate 7 arrival alert",
+      "gate_arrival_intro":
+          "Collect all luggage and reach the outside of Arrival Gate 7 before tapping. Only your assigned driver is notified.",
+      "gate_arrival_button": "I have my luggage and am at Gate 7",
+      "gate_arrival_confirm_title": "Are you outside Gate 7 with all luggage?",
+      "gate_arrival_confirm_body":
+          "A Thai notification will be sent to your assigned driver. Cancel if you are not there yet.",
+      "gate_arrival_sent":
+          "Arrival alert recorded. This does not confirm the driver received it or departed. Contact support if there is no response.",
+      "gate_arrival_unavailable":
+          "Available after driver assignment, within 24 hours before or after pickup.",
+      "gate_arrival_error":
+          "Could not check the alert. Refresh or contact support.",
+      "gate_arrival_refresh": "Check again",
+      "gate_arrival_support": "Contact support",
+      "gate_arrival_cancel": "Cancel",
+      "gate_arrival_send": "Send arrival alert",
+      "gate_arrival_read":
+          "Marked as read in the driver notification list. This does not confirm departure.",
+      "gate_arrival_link": "Customer arrival alert link",
+    },
+    "th": {
+      "gate_arrival_title": "แจ้งถึงประตู 7",
+      "gate_arrival_intro":
+          "รับกระเป๋าให้ครบและไปด้านนอกประตู 7 ชั้นผู้โดยสารขาเข้าก่อนกด ระบบจะแจ้งเฉพาะคนขับที่ได้รับมอบหมาย",
+      "gate_arrival_button": "รับกระเป๋าครบและถึงประตู 7 แล้ว",
+      "gate_arrival_confirm_title":
+          "รับกระเป๋าครบและอยู่ด้านนอกประตู 7 แล้วใช่ไหม?",
+      "gate_arrival_confirm_body":
+          "ระบบจะส่งแจ้งเตือนภาษาไทยให้คนขับที่ได้รับมอบหมาย หากยังไม่ถึง กรุณากดยกเลิก",
+      "gate_arrival_sent":
+          "บันทึกการแจ้งแล้ว ยังไม่ได้ยืนยันว่าคนขับได้รับข้อความหรือออกเดินทาง หากไม่มีการตอบกลับ โปรดติดต่อผู้ดูแล",
+      "gate_arrival_unavailable":
+          "ใช้ได้หลังมีคนขับรับงาน ภายใน 24 ชั่วโมงก่อนหรือหลังเวลารับ",
+      "gate_arrival_error":
+          "ตรวจสอบการแจ้งไม่ได้ กรุณาลองอีกครั้งหรือติดต่อผู้ดูแล",
+      "gate_arrival_refresh": "ตรวจสอบอีกครั้ง",
+      "gate_arrival_support": "ติดต่อผู้ดูแล",
+      "gate_arrival_cancel": "ยกเลิก",
+      "gate_arrival_send": "แจ้งว่าถึงแล้ว",
+      "gate_arrival_read":
+          "รายการแจ้งเตือนของคนขับถูกทำเครื่องหมายว่าอ่านแล้ว ไม่ใช่การยืนยันว่าออกเดินทางแล้ว",
+      "gate_arrival_link": "ลิงก์แจ้งว่าลูกค้าถึงแล้ว",
+    },
+    "ja": {
+      "gate_arrival_title": "7番ゲート到着通知",
+      "gate_arrival_intro":
+          "すべての荷物を受け取り、到着階7番ゲートの外に着いてから押してください。担当ドライバーだけに通知します。",
+      "gate_arrival_button": "荷物を受け取り、7番ゲートに到着しました",
+      "gate_arrival_confirm_title": "荷物をすべて持って7番ゲートの外にいますか？",
+      "gate_arrival_confirm_body": "担当ドライバーにタイ語で通知します。まだ到着していない場合はキャンセルしてください。",
+      "gate_arrival_sent":
+          "到着通知を受け付けました。ドライバーの受信・出発を確認したものではありません。応答がない場合はサポートへご連絡ください。",
+      "gate_arrival_unavailable": "担当ドライバー決定後、お迎え時刻の前後24時間以内に利用できます。",
+      "gate_arrival_error": "通知を確認できませんでした。再確認するかサポートへご連絡ください。",
+      "gate_arrival_refresh": "再確認",
+      "gate_arrival_support": "サポート",
+      "gate_arrival_cancel": "キャンセル",
+      "gate_arrival_send": "到着を知らせる",
+      "gate_arrival_read": "ドライバーの通知一覧で既読になりました。出発の確認ではありません。",
+      "gate_arrival_link": "お客様の到着通知リンク",
+    },
+    "zh": {
+      "gate_arrival_title": "7号门到达通知",
+      "gate_arrival_intro": "请取齐所有行李，到达层7号门外后再点击。仅通知已分配的司机。",
+      "gate_arrival_button": "已取齐行李，到达7号门",
+      "gate_arrival_confirm_title": "您已取齐行李并在7号门外了吗？",
+      "gate_arrival_confirm_body": "将向您的司机发送泰语通知。若尚未到达，请取消。",
+      "gate_arrival_sent": "已记录到达通知。这不代表司机已收到或已出发。若无回复，请联系客服。",
+      "gate_arrival_unavailable": "分配司机后，在接车时间前后24小时内可用。",
+      "gate_arrival_error": "无法确认通知状态。请重试或联系客服。",
+      "gate_arrival_refresh": "重新确认",
+      "gate_arrival_support": "联系客服",
+      "gate_arrival_cancel": "取消",
+      "gate_arrival_send": "通知已到达",
+      "gate_arrival_read": "司机通知列表已标为已读，不代表司机已出发。",
+      "gate_arrival_link": "客户到达通知链接",
+    },
+    "ru": {
+      "gate_arrival_title": "Уведомление у выхода 7",
+      "gate_arrival_intro":
+          "Получите весь багаж и подойдите к выходу 7 снаружи зала прилёта. Уведомление получит только назначенный водитель.",
+      "gate_arrival_button": "Багаж получен, я у выхода 7",
+      "gate_arrival_confirm_title": "Вы с багажом снаружи у выхода 7?",
+      "gate_arrival_confirm_body":
+          "Назначенному водителю придёт уведомление на тайском. Если вы ещё не там, нажмите «Отмена».",
+      "gate_arrival_sent":
+          "Уведомление записано. Это не подтверждает получение водителем или его выезд. Если ответа нет, свяжитесь с поддержкой.",
+      "gate_arrival_unavailable":
+          "Доступно после назначения водителя, за 24 часа до и в течение 24 часов после подачи.",
+      "gate_arrival_error":
+          "Не удалось проверить уведомление. Повторите проверку или свяжитесь с поддержкой.",
+      "gate_arrival_refresh": "Проверить снова",
+      "gate_arrival_support": "Поддержка",
+      "gate_arrival_cancel": "Отмена",
+      "gate_arrival_send": "Сообщить о прибытии",
+      "gate_arrival_read":
+          "В списке водителя уведомление отмечено прочитанным. Это не подтверждает его выезд.",
+      "gate_arrival_link": "Ссылка для уведомления о прибытии",
+    },
+  };
+
   String t(String key) {
+    final gateText = _gateArrivalText[languageCode]?[key];
+    if (gateText != null) return gateText;
     if (languageCode == 'ru') {
       final customerText = _customerRussianTranslations[key];
       if (customerText != null) return customerText;

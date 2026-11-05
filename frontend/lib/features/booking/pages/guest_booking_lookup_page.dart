@@ -17,6 +17,7 @@ import '../widgets/booking_notification_section.dart';
 import '../widgets/booking_review_form.dart';
 import '../widgets/booking_voucher.dart';
 import '../widgets/airport_meeting_guide_card.dart';
+import '../widgets/gate_arrival_action.dart';
 import '../widgets/guest_booking_cancel_section.dart';
 import '../widgets/customer_payment_instructions_card.dart';
 import '../../driver_location/widgets/guest_driver_tracking_section.dart';
@@ -806,6 +807,12 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
             serviceTypeCode: result.serviceTypeCode,
             originAirportCode: result.originAirportCode,
             nameSignRequested: result.nameSignRequested,
+            arrivalAction: GateArrivalAction(
+              key: ValueKey('gate_${result.bookingNumber}'),
+              bookingNumber: result.bookingNumber,
+              guestToken: result.guestAccessToken,
+              customerToken: _customerAccessToken,
+            ),
             vehicleInfo: AirportMeetingVehicleInfo(
               driverName: result.driverName,
               driverPhone: _canShowDriverPhone(result)
