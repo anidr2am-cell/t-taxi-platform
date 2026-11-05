@@ -1,3 +1,4 @@
+const { resolveBookingAirport } = require('../utils/bookingAirport.util');
 const { buildAdminDriverFinancialSummary } = require('../utils/adminDriverFinancialSummary');
 const { randomUUID } = require("node:crypto");
 const AppError = require("../utils/AppError");
@@ -491,6 +492,7 @@ class AdminDispatchService {
       });
     }
 
+    const airportIata = await resolveBookingAirport(row, this.bookingRepository);
     const chargeItems = await this.bookingRepository.findChargeItemsByBookingId(
       row.id,
     );
@@ -645,7 +647,7 @@ class AdminDispatchService {
       },
       flight: {
         flightNumber: row.flight_number,
-        airportIata: row.airport_iata ?? row.airport_code_custom,
+        airportIata,
         scheduledArrivalAt: formatServiceDateTimeIso(
           row.flight_scheduled_arrival_at,
         ),

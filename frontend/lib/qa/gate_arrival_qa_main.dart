@@ -62,25 +62,52 @@ class GateArrivalQaApp extends StatelessWidget {
               if ((Uri.base.queryParameters['view'] == 'driver' || Uri.base.path.startsWith('/driver')))
                 DriverArrivalReadinessCard(api: QaDriverApi(),registration:QaPushRegistration())
               else if (Uri.base.queryParameters['view'] == 'admin')
-                const AdminGateArrivalLink(bookingNumber: 'TX209901010217')
+                const ResolvedAirportQaView(admin: true)
               else
-                const AirportMeetingGuideCard(
-                  serviceTypeCode: 'AIRPORT_PICKUP',
-                  originAirportCode: 'BKK',
-                  nameSignRequested: false,
-                  vehicleInfo: AirportMeetingVehicleInfo(
-                    driverName: 'QA Driver',
-                    vehiclePlateNumber: 'QA123',
-                  ),
-                  arrivalAction: GateArrivalAction(
-                    bookingNumber: 'TX209901010217',
-                    guestToken: 'qa-gate-arrival',
-                  ),
-                ),
+                const ResolvedAirportQaView(admin: false),
             ],
           ),
         ),
       ),
     );
   }
+}
+
+
+/// Uses the real service response, including the production display condition.
+class ResolvedAirportQaView extends StatefulWidget {
+  const ResolvedAirportQaView({super.key, required this.admin});
+  final bool admin;
+  @override
+  State<ResolvedAirportQaView> createState() => _ResolvedAirportQaViewState();
+}
+class _ResolvedAirportQaViewState extends State<ResolvedAirportQaView> {
+  late final Future<Map<String,dynamic>> detail = http.get(
+    Uri.parse('${AppConfig.apiBaseUrl}/qa/detail'),
+  ).then((r) => Map<String,dynamic>.from(jsonDecode(r.body)['data'] as Map));
+  @override
+  Widget build(BuildContext context) => FutureBuilder<Map<String,dynamic>>(
+    future: detail,
+    builder: (context, snapshot) {
+      if (snapshot.hasError) return const Text('QA detail failed');
+      if (!snapshot.hasData) return const CircularProgressIndicator();
+      final data = snapshot.data!;
+      final airport = data['flight']?['airportIata'] as String?;
+      final service = data['serviceType']?['code'] as String?;
+      final nameSign = data['options']?['nameSign'] == true;
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('QA manual booking · stored airport: NULL · resolved: $airport'),
+        Text('Assignment unchanged: driver ${data['activeAssignment']?['driverId']}'),
+        if (widget.admin) ...[
+          if (service == 'AIRPORT_PICKUP' && airport == 'BKK' && !nameSign)
+            AdminGateArrivalLink(bookingNumber: data['bookingNumber'] as String),
+        ] else AirportMeetingGuideCard(
+          serviceTypeCode: service ?? '', originAirportCode: airport,
+          nameSignRequested: nameSign,
+          vehicleInfo: const AirportMeetingVehicleInfo(driverName:'QA Driver',vehiclePlateNumber:'QA123'),
+          arrivalAction: GateArrivalAction(bookingNumber:data['bookingNumber'] as String,guestToken:'qa-gate-arrival'),
+        ),
+      ]);
+    },
+  );
 }

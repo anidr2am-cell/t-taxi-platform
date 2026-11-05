@@ -18,8 +18,9 @@ function fixture(overrides = {}) {
     processDeliveries:async()=>{events.push('delivery');if(deliveryFails)throw Error('offline');},
   };
   const service = new Service({getConnection:async()=>conn}, {
+    findActiveAirportRegions:async()=>require('./helpers/airportRegionFixture')(),
     findByBookingNumberForUpdate:async()=>booking,
-    findTransferByBookingId:async()=>({airport_iata:overrides.airport || 'BKK'}),
+    findTransferByBookingId:async()=>({airport_iata:Object.hasOwn(overrides,'airport') ? overrides.airport : 'BKK'}),
   },{assertCustomerOrGuestAccess:async()=>{if(!authorized)throw Error('forbidden');}},notificationService);
   return {service,events,stored,booking, setAssignment:v=>assignment=v, setSign:v=>sign=v, setAuthorized:v=>authorized=v, failDelivery:()=>deliveryFails=true};
 }
@@ -72,4 +73,16 @@ test('confirmation email has localized authenticated lookup link, no bearer secr
     const mail=renderCustomerEmail(n);assert.match(mail.text,/arrival=gate7/);assert.match(mail.html,/arrival=gate7/);assert.match(mail.text,new RegExp('lang='+locale));assert.doesNotMatch(mail.text,/guestAccessToken/);
     assert.doesNotMatch(renderCustomerEmail({...n,type:'TRIP_ENDED'}).text,/arrival=gate7/);
   }
+});
+
+test('legacy code-less manual booking uses BKK boundary, sends once, keeps assignment and booking untouched',async()=>{
+ const f=fixture({airport:null,booking_source:'ADMIN_MANUAL',origin_lat:13.689999,origin_lng:100.747924});
+ const before=JSON.stringify(f.booking);assert.equal((await f.service.run('n',null,'t')).available,true);
+ await f.service.run('n',null,'t',true);await f.service.run('n',null,'t',true);
+ assert.equal(f.events.filter(e=>e.spec).length,1);assert.equal(JSON.stringify(f.booking),before);
+ assert.equal(f.events.find(e=>e.spec).spec.recipientDriverId,2);
+});
+test('code-less DMK/UTP, outside, name sign and non-pickup cannot use Gate 7',async()=>{
+ for(const p of [{origin_lat:13.91326,origin_lng:100.60201},{origin_lat:12.679944,origin_lng:101.005028},{origin_lat:13.7563,origin_lng:100.5018}])await assert.rejects(fixture({airport:null,...p}).service.run('n',null,'t',true),/NOT_APPLICABLE/);
+ const f=fixture({airport:null,origin_lat:13.689999,origin_lng:100.747924});f.setSign(true);await assert.rejects(f.service.run('n',null,'t',true),/NOT_APPLICABLE/);
 });

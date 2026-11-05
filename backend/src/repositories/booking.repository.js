@@ -1,3 +1,4 @@
+const { pointForBooking, explicitAirport, airportFromRegions } = require('../utils/bookingAirport.util');
 const database = require('../config/database');
 const { PICKUP_CONFLICT_MIN_GAP_SECONDS } = require('../policies/driverBookingConflictPolicy');
 const {
@@ -13,6 +14,20 @@ const SETTLEMENT_ELIGIBLE_BOOKING_STATUSES_SQL = "'SETTLEMENT_PENDING', 'COMPLET
 class BookingRepository {
   constructor(pool = database.pool) {
     this.pool = pool;
+  }
+
+  async findActiveAirportRegions(conn = this.pool) {
+    const [rows] = await conn.query(`SELECT airport_iata, geometry, is_active FROM pricing_regions
+      WHERE is_active = 1 AND airport_iata IS NOT NULL`);
+    return rows;
+  }
+
+  async withResolvedAirport(rows, conn = this.pool) {
+    const needsRegions = rows.some(row => explicitAirport(row) === undefined && pointForBooking(row));
+    const regions = needsRegions ? await this.findActiveAirportRegions(conn) : [];
+    return rows.map(row => ({ ...row,
+      origin_airport_iata: row.service_type_code === 'AIRPORT_PICKUP' ? airportFromRegions(row, regions) : null,
+    }));
   }
 
   activeAssignmentExistsSql() {
@@ -771,7 +786,7 @@ class BookingRepository {
       `,
       [bookingNumber],
     );
-    return rows[0] || null;
+    return (await this.withResolvedAirport(rows, conn))[0] || null;
   }
 
   async findGuestLookupBookingsByPhoneDigits(conn, normalizedPhoneDigits, { limit = 20 } = {}) {
@@ -788,7 +803,7 @@ class BookingRepository {
       `,
       [normalizedPhoneDigits, limit],
     );
-    return rows;
+    return this.withResolvedAirport(rows, conn);
   }
 
   guestLookupSelectSql() {
@@ -799,7 +814,7 @@ class BookingRepository {
           b.status,
           COALESCE(b.driver_id, bda.driver_id) AS driver_id,
           DATE_FORMAT(b.scheduled_pickup_at, '%Y-%m-%d %H:%i:%s') AS scheduled_pickup_at_text,
-          b.origin_address,
+          b.origin_address, b.origin_lat, b.origin_lng, b.destination_lat, b.destination_lng,
           b.destination_address,
           b.metadata,
           b.customer_phone,
@@ -825,7 +840,7 @@ class BookingRepository {
           bl.carriers_24_inch_plus,
           bl.golf_bags,
           bl.special_items,
-          btd.flight_number,
+          btd.flight_number, btd.airport_code_custom, a.iata_code AS airport_iata,
           lo.code AS origin_location_code,
           ld.code AS destination_location_code,
           EXISTS (
@@ -883,6 +898,7 @@ class BookingRepository {
         LEFT JOIN booking_passengers bp ON bp.booking_id = b.id AND bp.deleted_at IS NULL
         LEFT JOIN booking_luggage bl ON bl.booking_id = b.id AND bl.deleted_at IS NULL
         LEFT JOIN booking_transfer_details btd ON btd.booking_id = b.id AND btd.deleted_at IS NULL
+        LEFT JOIN airports a ON a.id=btd.airport_id AND a.deleted_at IS NULL
         LEFT JOIN booking_driver_assignments bda ON bda.id = (
           SELECT bda2.id
           FROM booking_driver_assignments bda2
@@ -914,7 +930,7 @@ class BookingRepository {
       `,
       [userId, limit, offset],
     );
-    return rows;
+    return this.withResolvedAirport(rows);
   }
 
   async countByCustomerUserId(userId) {
@@ -972,6 +988,7 @@ class BookingRepository {
         SELECT
           b.id, b.booking_number, b.status, b.total_amount, b.currency, b.vehicle_type_id,
           b.scheduled_pickup_at,
+          b.origin_lat, b.origin_lng, b.destination_lat, b.destination_lng,
           b.payment_status, b.payment_method, b.commission_exempt, b.booking_source,
           b.commission_amount, b.metadata,
           b.customer_user_id,

@@ -778,3 +778,14 @@ test('createAdminManualBooking creates guest booking and auto note when customer
     restoreContainer();
   }
 });
+
+test('new manual airport pickup persists code inferred from registered boundary',async()=>{
+ const {service,calls,input,restoreContainer}=createHarness({});
+ try {
+   service.bookingRepository.findActiveAirportRegions=async()=>require('./helpers/airportRegionFixture')();
+   input.serviceTypeCode='AIRPORT_PICKUP';input.origin={address:'QA airport',lat:13.689999,lng:100.747924};
+   await service.createAdminManualBooking(input,ADMIN);
+   assert.equal(calls.transferUpsertPayload.airportId,1);
+   assert.equal(calls.transferUpsertPayload.airportCodeCustom,null);
+ }finally{setRealtimeIo(null);restoreContainer();}
+});

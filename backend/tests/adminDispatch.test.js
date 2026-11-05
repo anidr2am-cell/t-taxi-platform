@@ -31,6 +31,25 @@ const settlementStub = {
 };
 const scoringService = new DriverCandidateScoringService();
 
+test('legacy manual BKK detail exposes arrival-link airport without rewriting booking or assignment', async () => {
+  const row = queueRow({booking_source:'ADMIN_MANUAL',status:'DRIVER_ASSIGNED',origin_lat:13.689999,origin_lng:100.747924,airport_iata:null,airport_code_custom:null});
+  const assignments = [{id:10,driver_id:2,is_active:1,status:'ASSIGNED'}];
+  const before = JSON.stringify({row,assignments});
+  const repository = {
+    findAdminBookingDetail:async()=>row,
+    findActiveAirportRegions:async()=>require('./helpers/airportRegionFixture')(),
+    findChargeItemsByBookingId:async()=>[],
+    findStatusLogsByBookingId:async()=>[],
+    findAssignmentsByBookingId:async()=>assignments,
+  };
+  const service = new AdminDispatchService({},repository,{}, {},settlementStub,null,null,scoringService);
+  const detail = await service.getBookingDetail(row.booking_number);
+  assert.equal(detail.flight.airportIata,'BKK');
+  assert.equal(detail.serviceType.code,'AIRPORT_PICKUP');
+  assert.equal(detail.options.nameSign,false);
+  assert.equal(JSON.stringify({row,assignments}),before);
+});
+
 function sign(role = "ADMIN", id = 1) {
   return jwt.sign(
     {

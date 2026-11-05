@@ -1,3 +1,4 @@
+const { resolveBookingAirport } = require('../utils/bookingAirport.util');
 const { resolveBookingContactChannel } = require('../utils/bookingContactChannel');
 const { normalizeMarketingAttribution } = require('../utils/marketingAttribution.util');
 const { pickPersistableMessengerMetadata } = require('../utils/customerMessengerFields');
@@ -780,9 +781,12 @@ class BookingService {
   }
 
   async resolveTransferAirport(conn, input) {
-    const iata = input.transfer?.airportIata
-      || input.originAirportIata
-      || input.destinationAirportIata;
+    const iata = await resolveBookingAirport({
+      service_type_code: input.serviceTypeCode,
+      airport_iata: input.transfer?.airportIata || input.originAirportIata || input.destinationAirportIata,
+      origin_lat: input.origin?.lat, origin_lng: input.origin?.lng,
+      destination_lat: input.destination?.lat, destination_lng: input.destination?.lng,
+    }, this.bookingRepository, conn);
 
     if (!iata) {
       return { airportId: null, airportCodeCustom: null };

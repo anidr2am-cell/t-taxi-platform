@@ -55,6 +55,8 @@ class _FakeDispatchApi extends AdminDispatchApiService {
 
   final Future<Map<String, dynamic>> Function() onCreate;
   final Map<String, dynamic>? editDetail;
+  String? submittedAirportIata;
+  Map<String, dynamic>? submittedTransfer;
 
   @override
   Future<Map<String, dynamic>> getBookingDetail(String bookingNumber) async {
@@ -107,6 +109,8 @@ class _FakeDispatchApi extends AdminDispatchApiService {
     Map<String, dynamic>? transfer,
     int? driverId,
   }) {
+    submittedAirportIata = originAirportIata;
+    submittedTransfer = transfer;
     return onCreate();
   }
 
@@ -395,6 +399,8 @@ void main() {
     await tester.tap(submit);
     await tester.pump();
     expect(tester.widget<FilledButton>(submit).onPressed, isNull);
+    expect(dispatchApi.submittedAirportIata, 'BKK');
+    expect(dispatchApi.submittedTransfer?['airportIata'], 'BKK');
 
     createResult.complete({'bookingNumber': 'TX202610130001'});
     await tester.pump();

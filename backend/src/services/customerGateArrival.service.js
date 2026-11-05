@@ -1,3 +1,4 @@
+const { resolveBookingAirport } = require('../utils/bookingAirport.util');
 const { createHash } = require('node:crypto');
 const GateArrivalRepository = require('../repositories/customerGateArrival.repository');
 const AppError = require('../utils/AppError');
@@ -21,7 +22,8 @@ class CustomerGateArrivalService {
       await this.bookingService.assertCustomerOrGuestAccess(conn, b, user, token);
       const transfer = await this.bookingRepository.findTransferByBookingId(conn, b.id);
       const hasNameSign = await this.arrivalRepository.hasNameSign(conn, b.id);
-      if (b.service_type_code !== 'AIRPORT_PICKUP' || (transfer?.airport_iata || transfer?.airport_code_custom) !== 'BKK' || hasNameSign) {
+      const airport = await resolveBookingAirport({ ...b, airport_iata: transfer?.airport_iata, airport_code_custom: transfer?.airport_code_custom }, this.bookingRepository, conn);
+      if (b.service_type_code !== 'AIRPORT_PICKUP' || airport !== 'BKK' || hasNameSign) {
         fail('GATE_ARRIVAL_NOT_APPLICABLE');
       }
       const a = await this.arrivalRepository.findActiveAssignment(conn, b.id);
