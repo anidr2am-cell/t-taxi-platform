@@ -981,12 +981,15 @@ class BookingWizardController extends ChangeNotifier {
     required String flightDate,
     required String? arrivalAirportCode,
     required String? arrivalTimestamp,
+    int pickupDelayMinutes = 50,
   }) async {
     final airport = AirportShortcuts.byCode(arrivalAirportCode);
     final arrivalBangkok = FlightTimeFormat.bangkokWallClock(arrivalTimestamp);
     if (airport == null || arrivalBangkok == null) return false;
 
-    final pickupBangkok = arrivalBangkok.add(const Duration(minutes: 50));
+    final pickupBangkok = arrivalBangkok.add(
+      Duration(minutes: pickupDelayMinutes),
+    );
     if (!isPickupSelectable(pickupBangkok)) return false;
 
     _invalidateSubmitIdempotencyKey();

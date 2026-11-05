@@ -184,7 +184,37 @@ Future<void> _tapSubmit(WidgetTester tester) async {
   await tester.pump();
 }
 
+Future<void> _reveal(WidgetTester tester, Finder target) async {
+  if (target.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(target, 350, scrollable: find.byType(Scrollable).first);
+  }
+  for (var i = 0; i < 25; i++) {
+    final y = tester.getCenter(target).dy;
+    final h = tester.view.physicalSize.height / tester.view.devicePixelRatio;
+    if (y >= 80 && y <= h - 80) return;
+    await tester.drag(find.byType(ListView).first, Offset(0, y < 80 ? 300 : -300));
+    await tester.pumpAndSettle();
+  }
+  fail('Could not reveal $target');
+}
+
 void main() {
+  testWidgets('admin order follows customer route schedule vehicle contact payment order', (tester) async {
+    tester.view.physicalSize=const Size(1100,12000);
+    tester.view.devicePixelRatio=1;
+    addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
+    await _pumpAdminPage(tester);
+    tester.view.physicalSize=const Size(1100,12000);
+    await tester.pump(const Duration(milliseconds:500));
+    final keys=['adminManualBookingServiceType','adminManualBookingVehicleType',
+      'adminManualBookingGuestName','adminManualBookingPayoutAmount','adminManualDispatchOpen'];
+    for(var i=1;i<keys.length;i++) {
+      expect(tester.getTopLeft(find.byKey(Key(keys[i-1]))).dy,
+        lessThan(tester.getTopLeft(find.byKey(Key(keys[i]))).dy));
+    }
+    expect(tester.takeException(),isNull);
+  });
+
   test(
     'worldwide calling codes are unique and normalize international input',
     () {
@@ -275,6 +305,7 @@ void main() {
     await tester.enterText(amount, '1250');
     final service = find.byKey(const Key('adminManualBookingServiceType'));
     await tester.scrollUntilVisible(service, -500, scrollable: find.byType(Scrollable).first);
+    await _reveal(tester, service);
     await tester.tap(service);
     await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.text('도시간 이동').last);
@@ -323,6 +354,8 @@ void main() {
     )));
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(find.byKey(const Key('adminManualDispatchDirect')), 400, scrollable: find.byType(Scrollable).first);
+    await _reveal(tester, find.byKey(const Key('adminManualDispatchDirect')));
     await tester.tap(find.byKey(const Key('adminManualDispatchDirect')));
     await tester.pumpAndSettle();
     final driver = find.byKey(const Key('adminManualDirectDriver'));
@@ -333,7 +366,7 @@ void main() {
 
     await tester.scrollUntilVisible(
       find.byKey(const Key('adminManualBookingPayoutAmount')),
-      400,
+      -400,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.enterText(
@@ -342,7 +375,7 @@ void main() {
     );
     await tester.scrollUntilVisible(
       find.byKey(const Key('adminManualBookingGuestName')),
-      400,
+      -400,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.enterText(
@@ -377,6 +410,7 @@ void main() {
   ) async {
     await _pumpAdminPage(tester);
     final direct = find.byKey(const Key('adminManualDispatchDirect'));
+    await tester.scrollUntilVisible(direct, 400, scrollable: find.byType(Scrollable).first);
     await tester.ensureVisible(direct);
     await tester.tap(direct);
     await tester.pump(const Duration(milliseconds: 400));
@@ -391,7 +425,7 @@ void main() {
     final messenger = find.byKey(const Key('adminManualMessengerType'));
     await tester.scrollUntilVisible(
       messenger,
-      400,
+      -400,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.ensureVisible(messenger);

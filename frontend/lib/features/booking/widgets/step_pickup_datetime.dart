@@ -12,6 +12,7 @@ import '../utils/pickup_time_format.dart';
 import 'pickup_time_picker_sheet.dart';
 import 'wizard_compact.dart';
 import 'wizard_ui.dart';
+import 'step_flight_lookup.dart';
 
 enum _PickupTimeSource { manual, flight }
 
@@ -694,22 +695,22 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                StepFlightLookup(
+                  state: widget.state,
+                  controller: widget.controller,
+                  flightLookupApi: widget.flightLookupApi,
+                ),
+                Text(
+                  l10n.t('flight_first_manual'),
+                  key: const Key('pickup_manual_section'),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: AppTokens.spaceSm),
+                Text(l10n.t('flight_first_manual_help')),
+                const SizedBox(height: AppTokens.spaceSm),
                 dateTimeCard,
                 const SizedBox(height: WizardCompact.fieldGap),
                 manualTimeField,
-                const SizedBox(height: WizardCompact.fieldGap),
-                TextField(
-                  key: const Key('flight_number_field'),
-                  controller: _flightController,
-                  focusNode: widget.focusNode,
-                  decoration: WizardCompact.inputDecoration(
-                    label: l10n.t('flight_number'),
-                    hint: l10n.t('flight_number_hint'),
-                    prefixIcon: const Icon(Icons.flight_outlined, size: 20),
-                  ),
-                  textCapitalization: TextCapitalization.characters,
-                  onChanged: _onFlightNumberChanged,
-                ),
               ],
             );
           },
