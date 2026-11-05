@@ -1,3 +1,4 @@
+import '../features/notification/services/notification_device_registration_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import '../l10n/app_localizations.dart';
@@ -20,6 +21,14 @@ class QaDriverApi extends DriverApiService {
   Future<Map<String, dynamic>> listNotifications({bool? unreadOnly}) async {
     final r = await http.get(Uri.parse('${AppConfig.apiBaseUrl}/qa/inbox'));
     return Map<String, dynamic>.from(jsonDecode(r.body)['data'] as Map);
+  }
+}
+
+class QaPushRegistration extends NotificationDeviceRegistrationService {
+  @override Future<NotificationDeviceRegistrationResult> enableAuthenticated({required Future<String?> Function() accessTokenLoader}) async {
+    final result=await super.enableAuthenticated(accessTokenLoader:accessTokenLoader);
+    debugPrint('QA_PUSH_STATUS: ${result.status.name} ${result.message ?? ""}');
+    return result;
   }
 }
 
@@ -51,7 +60,7 @@ class GateArrivalQaApp extends StatelessWidget {
                 '격리 QA · 실제 기사·고객 알림 없음 / QA ONLY · No live push or email',
               ),
               if ((Uri.base.queryParameters['view'] == 'driver' || Uri.base.path.startsWith('/driver')))
-                DriverArrivalReadinessCard(api: QaDriverApi())
+                DriverArrivalReadinessCard(api: QaDriverApi(),registration:QaPushRegistration())
               else if (Uri.base.queryParameters['view'] == 'admin')
                 const AdminGateArrivalLink(bookingNumber: 'TX209901010217')
               else

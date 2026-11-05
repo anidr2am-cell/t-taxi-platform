@@ -3,6 +3,12 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '../..');
+test('default FCM sender reads config/env credential settings', () => {
+  const config = require('../src/config/env');
+  const { FcmNotificationAdapter } = require('../src/services/notificationDelivery.adapters');
+  // Compare identity only: assertion failures must never dump credential values.
+  assert.equal(Object.is(new FcmNotificationAdapter().firebase, config.firebase), true);
+});
 test('release image forwards public Firebase configuration to both Flutter build branches', () => {
   const docker = fs.readFileSync(path.join(root, 'deploy/docker/Dockerfile.frontend'), 'utf8');
   const compose = fs.readFileSync(path.join(root, 'deploy/docker/docker-compose.production.yml'), 'utf8');
