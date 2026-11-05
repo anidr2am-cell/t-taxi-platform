@@ -1953,11 +1953,8 @@ class BookingService {
     scheduledPickupAtIso,
     partial = false,
     existingTransfer = null,
-    serviceTypeCode = input.serviceTypeCode,
-    origin = input.origin,
-    destination = input.destination,
   }) {
-    if (partial && input.transfer === undefined && input.originAirportIata === undefined && input.origin === undefined && input.destination === undefined && input.serviceTypeCode === undefined) {
+    if (partial && input.transfer === undefined && input.originAirportIata === undefined) {
       return;
     }
     const mergedTransfer = {
@@ -1974,8 +1971,6 @@ class BookingService {
     };
     if (input.originAirportIata !== undefined) {
       mergedTransfer.airportIata = input.originAirportIata || null;
-    } else if ((input.origin !== undefined || input.destination !== undefined) && input.transfer?.airportIata === undefined) {
-      delete mergedTransfer.airportIata;
     }
     const flightInfo = this.resolveTransferFlight({
       ...input,
@@ -1985,7 +1980,6 @@ class BookingService {
     const airportInfo = await this.resolveTransferAirport(conn, {
       ...input,
       transfer: mergedTransfer,
-      serviceTypeCode, origin, destination,
       originAirportIata: mergedTransfer.airportIata ?? input.originAirportIata,
     });
 
@@ -2667,7 +2661,6 @@ class BookingService {
         scheduledPickupAtIso,
         partial: true,
         existingTransfer,
-        serviceTypeCode: serviceType.code ?? fieldsRow.service_type_code, origin, destination,
       });
 
       await this.bookingRepository.insertActivityLog(conn, booking.id, {
