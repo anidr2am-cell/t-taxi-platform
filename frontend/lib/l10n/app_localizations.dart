@@ -10993,6 +10993,9 @@ class AppLocalizations {
 
   static const Map<String, Map<String, String>> _gateArrivalText = {
     "ko": {
+      "airport_meeting_no_picket_highlight": "수하물을 모두 찾고 7번 게이트 밖에 도착한 뒤 도착 알림을 눌러 주세요.",
+      "airport_meeting_step_notify_driver": "7번 게이트 밖에서 도착 알림 버튼을 눌러 기사에게 알려 주세요.",
+
       "gate_arrival_title": "7번 게이트 도착 알림",
       "gate_arrival_intro":
           "수하물을 모두 찾고 입국층 7번 게이트 밖에 도착한 뒤 눌러 주세요. 배정 기사에게만 알림을 보냅니다.",
@@ -11013,6 +11016,9 @@ class AppLocalizations {
       "gate_arrival_link": "고객 도착 알림 링크",
     },
     "en": {
+      "airport_meeting_no_picket_highlight": "Collect all luggage and reach outside Gate 7 before sending your arrival alert.",
+      "airport_meeting_step_notify_driver": "Outside Gate 7, tap the arrival alert to notify your driver.",
+
       "gate_arrival_title": "Gate 7 arrival alert",
       "gate_arrival_intro":
           "Collect all luggage and reach the outside of Arrival Gate 7 before tapping. Only your assigned driver is notified.",
@@ -11035,6 +11041,9 @@ class AppLocalizations {
       "gate_arrival_link": "Customer arrival alert link",
     },
     "th": {
+      "airport_meeting_no_picket_highlight": "รับกระเป๋าให้ครบและไปด้านนอกประตู 7 ก่อนกดแจ้งว่าถึงแล้ว",
+      "airport_meeting_step_notify_driver": "เมื่ออยู่ด้านนอกประตู 7 แล้ว ให้กดแจ้งว่าถึงแล้วเพื่อแจ้งคนขับ",
+
       "gate_arrival_title": "แจ้งถึงประตู 7",
       "gate_arrival_intro":
           "รับกระเป๋าให้ครบและไปด้านนอกประตู 7 ชั้นผู้โดยสารขาเข้าก่อนกด ระบบจะแจ้งเฉพาะคนขับที่ได้รับมอบหมาย",
@@ -11058,6 +11067,9 @@ class AppLocalizations {
       "gate_arrival_link": "ลิงก์แจ้งว่าลูกค้าถึงแล้ว",
     },
     "ja": {
+      "airport_meeting_no_picket_highlight": "荷物をすべて受け取り、7番ゲートの外に到着してから到着通知を押してください。",
+      "airport_meeting_step_notify_driver": "7番ゲートの外で到着通知を押し、ドライバーに知らせます。",
+
       "gate_arrival_title": "7番ゲート到着通知",
       "gate_arrival_intro":
           "すべての荷物を受け取り、到着階7番ゲートの外に着いてから押してください。担当ドライバーだけに通知します。",
@@ -11076,6 +11088,9 @@ class AppLocalizations {
       "gate_arrival_link": "お客様の到着通知リンク",
     },
     "zh": {
+      "airport_meeting_no_picket_highlight": "请取齐全部行李，到达7号门外后再发送到达通知。",
+      "airport_meeting_step_notify_driver": "在7号门外点击到达通知，告知司机。",
+
       "gate_arrival_title": "7号门到达通知",
       "gate_arrival_intro": "请取齐所有行李，到达层7号门外后再点击。仅通知已分配的司机。",
       "gate_arrival_button": "已取齐行李，到达7号门",
@@ -11092,6 +11107,9 @@ class AppLocalizations {
       "gate_arrival_link": "客户到达通知链接",
     },
     "ru": {
+      "airport_meeting_no_picket_highlight": "Получите весь багаж и выйдите к выходу 7, затем отправьте уведомление о прибытии.",
+      "airport_meeting_step_notify_driver": "Снаружи у выхода 7 нажмите кнопку уведомления о прибытии.",
+
       "gate_arrival_title": "Уведомление у выхода 7",
       "gate_arrival_intro":
           "Получите весь багаж и подойдите к выходу 7 снаружи зала прилёта. Уведомление получит только назначенный водитель.",
