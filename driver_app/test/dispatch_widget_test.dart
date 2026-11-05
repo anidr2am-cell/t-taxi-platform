@@ -18,9 +18,11 @@ Future<void> pumpOpenCalls(
   VoidCallback? onOpenSettlement,
   DriverSocketConnection? driverSocket,
   ThemeData? theme,
+  Locale locale = const Locale('ko'),
 }) async {
   await tester.pumpWidget(
     localizedMaterialApp(
+      locale: locale,
       theme:
           theme ??
           ThemeData(
@@ -62,6 +64,26 @@ Future<void> confirmClaim(WidgetTester tester) async {
 final _ko = AppLocalizations(const Locale('ko'));
 
 void main() {
+  testWidgets('Thai new calls show pickup, route and creation labels in Thai', (
+    tester,
+  ) async {
+    await pumpOpenCalls(
+      tester,
+      onlineReader(calls: [openCall(createdAt: '2026-07-12T08:30:00Z')]),
+      locale: const Locale('th'),
+    );
+    expect(
+      find.textContaining('เวลารับที่ลูกค้าขอ : 2026-07-27 10:30'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('จุดเริ่มต้น'), findsWidgets);
+    expect(find.textContaining('จุดหมาย'), findsWidgets);
+    expect(find.textContaining('출발 요청시간'), findsNothing);
+    expect(find.textContaining('예약시간'), findsNothing);
+    expect(find.text('เวลาที่สร้างการจอง : 2026-07-12 15:30'), findsOneWidget);
+    expect(find.textContaining('출발지'), findsNothing);
+  });
+
   testWidgets('offline shows guidance and does not request open calls', (
     tester,
   ) async {
@@ -256,7 +278,10 @@ void main() {
       );
       expect(find.text(_ko.urgentCallLabel), findsOneWidget);
       expect(find.textContaining('BKK — Suvarnabhumi Airport'), findsOneWidget);
-      expect(find.text(_ko.previousRejectionRequiresEtaUnder(30)), findsOneWidget);
+      expect(
+        find.text(_ko.previousRejectionRequiresEtaUnder(30)),
+        findsOneWidget,
+      );
     },
   );
 
@@ -365,7 +390,10 @@ void main() {
 
     await confirmClaim(tester);
 
-    expect(find.textContaining(_ko.otherDriverClaimedCallFirst), findsOneWidget);
+    expect(
+      find.textContaining(_ko.otherDriverClaimedCallFirst),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('openCall-TX209912319998')), findsNothing);
   });
 
@@ -565,50 +593,39 @@ void main() {
     expect(dispatch.openCallsCount, greaterThan(initialOpenCallsCount));
   });
 
-  testWidgets('open call shows structured pickup name and address when available', (
-    tester,
-  ) async {
-    await pumpOpenCalls(
-      tester,
-      onlineReader(
-        calls: [
-          openCall(
-            origin: '999 Nong Prue, Bang Phli',
-            destination: '333 Moo 9, Pattaya Beach Road',
-            pickupLocation: const BookingLocation(
-              name: 'Suvarnabhumi Airport',
-              address: '999 Nong Prue, Bang Phli',
+  testWidgets(
+    'open call shows structured pickup name and address when available',
+    (tester) async {
+      await pumpOpenCalls(
+        tester,
+        onlineReader(
+          calls: [
+            openCall(
+              origin: '999 Nong Prue, Bang Phli',
+              destination: '333 Moo 9, Pattaya Beach Road',
+              pickupLocation: const BookingLocation(
+                name: 'Suvarnabhumi Airport',
+                address: '999 Nong Prue, Bang Phli',
+              ),
+              destinationLocation: const BookingLocation(
+                name: 'Hilton Pattaya',
+                address: '333 Moo 9, Pattaya Beach Road',
+              ),
             ),
-            destinationLocation: const BookingLocation(
-              name: 'Hilton Pattaya',
-              address: '333 Moo 9, Pattaya Beach Road',
-            ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
 
-    expect(
-      find.text('Suvarnabhumi Airport'),
-      findsOneWidget,
-    );
-    expect(
-      find.text('999 Nong Prue, Bang Phli'),
-      findsOneWidget,
-    );
-    expect(
-      find.text('Hilton Pattaya'),
-      findsOneWidget,
-    );
-    expect(
-      find.text('333 Moo 9, Pattaya Beach Road'),
-      findsOneWidget,
-    );
-    _expectOpenCallPlaceNameStyle(tester, 'Suvarnabhumi Airport');
-    _expectOpenCallPlaceNameStyle(tester, 'Hilton Pattaya');
-    _expectOpenCallAddressStyle(tester, '999 Nong Prue, Bang Phli');
-    _expectOpenCallAddressStyle(tester, '333 Moo 9, Pattaya Beach Road');
-  });
+      expect(find.text('Suvarnabhumi Airport'), findsOneWidget);
+      expect(find.text('999 Nong Prue, Bang Phli'), findsOneWidget);
+      expect(find.text('Hilton Pattaya'), findsOneWidget);
+      expect(find.text('333 Moo 9, Pattaya Beach Road'), findsOneWidget);
+      _expectOpenCallPlaceNameStyle(tester, 'Suvarnabhumi Airport');
+      _expectOpenCallPlaceNameStyle(tester, 'Hilton Pattaya');
+      _expectOpenCallAddressStyle(tester, '999 Nong Prue, Bang Phli');
+      _expectOpenCallAddressStyle(tester, '333 Moo 9, Pattaya Beach Road');
+    },
+  );
 
   testWidgets('open call prefers nameTh over name when available', (
     tester,
@@ -635,22 +652,10 @@ void main() {
       ),
     );
 
-    expect(
-      find.text('ท่าอากาศยานสุวรรณภูมิ'),
-      findsOneWidget,
-    );
-    expect(
-      find.text('999 Nong Prue, Bang Phli'),
-      findsOneWidget,
-    );
-    expect(
-      find.text('โรงแรมฮilton พัทยา'),
-      findsOneWidget,
-    );
-    expect(
-      find.text('333 Moo 9, Pattaya Beach Road'),
-      findsOneWidget,
-    );
+    expect(find.text('ท่าอากาศยานสุวรรณภูมิ'), findsOneWidget);
+    expect(find.text('999 Nong Prue, Bang Phli'), findsOneWidget);
+    expect(find.text('โรงแรมฮilton พัทยา'), findsOneWidget);
+    expect(find.text('333 Moo 9, Pattaya Beach Road'), findsOneWidget);
     _expectOpenCallPlaceNameStyle(tester, 'ท่าอากาศยานสุวรรณภูมิ');
     _expectOpenCallAddressStyle(tester, '999 Nong Prue, Bang Phli');
   });
@@ -669,13 +674,7 @@ void main() {
   ) async {
     await pumpOpenCalls(
       tester,
-      onlineReader(
-        calls: [
-          openCall(
-            createdAt: '2026-07-12T08:30:00.000Z',
-          ),
-        ],
-      ),
+      onlineReader(calls: [openCall(createdAt: '2026-07-12T08:30:00.000Z')]),
     );
 
     expect(find.text('예약시간 : 2026-07-12 15:30'), findsOneWidget);

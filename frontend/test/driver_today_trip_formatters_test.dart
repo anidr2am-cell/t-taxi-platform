@@ -4,15 +4,18 @@ import 'package:frontend/features/driver/models/driver_booking.dart';
 
 void main() {
   group('formatDriverPickupRequestTime', () {
-    test('formats YYYY-MM-DD and HH:mm into Korean pickup request label', () {
-      expect(
-        formatDriverPickupRequestTime(
-          pickupDate: '2026-07-29',
-          pickupTime: '22:23',
-        ),
-        '고객 픽업 요청 시간 (เวลารับที่ลูกค้าขอ) 7월 29일 22시 23분',
-      );
-    });
+    test(
+      'formats YYYY-MM-DD and HH:mm into Thai-first pickup label and 24-hour Thai time',
+      () {
+        expect(
+          formatDriverPickupRequestTime(
+            pickupDate: '2026-07-29',
+            pickupTime: '22:23',
+          ),
+          'เวลารับที่ลูกค้าขอ / 고객 픽업 요청 시간 29/07/2026 22:23 (เวลาไทย / 태국 시간)',
+        );
+      },
+    );
 
     test('pads single-digit minutes', () {
       expect(
@@ -20,7 +23,7 @@ void main() {
           pickupDate: '2026-07-01',
           pickupTime: '09:05',
         ),
-        '고객 픽업 요청 시간 (เวลารับที่ลูกค้าขอ) 7월 1일 9시 05분',
+        'เวลารับที่ลูกค้าขอ / 고객 픽업 요청 시간 01/07/2026 09:05 (เวลาไทย / 태국 시간)',
       );
     });
 
@@ -30,7 +33,7 @@ void main() {
           pickupDate: 'invalid',
           pickupTime: '22:23',
         ),
-        '고객 픽업 요청 시간 (เวลารับที่ลูกค้าขอ) invalid 22:23',
+        'เวลารับที่ลูกค้าขอ / 고객 픽업 요청 시간 invalid 22:23',
       );
     });
   });
