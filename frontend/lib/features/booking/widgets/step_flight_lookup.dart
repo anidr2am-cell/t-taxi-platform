@@ -297,10 +297,10 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
               key: Key('route_flight_confirm_button_$index'),
               onPressed: () => _confirm(result, index),
               icon: Icon(
-                _confirmedIndex == index
+                _confirmedIndex == index && _selectedDelayMinutes == 50
                     ? Icons.check_circle
                     : Icons.check_circle_outline,
-                color: _confirmedIndex == index
+                color: _confirmedIndex == index && _selectedDelayMinutes == 50
                     ? AppTokens.success
                     : AppTokens.primary,
               ),
@@ -309,7 +309,10 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
             TextButton.icon(
               key: Key('route_flight_use_arrival_$index'),
               onPressed: () => _confirm(result, index, delayMinutes: 0),
-              icon: const Icon(Icons.schedule),
+              icon: Icon(_confirmedIndex == index && _selectedDelayMinutes == 0
+                ? Icons.check_circle : Icons.schedule,
+                color: _confirmedIndex == index && _selectedDelayMinutes == 0
+                  ? AppTokens.success : AppTokens.primary),
               label: Text(l10n.t('flight_first_use_arrival')),
             ),
             if (_confirmedIndex == index)

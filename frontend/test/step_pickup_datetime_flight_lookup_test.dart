@@ -424,6 +424,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(controller.state.pickupDate, '2026-10-16');
     expect(controller.state.pickupTime, '02:30');
+    expect(find.descendant(of:useArrival,matching:find.byIcon(Icons.check_circle)),findsOneWidget);
+    expect(find.descendant(of:find.byKey(const Key('route_flight_confirm_button_0')),matching:find.byIcon(Icons.check_circle)),findsNothing);
     await controller.setPickupDateTime(DateTime(2026,10,17,9,45));
     expect(controller.state.pickupDate, '2026-10-17');
     expect(controller.state.pickupTime, '09:45');
