@@ -80,6 +80,10 @@ function renderCustomerEmail(notification, { origin = 'https://trider.taxi', goo
     receipt && paymentLabel ? `${t.paymentMethod}: ${paymentLabel}` : null,
     '', t.fare, t.cancel, t.payment, '', `${t.lookup}: ${bookingUrl.href}`, `${t.support}: ${supportUrl.href}`,
   ].filter((line) => line != null);
+  if (['BOOKING_CREATED','BOOKING_CONFIRMED','DRIVER_ASSIGNED'].includes(notification.type)) {
+    const arrivalUrl = new URL(bookingUrl); arrivalUrl.searchParams.set('arrival','gate7');
+    lines.push('', require('./gate-arrival-email.json')[locale] || require('./gate-arrival-email.json').en, arrivalUrl.href);
+  }
   const document = isTripEndEmail(notification)
     ? receiptDocument(notification, {locale, labels:t, pickupAt:pickup, issuedAt:bangkokDateTime(notification.created_at), escapeHtml,formatDateTime:bangkokDateTime}) : null;
   if(document) lines=[...document.lines,'',body,'',t.fare,t.cancel,t.payment,'',`${t.lookup}: ${bookingUrl.href}`,`${t.support}: ${supportUrl.href}`];

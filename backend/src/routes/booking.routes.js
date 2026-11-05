@@ -149,4 +149,12 @@ router.get(
   notificationController.listBookingNotifications,
 );
 
+// Opening a link or mail preview must never notify a driver: only explicit POST does.
+const gateArrival = require('../controllers/customerGateArrival.controller');
+const gateArrivalLimit = require('../middlewares/rateLimit.middleware')({ max:30 });
+router.get('/:bookingNumber/gate-arrival', gateArrivalLimit, optionalAuthMiddleware,
+  validate({ params: bookingNumberParamsSchema }), gateArrival.status);
+router.post('/:bookingNumber/gate-arrival', gateArrivalLimit, optionalAuthMiddleware,
+  validate({ params: bookingNumberParamsSchema }), gateArrival.send);
+
 module.exports = router;

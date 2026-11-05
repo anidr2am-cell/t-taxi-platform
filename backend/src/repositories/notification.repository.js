@@ -130,6 +130,17 @@ class NotificationRepository {
     );
   }
 
+  async isGateArrivalCurrent(notification) {
+    const [rows] = await this.pool.query(`SELECT a.id FROM booking_driver_assignments a
+      JOIN bookings b ON b.id=a.booking_id JOIN drivers d ON d.id=a.driver_id
+      WHERE a.booking_id=? AND a.driver_id=? AND a.is_active=1 AND a.deleted_at IS NULL
+      AND d.deleted_at IS NULL AND d.status <> 'SUSPENDED' AND b.deleted_at IS NULL
+      AND b.status IN ('DRIVER_ASSIGNED','ON_ROUTE','DRIVER_ARRIVED')
+      AND a.id=? LIMIT 1`,
+      [notification.booking_id, notification.recipient_driver_id, notification.payload?.assignmentId]);
+    return rows.length > 0;
+  }
+
   async findById(notificationId) {
     const [rows] = await this.pool.query(
       `

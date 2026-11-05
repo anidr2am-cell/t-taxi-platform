@@ -15,3 +15,13 @@ self.addEventListener('push', function(event) {
 
   event.waitUntil(self.registration.showNotification(title, options));
 });
+
+self.addEventListener('notificationclick', function(event) {
+  if ((event.notification.data || {}).notificationType !== 'CUSTOMER_GATE_ARRIVED') return;
+  event.notification.close();
+  event.waitUntil(clients.matchAll({type:'window', includeUncontrolled:true}).then(function(windows) {
+    var target = new URL('/driver', self.location.origin).href;
+    var existing = windows.find(function(w) { return w.url.indexOf(target) === 0; });
+    return existing ? existing.focus() : clients.openWindow(target);
+  }));
+});

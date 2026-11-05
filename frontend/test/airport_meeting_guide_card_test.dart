@@ -135,7 +135,7 @@ void main() {
 
     expect(
       find.text(
-        'After arrival and collecting your luggage, notify your driver.',
+        'Collect all luggage and reach outside Gate 7 before sending your arrival alert.',
       ),
       findsOneWidget,
     );
@@ -157,10 +157,10 @@ void main() {
     expect(sends, 1);
   });
 
-  testWidgets('Gate 7 step 2 shows Korean warning text in error color', (
+  testWidgets('Gate 7 arrival notification step 3 is emphasized after moving to Gate 7', (
     tester,
   ) async {
-    const warning = '기사에게 픽업 알림을 보냅니다. 꼭 수하물을 찾으신 후에 알림을 보내주시기 바랍니다';
+    const warning = '7번 게이트 밖에서 도착 알림 버튼을 눌러 기사에게 알려 주세요.';
     await tester.pumpWidget(
       _wrap(
         const AirportMeetingGuideCard(
@@ -206,7 +206,7 @@ void main() {
     expect(find.text('Tell driver I’m ready'), findsNothing);
   });
 
-  testWidgets('lookup keeps pickup alert disabled in active pickup statuses', (
+  testWidgets('lookup exposes new arrival flow but never enables it without authorized API status', (
     tester,
   ) async {
     for (final status in ['DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED']) {
@@ -247,7 +247,7 @@ void main() {
 
         expect(
           find.text(
-            'Pickup notification becomes available after a driver is assigned.',
+            'Gate 7 arrival alert',
           ),
           findsOneWidget,
           reason: status,
