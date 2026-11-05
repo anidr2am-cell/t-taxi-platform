@@ -260,8 +260,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.markPickedUpCalls, 0);
-    expect(find.text('고객이 차량에 탑승했습니까?'), findsOneWidget);
-    expect(find.text('탑승 확인 후 운행이 시작됩니다.'), findsOneWidget);
+    expect(find.text(AppLocalizations('th').t('driver_confirm_mark_picked_up_title')), findsOneWidget);
+    expect(find.text(AppLocalizations('th').t('driver_confirm_mark_picked_up_message')), findsOneWidget);
 
     await tester.tap(
       find.descendant(
@@ -402,7 +402,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(api.endTripCalls, 0);
-      expect(find.text('고객을 목적지에 내려드렸습니까?'), findsOneWidget);
+      expect(find.text(AppLocalizations('th').t('driver_confirm_end_trip_title')), findsOneWidget);
       expect(find.text('THB 1,300'), findsWidgets);
       expect(find.textContaining('기사에게 현장 결제'), findsOneWidget);
 
@@ -417,7 +417,7 @@ void main() {
       expect(api.endTripCalls, 1);
       expect(api.detailCalls, greaterThan(1));
       expect(settlementApi.detailCalls, greaterThanOrEqualTo(1));
-      expect(find.text('정산이 필요합니다'), findsOneWidget);
+      expect(find.text(AppLocalizations('th').t('driver_settlement_popup_title')), findsOneWidget);
       expect(find.text('THB 200'), findsWidgets);
       expect(find.text('SCB'), findsOneWidget);
       expect(find.text('T-Ride'), findsOneWidget);

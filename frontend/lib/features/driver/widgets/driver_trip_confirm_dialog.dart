@@ -15,6 +15,7 @@ Future<bool> confirmDriverTripAction({
   final result = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
+      scrollable: true,
       title: Text(l10n.t(titleKey)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
