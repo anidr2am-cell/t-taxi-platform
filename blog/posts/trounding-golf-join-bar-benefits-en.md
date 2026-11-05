@@ -1,27 +1,35 @@
 ---
-title: 'Buddy Golf Pattaya: joining a round and arranging your transfer'
-description: "Plan Pattaya golf with Buddy Golf: ask about dates, playing partners, tee times and TRider vehicle transfers together through WhatsApp."
+title: 'Buddy Golf Pattaya: 365-Day Group Joining and Trip Planning'
+description: "Buddy Golf offers group joining in Pattaya 365 days a year, including solo travellers. Discuss courses, itemised quotes and TRider transfers on WhatsApp."
 slug: trounding-golf-join-bar-benefits-en
 lang: en
 category: golf
 bookingService: GOLF_TRANSFER
 translationKey: trounding-golf-join-bar-benefits
 date: 2026-10-07
-updated: 2026-10-30
+updated: 2026-11-05
 related:
   - pattaya-golf-price-match-guarantee-en
   - burapha-cc-green-fee-en
 ---
 
-Buddy Golf is the new name for TRounding. Its Pattaya golf travel focus is Korean travellers. Whether you travel alone or with a small group, ask us about golf dates, joining a round and vehicle transfers together.
+Buddy Golf offers group joining in Pattaya 365 days a year, with a group to play with even if you travel alone. You can discuss golf dates, joining a round and TRider vehicle transfers together through [WhatsApp](https://wa.me/66815693445). This guide explains what to confirm as you turn an enquiry into an agreed itinerary.
 
-## Start with your date and course
+## Year-round joining starts with your travel dates
 
-Prepare the preferred date, course, tee time and player count before asking about joining a round. Matching players and securing tee times depend on actual availability. An enquiry alone does not confirm a place.
+Prepare your preferred date, course, tee time and player count. With group joining available 365 days a year, you do not need to bring your own playing group. The actual course, tee time, price and meeting arrangements are confirmed during consultation. A particular course or time, or partners of a particular nationality, language or playing level, is not guaranteed.
 
-## Understand the audience and language
+## Share your communication and meeting preferences
 
-Buddy Golf primarily serves Korean golf travellers. Reading this English guide does not mean English-speaking playing partners or staff are guaranteed. Ask about communication options and participation requirements through [WhatsApp](https://wa.me/66815693445), along with your preferred golf dates and transfer plans.
+Share your preferred language, golf dates and transfer plans through [WhatsApp](https://wa.me/66815693445). We will confirm the communication options, meeting details and itinerary during consultation. You can copy the following enquiry and fill in the details you know.
+
+> I would like to discuss golf, group joining and transfers together.\
+> Preferred dates, courses and times:\
+> Number of players:\
+> Hotel name and address:\
+> Golf bags and suitcases, including sizes:\
+> Transfers needed:\
+> Preferred language:
 
 ## Confirm golf costs and inclusions
 
@@ -37,4 +45,4 @@ Prepare the number and size of suitcases and golf bags for the whole group. You 
 
 ## One conversation for golf, joining and transport
 
-Send your date, preferred course, player count and accommodation through [WhatsApp](https://wa.me/66815693445). We can check tee-time and playing-partner availability, then help coordinate the round and pickup schedule together. The [golf cost checklist](/blog/pattaya-golf-price-match-guarantee-en) and [Burapha CC guide](/blog/burapha-cc-green-fee-en) can help you plan. Book your agreed vehicle arrangements around the clock on the [TRider booking page](/booking?service=GOLF_TRANSFER&lang=en).
+Send your date, preferred course, player count and accommodation through [WhatsApp](https://wa.me/66815693445). Buddy Golf's 365-day group joining lets solo travellers start with their travel dates; we then confirm the actual round and pickup arrangements together. The [golf cost checklist](/blog/pattaya-golf-price-match-guarantee-en) and [Burapha CC guide](/blog/burapha-cc-green-fee-en) can help you plan. Book your agreed vehicle arrangements around the clock on the [TRider booking page](/booking?service=GOLF_TRANSFER&lang=en).
