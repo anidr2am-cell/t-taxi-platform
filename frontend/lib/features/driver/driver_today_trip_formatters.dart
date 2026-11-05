@@ -8,7 +8,7 @@ String formatDriverPickupRequestTime({
   required String pickupDate,
   required String pickupTime,
 }) {
-  const label = '고객 픽업 요청 시간 (เวลารับที่ลูกค้าขอ)';
+  const label = 'เวลารับที่ลูกค้าขอ / 고객 픽업 요청 시간';
   final dateParts = pickupDate.trim().split('-');
   final timeParts = pickupTime.trim().split(':');
   if (dateParts.length != 3 || timeParts.length < 2) {
@@ -37,7 +37,10 @@ String formatDriverPickupRequestTime({
   }
 
   final minuteText = minute.toString().padLeft(2, '0');
-  return '$label $month월 $day일 $hour시 $minuteText분';
+  final dayText = day.toString().padLeft(2, '0');
+  final monthText = month.toString().padLeft(2, '0');
+  final hourText = hour.toString().padLeft(2, '0');
+  return '$label $dayText/$monthText/${dateParts[0]} $hourText:$minuteText (เวลาไทย / 태국 시간)';
 }
 
 /// Place label for route lines: name/nameTh pairing, then address/fallback.
@@ -65,7 +68,7 @@ String formatDriverRoutePlaceLabel(
   }
 
   final fallback = fallbackAddress.trim();
-  return fallback.isEmpty ? '위치 정보 없음' : fallback;
+  return fallback.isEmpty ? 'ไม่มีข้อมูลสถานที่ / 위치 정보 없음' : fallback;
 }
 
 String formatDriverRouteLineLabel({

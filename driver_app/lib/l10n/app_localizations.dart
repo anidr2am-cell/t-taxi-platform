@@ -524,6 +524,9 @@ class AppLocalizations {
   String golfBagsCount(int count) =>
       _s('골프백 $count개', 'กระเป๋ากอล์ฟ $count ใบ');
 
+  String get pickupRequestedTimeLabel => _s('출발 요청시간', 'เวลารับที่ลูกค้าขอ');
+  String get bookingCreatedTimeLabel => _s('예약시간', 'เวลาที่สร้างการจอง');
+
   // Booking display formatters
   String bookingCreatedAt(int month, int day, int hour, String minuteText) =>
       _s(

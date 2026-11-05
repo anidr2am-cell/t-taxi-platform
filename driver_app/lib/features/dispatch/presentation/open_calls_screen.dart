@@ -891,7 +891,7 @@ class _UrgentCallCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: _OpenCallLocationText(
-                    label: '출발지',
+                    label: l10n.labelOrigin,
                     location: call.pickupLocation,
                     fallbackAddress: call.origin,
                   ),
@@ -902,7 +902,7 @@ class _UrgentCallCard extends StatelessWidget {
                 ),
                 Expanded(
                   child: _OpenCallLocationText(
-                    label: '도착지',
+                    label: l10n.labelDestination,
                     location: call.destinationLocation,
                     fallbackAddress: call.destination,
                   ),
@@ -1044,14 +1044,14 @@ class _OpenCallCard extends StatelessWidget {
                 ),
               const SizedBox(height: 10),
               _OpenCallLocationText(
-                label: '출발지',
+                label: l10n.labelOrigin,
                 location: call.pickupLocation,
                 fallbackAddress: call.origin,
                 key: Key('openCallOrigin-${call.bookingNumber}'),
               ),
               const SizedBox(height: 6),
               _OpenCallLocationText(
-                label: '도착지',
+                label: l10n.labelDestination,
                 location: call.destinationLocation,
                 fallbackAddress: call.destination,
                 key: Key('openCallDestination-${call.bookingNumber}'),
@@ -1092,7 +1092,7 @@ class _PickupRequestedTimeTitle extends StatelessWidget {
         style: theme.textTheme.titleMedium,
         children: [
           TextSpan(
-            text: '출발 요청시간 : ',
+            text: '${AppLocalizations.of(context).pickupRequestedTimeLabel} : ',
             style: TextStyle(
               fontWeight: FontWeight.normal,
               color: theme.colorScheme.onSurfaceVariant,
@@ -1120,7 +1120,7 @@ class _BookingCreatedAtText extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 6),
       child: Text(
-        '예약시간 : $formatted',
+        '${AppLocalizations.of(context).bookingCreatedTimeLabel} : $formatted',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
           color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),

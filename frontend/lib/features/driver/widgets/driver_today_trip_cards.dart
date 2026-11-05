@@ -25,7 +25,8 @@ class _DriverTodayRouteEndpoint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final resolved = location ??
+    final resolved =
+        location ??
         (fallbackAddress.trim().isNotEmpty
             ? DriverBookingLocation(address: fallbackAddress)
             : null);
@@ -34,18 +35,18 @@ class _DriverTodayRouteEndpoint extends StatelessWidget {
     final displayName = (nameTh != null && nameTh.isNotEmpty)
         ? nameTh
         : (name != null && name.isNotEmpty
-            ? name
-            : (resolved != null
-                ? DriverTripContact.displayLabelFor(resolved)
-                : null));
+              ? name
+              : (resolved != null
+                    ? DriverTripContact.displayLabelFor(resolved)
+                    : null));
     final hasStructuredName =
         (nameTh != null && nameTh.isNotEmpty) ||
         (name != null && name.isNotEmpty);
-    final address = resolved?.secondaryAddress ??
+    final address =
+        resolved?.secondaryAddress ??
         (hasStructuredName ? null : fallbackAddress.trim());
-    final showAddress = address != null &&
-        address.isNotEmpty &&
-        address != displayName;
+    final showAddress =
+        address != null && address.isNotEmpty && address != displayName;
     final labelStyle = TextStyle(
       fontSize: compact ? 14 : 15,
       color: AppTokens.textSecondary,
@@ -60,7 +61,7 @@ class _DriverTodayRouteEndpoint extends StatelessWidget {
 
     if (displayName == null || displayName.isEmpty) {
       return Text(
-        '$prefix - ${fallbackAddress.trim().isEmpty ? '위치 정보 없음' : fallbackAddress.trim()}',
+        '$prefix - ${fallbackAddress.trim().isEmpty ? 'ไม่มีข้อมูลสถานที่ / 위치 정보 없음' : fallbackAddress.trim()}',
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
         style: labelStyle,
@@ -124,7 +125,9 @@ class DriverTodayCurrentTripCard extends StatelessWidget {
     final l10n = context.l10n;
     final guidanceKey = DriverUx.statusGuidanceKey(booking.status);
     final navigateLocation = DriverUx.navigateTargetLocation(booking);
-    final canNavigate = DriverTripContact.hasNavigableLocation(navigateLocation);
+    final canNavigate = DriverTripContact.hasNavigableLocation(
+      navigateLocation,
+    );
     final luggageCount = _luggageCount(booking);
     final pickupRequestTime = formatDriverPickupRequestTime(
       pickupDate: booking.pickupDate,
@@ -176,12 +179,12 @@ class DriverTodayCurrentTripCard extends StatelessWidget {
           const SizedBox(height: AppTokens.spaceSm),
           _RouteLine(
             origin: _DriverTodayRouteEndpoint(
-              prefix: '출발지',
+              prefix: 'จุดรับ / 출발지',
               location: booking.pickupLocation,
               fallbackAddress: booking.origin,
             ),
             destination: _DriverTodayRouteEndpoint(
-              prefix: '도착지',
+              prefix: 'จุดส่ง / 도착지',
               location: booking.destinationLocation,
               fallbackAddress: booking.destination,
             ),
@@ -240,7 +243,8 @@ class DriverTodayCurrentTripCard extends StatelessWidget {
               label: l10n.t('driver_quick_navigate'),
               enabled: canNavigate,
               onPressed: canNavigate
-                  ? () => DriverTripContact.openMapsForLocation(navigateLocation)
+                  ? () =>
+                        DriverTripContact.openMapsForLocation(navigateLocation)
                   : null,
             ),
           ),
@@ -310,13 +314,13 @@ class DriverTodayTripListTile extends StatelessWidget {
           const SizedBox(height: 6),
           _RouteLine(
             origin: _DriverTodayRouteEndpoint(
-              prefix: '출발지',
+              prefix: 'จุดรับ / 출발지',
               location: booking.pickupLocation,
               fallbackAddress: booking.origin,
               compact: true,
             ),
             destination: _DriverTodayRouteEndpoint(
-              prefix: '도착지',
+              prefix: 'จุดส่ง / 도착지',
               location: booking.destinationLocation,
               fallbackAddress: booking.destination,
               compact: true,
