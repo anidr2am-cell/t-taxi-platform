@@ -397,7 +397,7 @@ class _AdminManualFlightSectionState extends State<AdminManualFlightSection> {
             const SizedBox(height: AppTokens.spaceSm),
             Text(
               FlightTimeFormat.formatBangkokDisplay(
-                _lookupResult!.arrival.scheduledAt,
+                _lookupResult!.arrival.estimatedAt ?? _lookupResult!.arrival.scheduledAt,
                 amLabel: l10n.t('pickup_time_am'),
                 pmLabel: l10n.t('pickup_time_pm'),
               ),
