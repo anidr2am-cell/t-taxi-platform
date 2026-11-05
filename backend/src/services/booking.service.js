@@ -1,3 +1,4 @@
+const { resolveBookingAirport } = require('../utils/bookingAirport.util');
 const { resolveBookingContactChannel } = require('../utils/bookingContactChannel');
 const { normalizeMarketingAttribution } = require('../utils/marketingAttribution.util');
 const { pickPersistableMessengerMetadata } = require('../utils/customerMessengerFields');
@@ -780,9 +781,12 @@ class BookingService {
   }
 
   async resolveTransferAirport(conn, input) {
-    const iata = input.transfer?.airportIata
-      || input.originAirportIata
-      || input.destinationAirportIata;
+    const iata = await resolveBookingAirport({
+      service_type_code: input.serviceTypeCode,
+      airport_iata: input.transfer?.airportIata || input.originAirportIata || input.destinationAirportIata,
+      origin_lat: input.origin?.lat, origin_lng: input.origin?.lng,
+      destination_lat: input.destination?.lat, destination_lng: input.destination?.lng,
+    }, this.bookingRepository, conn);
 
     if (!iata) {
       return { airportId: null, airportCodeCustom: null };
@@ -1949,8 +1953,11 @@ class BookingService {
     scheduledPickupAtIso,
     partial = false,
     existingTransfer = null,
+    serviceTypeCode = input.serviceTypeCode,
+    origin = input.origin,
+    destination = input.destination,
   }) {
-    if (partial && input.transfer === undefined && input.originAirportIata === undefined) {
+    if (partial && input.transfer === undefined && input.originAirportIata === undefined && input.origin === undefined && input.destination === undefined && input.serviceTypeCode === undefined) {
       return;
     }
     const mergedTransfer = {
@@ -1967,6 +1974,8 @@ class BookingService {
     };
     if (input.originAirportIata !== undefined) {
       mergedTransfer.airportIata = input.originAirportIata || null;
+    } else if ((input.origin !== undefined || input.destination !== undefined) && input.transfer?.airportIata === undefined) {
+      delete mergedTransfer.airportIata;
     }
     const flightInfo = this.resolveTransferFlight({
       ...input,
@@ -1976,6 +1985,7 @@ class BookingService {
     const airportInfo = await this.resolveTransferAirport(conn, {
       ...input,
       transfer: mergedTransfer,
+      serviceTypeCode, origin, destination,
       originAirportIata: mergedTransfer.airportIata ?? input.originAirportIata,
     });
 
@@ -2657,6 +2667,7 @@ class BookingService {
         scheduledPickupAtIso,
         partial: true,
         existingTransfer,
+        serviceTypeCode: serviceType.code ?? fieldsRow.service_type_code, origin, destination,
       });
 
       await this.bookingRepository.insertActivityLog(conn, booking.id, {

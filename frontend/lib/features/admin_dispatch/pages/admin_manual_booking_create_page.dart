@@ -242,6 +242,12 @@ class _AdminManualBookingCreatePageState
     return '${_pickupAt!.year}-${two(_pickupAt!.month)}-${two(_pickupAt!.day)}';
   }
 
+  String? get _resolvedTransferAirportIata {
+    if (_serviceTypeCode == 'AIRPORT_PICKUP') return airportIataFromOption(_origin) ?? _originAirportIata;
+    if (_serviceTypeCode == 'AIRPORT_DROPOFF') return airportIataFromOption(_destination) ?? _originAirportIata;
+    return null;
+  }
+
   Map<String, dynamic>? get _transferPayload {
     if (_showsGolfSection) {
       return {
@@ -254,8 +260,8 @@ class _AdminManualBookingCreatePageState
     if (!_showsFlightSection) return null;
     final normalized = _flightNumber.trim().toUpperCase();
     return {
-      if (_originAirportIata != null && _originAirportIata!.isNotEmpty)
-        'airportIata': _originAirportIata,
+      if (_resolvedTransferAirportIata != null)
+        'airportIata': _resolvedTransferAirportIata,
       'flightNumber': normalized.isEmpty ? null : normalized,
       if (_flightScheduledArrivalAt != null && _flightScheduledArrivalAt!.isNotEmpty)
         'flightScheduledArrivalAt': _flightScheduledArrivalAt,
@@ -953,8 +959,8 @@ class _AdminManualBookingCreatePageState
         'nameSign': _nameSign,
         'nameSignText': _nameSign ? _nameSignTextController.text.trim() : null,
         'preferFemaleDriver': _preferFemaleDriver,
-        if (_originAirportIata != null && _originAirportIata!.isNotEmpty)
-          'originAirportIata': _originAirportIata,
+        if (_resolvedTransferAirportIata != null)
+          'originAirportIata': _resolvedTransferAirportIata,
         if (_transferPayload != null) 'transfer': _transferPayload,
       };
 
@@ -1263,7 +1269,7 @@ class _AdminManualBookingCreatePageState
                       languageCode: languageCode,
                       selected: _origin,
                       onSelected: (value) {
-                        setState(() => _origin = value);
+                        setState(() { _origin = value; if (_serviceTypeCode == 'AIRPORT_PICKUP') _originAirportIata = null; });
                         _onQuoteInputsChanged();
                       },
                     ),
@@ -1273,7 +1279,7 @@ class _AdminManualBookingCreatePageState
                       languageCode: languageCode,
                       selected: _destination,
                       onSelected: (value) {
-                        setState(() => _destination = value);
+                        setState(() { _destination = value; if (_serviceTypeCode == 'AIRPORT_DROPOFF') _originAirportIata = null; });
                         _onQuoteInputsChanged();
                       },
                     ),

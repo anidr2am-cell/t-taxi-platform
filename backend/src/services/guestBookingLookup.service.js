@@ -225,6 +225,8 @@ class GuestBookingLookupService {
       route: {
         origin: {
           code: row.origin_location_code ?? null,
+          airportIata: row.service_type_code === 'AIRPORT_PICKUP'
+            ? row.origin_airport_iata ?? row.airport_iata ?? row.airport_code_custom ?? null : null,
           address: row.origin_address,
           name: pickupLocation.name,
         },
@@ -372,6 +374,8 @@ class GuestBookingLookupService {
       route: {
         origin: {
           code: row.origin_location_code ?? null,
+          airportIata: row.service_type_code === 'AIRPORT_PICKUP'
+            ? row.origin_airport_iata ?? row.airport_iata ?? row.airport_code_custom ?? null : null,
           address: null,
           name: pickupLocation.name,
         },
