@@ -68,13 +68,21 @@ function renderCustomerEmail(notification, { origin = 'https://trider.taxi', goo
   const rawAmount = notification.booking_total_amount;
   const amount = rawAmount == null || rawAmount === '' ? null : Number(rawAmount);
   const receipt = notification.type === 'BOOKING_CREATED';
-  const vehicle = t.vehicles?.[notification.booking_vehicle_type];
+  const assignment = notification.type === 'DRIVER_ASSIGNED';
+  const vehicle = t.vehicles?.[assignment ? (notification.assigned_vehicle_type || notification.booking_vehicle_type) : notification.booking_vehicle_type];
   const payment = customerPaymentFromMetadata(notification.booking_metadata, notification.booking_payment_method);
   const paymentLabel = t.paymentMethods?.[payment.method];
   let lines = [body, '', `${t.booking}: ${number}`,
     pickup ? `${t.pickup}: ${pickup}` : null,
     route ? `${t.route}: ${route}` : null,
-    receipt && vehicle ? `${t.vehicle}: ${vehicle}` : null,
+    (receipt || assignment) && vehicle ? `${t.vehicle}: ${vehicle}` : null,
+    ...(assignment ? [
+      `${t.driverName}: ${notification.assigned_driver_name || t.assignmentMissing}`,
+      `${t.vehicleModel}: ${notification.assigned_vehicle_model || t.assignmentMissing}`,
+      `${t.vehicleColor}: ${notification.assigned_vehicle_color || t.assignmentMissing}`,
+      `${t.vehiclePlate}: ${notification.assigned_vehicle_plate || t.assignmentMissing}`,
+      t.assignmentNote,
+    ] : []),
     amount != null && Number.isFinite(amount) && amount >= 0
       ? `${t.amount}: ${new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(amount)} ${t.currency}` : null,
     receipt && paymentLabel ? `${t.paymentMethod}: ${paymentLabel}` : null,

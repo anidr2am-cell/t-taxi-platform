@@ -22,8 +22,8 @@
         "body": "예약이 확정되었습니다. 예약 조회에서 이동 일정을 확인해 주세요."
       },
       "DRIVER_ASSIGNED": {
-        "subject": "담당 기사가 배정되었습니다",
-        "body": "담당 기사가 배정되었습니다. 예약 조회에서 배정 정보를 확인해 주세요."
+        "subject": "예약이 확정되었습니다 — 기사·차량 안내",
+        "body": "예약하신 이동에 기사와 차량이 배정되었습니다. 아래 정보와 픽업 일정을 확인해 주세요."
       },
       "DRIVER_ARRIVED": {
         "subject": "기사가 픽업 장소에 도착했습니다",
@@ -81,7 +81,13 @@
       "PAY_DRIVER": "현금 · 도착 후 기사에게 결제",
       "BANK_TRANSFER": "계좌이체 · 관리자 안내",
       "CARD": "카드결제 · 관리자 안내"
-    }
+    },
+    "driverName": "기사 이름",
+    "vehicleModel": "차량 모델",
+    "vehicleColor": "차량 색상",
+    "vehiclePlate": "차량번호",
+    "assignmentMissing": "관리자에게 확인해 주세요",
+    "assignmentNote": "기사와 차량이 배정되었습니다. 배정은 실제 출발을 의미하지 않습니다. 최신 정보는 예약 조회에서 확인해 주세요."
   },
   "en": {
     "booking": "Booking number",
@@ -106,8 +112,8 @@
         "body": "Your booking is confirmed. Check your itinerary on the booking lookup page."
       },
       "DRIVER_ASSIGNED": {
-        "subject": "Your driver has been assigned",
-        "body": "A driver has been assigned to your ride. Check the assignment on the booking lookup page."
+        "subject": "Booking confirmed — your driver and vehicle",
+        "body": "A driver and vehicle have been assigned to your transfer. Please check their details and your pickup schedule below."
       },
       "DRIVER_ARRIVED": {
         "subject": "Your driver has arrived",
@@ -165,7 +171,13 @@
       "PAY_DRIVER": "Cash · pay the driver on arrival",
       "BANK_TRANSFER": "Bank transfer · arranged by the administrator",
       "CARD": "Card · arranged by the administrator"
-    }
+    },
+    "driverName": "Driver name",
+    "vehicleModel": "Vehicle model",
+    "vehicleColor": "Vehicle colour",
+    "vehiclePlate": "Licence plate",
+    "assignmentMissing": "Please check with our support team",
+    "assignmentNote": "Your driver and vehicle have been assigned. Assignment does not mean the driver has set off. Check your booking for the latest details."
   },
   "th": {
     "booking": "หมายเลขการจอง",
@@ -190,8 +202,8 @@
         "body": "ยืนยันการจองของคุณแล้ว ตรวจสอบรายละเอียดการเดินทางได้ที่หน้าตรวจสอบการจอง"
       },
       "DRIVER_ASSIGNED": {
-        "subject": "จัดคนขับให้คุณแล้ว",
-        "body": "จัดคนขับให้การเดินทางของคุณแล้ว ตรวจสอบข้อมูลการจัดรถได้ที่หน้าตรวจสอบการจอง"
+        "subject": "ยืนยันการจอง — ข้อมูลคนขับและรถ",
+        "body": "เราได้จัดสรรคนขับและรถสำหรับการเดินทางของคุณแล้ว กรุณาตรวจสอบข้อมูลและกำหนดการรับด้านล่าง"
       },
       "DRIVER_ARRIVED": {
         "subject": "คนขับถึงจุดรับแล้ว",
@@ -249,7 +261,13 @@
       "PAY_DRIVER": "เงินสด · ชำระกับคนขับเมื่อถึงจุดหมาย",
       "BANK_TRANSFER": "โอนเงิน · ติดต่อผู้ดูแล",
       "CARD": "บัตร · ติดต่อผู้ดูแล"
-    }
+    },
+    "driverName": "ชื่อคนขับ",
+    "vehicleModel": "รุ่นรถ",
+    "vehicleColor": "สีรถ",
+    "vehiclePlate": "ทะเบียนรถ",
+    "assignmentMissing": "กรุณาสอบถามผู้ดูแล",
+    "assignmentNote": "ระบบจัดสรรคนขับและรถให้แล้ว การมอบหมายงานไม่ได้หมายความว่าคนขับออกเดินทางแล้ว กรุณาตรวจสอบข้อมูลล่าสุดในหน้าตรวจสอบการจอง"
   },
   "ja": {
     "booking": "予約番号",
@@ -274,8 +292,8 @@
         "body": "ご予約が確定しました。予約確認ページで移動の予定をご確認ください。"
       },
       "DRIVER_ASSIGNED": {
-        "subject": "担当ドライバーが決まりました",
-        "body": "担当ドライバーが決まりました。予約確認ページで配車情報をご確認ください。"
+        "subject": "ご予約確定 — ドライバー・車両のご案内",
+        "body": "ご予約の送迎にドライバーと車両が手配されました。以下の情報とお迎え日時をご確認ください。"
       },
       "DRIVER_ARRIVED": {
         "subject": "ドライバーが乗車場所に到着しました",
@@ -333,7 +351,13 @@
       "PAY_DRIVER": "現金 · 到着後にドライバーへお支払い",
       "BANK_TRANSFER": "銀行振込 · 管理者がご案内",
       "CARD": "カード · 管理者がご案内"
-    }
+    },
+    "driverName": "ドライバー名",
+    "vehicleModel": "車種・モデル",
+    "vehicleColor": "車体の色",
+    "vehiclePlate": "ナンバープレート",
+    "assignmentMissing": "サポートにご確認ください",
+    "assignmentNote": "ドライバーと車両が手配されました。手配完了はドライバーの出発を意味するものではありません。最新情報は予約照会でご確認ください。"
   },
   "zh": {
     "booking": "预订编号",
@@ -358,8 +382,8 @@
         "body": "您的预订已确认，请在预订查询页面查看行程安排。"
       },
       "DRIVER_ASSIGNED": {
-        "subject": "已为您安排司机",
-        "body": "已为您的行程安排司机，请在预订查询页面查看派车信息。"
+        "subject": "预订已确认 — 司机及车辆信息",
+        "body": "您的行程已安排司机和车辆。请核对以下信息及接送时间。"
       },
       "DRIVER_ARRIVED": {
         "subject": "司机已到达上车地点",
@@ -417,6 +441,12 @@
       "PAY_DRIVER": "现金 · 到达目的地后付给司机",
       "BANK_TRANSFER": "银行转账 · 由管理员提供指引",
       "CARD": "银行卡 · 由管理员提供指引"
-    }
+    },
+    "driverName": "司机姓名",
+    "vehicleModel": "车辆型号",
+    "vehicleColor": "车身颜色",
+    "vehiclePlate": "车牌号码",
+    "assignmentMissing": "请联系客服确认",
+    "assignmentNote": "司机和车辆已安排。完成安排不代表司机已出发。最新信息请在订单查询页面查看。"
   }
 }

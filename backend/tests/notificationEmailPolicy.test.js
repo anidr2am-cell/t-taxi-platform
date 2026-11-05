@@ -9,7 +9,7 @@ const TYPES = require('../src/constants/notificationTypes');
 
 // Exercise the real repository's transaction/SQL decisions and service dispatch.
 // The booking-row mutex models separate concurrent database connections.
-function harness({ started = false, failSmtp = false, historical = [] } = {}) {
+function harness({ started = false, failSmtp = false, historical = [], assignmentId = 10 } = {}) {
   const rows = []; const sent = []; const other = []; const sqlLog = [];
   let tail = Promise.resolve();
   const pool = { async getConnection() {
@@ -25,6 +25,7 @@ function harness({ started = false, failSmtp = false, historical = [] } = {}) {
           return [[{ id: 1 }]];
         }
         if (sql.startsWith('SELECT delivery_status')) return [[rows.find((r) => r.delivery.id === params[0]).delivery]];
+        if (sql.startsWith('SELECT ba.id')) return [assignmentId ? [{id:assignmentId}] : []];
         if (sql.includes('SELECT n.type')) return [[...historical, ...rows.filter((r) => r.n.audience_role === 'CUSTOMER'
           && (r.delivery.delivery_status === 'DELIVERED' || r.delivery.last_error?.startsWith('PERMANENT_EMAIL_'))).map((r) => ({ type: r.n.type }))]];
         if (sql.includes('COUNT(*) AS n FROM booking_status_logs')) return [[{ n: started ? 1 : 0 }]];
@@ -67,7 +68,7 @@ function harness({ started = false, failSmtp = false, historical = [] } = {}) {
   service.sendFcmToActiveDevices = async (n) => { other.push(['FCM', n.type]); return { status: 'DELIVERED' }; };
   function add(type, role = 'CUSTOMER') {
     const id = rows.length + 1;
-    rows.push({ n: { id, booking_id: 1, audience_role: role, type }, delivery: {
+    rows.push({ n: { id, booking_id: 1, audience_role: role, type, email_assignment_id:10 }, delivery: {
       id, channel: 'EMAIL', delivery_status: 'PENDING', attempt_count: 0, last_error: null,
     } });
     return id;
@@ -77,10 +78,19 @@ function harness({ started = false, failSmtp = false, historical = [] } = {}) {
 }
 
 const normal = ['BOOKING_CREATED', 'BOOKING_CONFIRMED', 'DRIVER_ASSIGNED', 'TRIP_ON_ROUTE', 'DRIVER_ARRIVED', 'TRIP_PICKED_UP', 'TRIP_ENDED', 'TRIP_COMPLETED'];
+test('concurrent assignment events and reassignment cannot send a second confirmation; receipt and terminal slots remain available',async()=>{
+ const h=harness();await h.flow(['BOOKING_CREATED']);
+ await Promise.all([h.service.processDeliveries(h.add('DRIVER_ASSIGNED')),h.service.processDeliveries(h.add('DRIVER_ASSIGNED'))]);
+ await h.flow(['DRIVER_ASSIGNED','TRIP_ENDED','BOOKING_CANCELLED','TRIP_COMPLETED']);
+ assert.deepEqual(h.sent.map(n=>n.type),['BOOKING_CREATED','DRIVER_ASSIGNED','TRIP_ENDED']);
+});
+test('released, completed or changed assignments are skipped without SMTP reservation',async()=>{
+ for(const assignmentId of [null,99]){const h=harness({assignmentId});await h.flow(['DRIVER_ASSIGNED']);assert.equal(h.sent.length,0);assert.equal(h.rows[0].delivery.last_error,'EMAIL_POLICY_ASSIGNMENT_CHANGED');assert(!h.sqlLog.some(s=>s.startsWith('INSERT INTO notification_email_attempts')));}
+});
 for (const [name, flow, expected] of [
-  ['normal', normal, ['BOOKING_CREATED', 'TRIP_ENDED']],
-  ['cancelled before trip', ['BOOKING_CREATED', 'DRIVER_ASSIGNED', 'BOOKING_CANCELLED'], ['BOOKING_CREATED', 'BOOKING_CANCELLED']],
-  ['no show', ['BOOKING_CREATED', 'DRIVER_ASSIGNED', 'BOOKING_NO_SHOW'], ['BOOKING_CREATED']],
+  ['normal', normal, ['BOOKING_CREATED', 'DRIVER_ASSIGNED', 'TRIP_ENDED']],
+  ['cancelled before trip', ['BOOKING_CREATED', 'DRIVER_ASSIGNED', 'BOOKING_CANCELLED'], ['BOOKING_CREATED', 'DRIVER_ASSIGNED', 'BOOKING_CANCELLED']],
+  ['no show', ['BOOKING_CREATED', 'DRIVER_ASSIGNED', 'BOOKING_NO_SHOW'], ['BOOKING_CREATED','DRIVER_ASSIGNED']],
 ]) test(`${name}: exact customer EMAIL count, IN_APP/FCM unchanged`, async () => {
   const h = harness(); await h.flow(flow);
   assert.deepEqual(h.sent.map((n) => n.type), expected);
@@ -113,7 +123,7 @@ test('same delivery processed concurrently or recovered after uncertain SMTP is 
   }
 });
 test('historical customer deliveries count toward the cap; cancellation after trip start is blocked', async () => {
-  const capped = harness({ historical: [{ type: 'DRIVER_ASSIGNED' }, { type: 'TRIP_PICKED_UP' }] });
+  const capped = harness({ historical: [{ type: 'DRIVER_ASSIGNED' }, { type: 'TRIP_PICKED_UP' }, {type:'BOOKING_CONFIRMED'}] });
   await capped.flow(['BOOKING_CREATED', 'TRIP_ENDED']); assert.equal(capped.sent.length, 0);
   const started = harness({ started: true }); await started.flow(['BOOKING_CREATED', 'BOOKING_CANCELLED']);
   assert.deepEqual(started.sent.map((n) => n.type), ['BOOKING_CREATED']);
@@ -149,7 +159,7 @@ test('notification persistence keeps all channels but disables EMAIL only for di
       recipientType: 'USER', userId: 1, bookingId: 1, audienceRole, payload: {} });
     assert.equal(inserts.length, 3);
     assert(inserts.filter((r) => r.channel !== 'EMAIL').every((r) => r.deliveryStatus === 'PENDING'));
-    assert.equal(inserts.find((r) => r.channel === 'EMAIL').deliveryStatus, audienceRole === 'ADMIN' ? 'PENDING' : 'SKIPPED');
+    assert.equal(inserts.find((r) => r.channel === 'EMAIL').deliveryStatus, audienceRole !== 'DRIVER' ? 'PENDING' : 'SKIPPED');
   }
 });
 test('customer mail without a booking cannot bypass the per-booking cap', async () => {

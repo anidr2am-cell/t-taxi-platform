@@ -3,6 +3,7 @@ const {withReceiptPdf,PDF_TEMPLATE_VERSION}=require('../templates/customerReceip
 const AppError=require('../utils/AppError');
 const {encrypt}=require('../utils/tokenEncryption.util');
 const {renderCustomerEmail,normalizeLocale}=require('../templates/customerEmail');
+const {customerEmailSlot,CUSTOMER_EMAIL_LIMIT}=require('../policies/notificationEmail.policy');
 function meta(value){try{return typeof value==='string'?JSON.parse(value)||{}:value||{}}catch{return {}}}
 function fail(code,status=409){throw new AppError(code,{statusCode:status,errorCode:code})}
 function mask(email){const [local,domain]=String(email||'').split('@');return domain?local.slice(0,1)+'***@'+domain:''}
@@ -24,10 +25,10 @@ class AdminReceiptEmailService {
       || ['PERMANENT_INVALID_RECIPIENT','CONFIG_MISSING'].includes(h.last_error)
       || String(h.last_error||'').startsWith('EMAIL_POLICY_'));
     if(history.some(h=>h.type==='BOOKING_CREATED' && h.delivery_status!=='DELIVERED' && !['ACCEPTED','NOT_ACCEPTED'].includes(h.outcome) && !safeNoSmtp(h))) return 'RECEIPT_EMAIL_EXISTING_ATTEMPT';
-    if(history.some(h=>h.type!=='BOOKING_CREATED' && (h.delivery_status==='DELIVERED'
+    if(history.some(h=>customerEmailSlot(h.type)==='TERMINAL' && (h.delivery_status==='DELIVERED'
       || Number(h.accepted_confirmed)||!safeNoSmtp(h))))return 'RECEIPT_EMAIL_EXISTING_ATTEMPT';
     if(history.filter(h=>h.delivery_status==='DELIVERED'||Number(h.accepted_confirmed)
-      || Number(h.smtp_attempts)||String(h.last_error||'').startsWith('PERMANENT_EMAIL_')).length>=2)
+      || Number(h.smtp_attempts)||String(h.last_error||'').startsWith('PERMANENT_EMAIL_')).length>=CUSTOMER_EMAIL_LIMIT)
       return 'RECEIPT_EMAIL_LIMIT';
     return null;
   }
@@ -37,7 +38,7 @@ class AdminReceiptEmailService {
   }
   state(row,history){
     const m=meta(row.metadata);const prior=m.adminReceiptEmail;
-    const delivery=prior?history.find(h=>Number(h.id)===Number(prior.deliveryId)):history.find(h=>h.type!=='BOOKING_CREATED');
+    const delivery=prior?history.find(h=>Number(h.id)===Number(prior.deliveryId)):history.find(h=>customerEmailSlot(h.type)==='TERMINAL');
     const reason=this.eligibility(row,history);
     return {payment:{status:row.payment_status,amount:row.total_amount==null?null:Number(row.total_amount),currency:row.currency,canConfirm:['SETTLEMENT_PENDING','COMPLETED'].includes(row.status)&&['UNPAID','PENDING'].includes(row.payment_status)&&row.total_amount!=null&&Number.isFinite(Number(row.total_amount))&&Number(row.total_amount)>=0&&row.currency==='THB',confirmation:m.customerPaymentConfirmation||null},eligible:!reason,reason,email:row.customer_email||'',locale:normalizeLocale(m.locale)||'en',
       configured:Boolean(this.notificationService.adapters.EMAIL?.isConfigured()),
