@@ -57,6 +57,14 @@ test('airport and localized golf guides preset the correct service without chang
  assert.match(guide,/<aside class="cta"><strong>✈️ Airport pickup/);
  assert.ok(guide.includes('address-based distance charge'));
  assert.doesNotMatch(guide,/with no extra charges/);
+ const dmkSlug='don-mueang-to-pattaya-en',dmk=read(blog,dmkSlug);
+ const dmkLinks=[...dmk.matchAll(/href="(\/booking[^\"]*)"/g)].map(m=>new URL(m[1].replaceAll('&amp;','&'),'https://trider.taxi'));
+ assert.equal(dmkLinks.length,4);
+ for(const url of dmkLinks){assert.equal(url.searchParams.get('service'),'AIRPORT_PICKUP');assert.equal(url.searchParams.get('lang'),'en');assert.equal(url.searchParams.has('utm_source'),false);}
+ assert.match(dmk,/<aside class="cta"><strong>✈️ Airport pickup/);
+ assert.ok(dmk.includes('EN-DMK-PATTAYA-GUIDE'));
+ assert.ok(dmk.includes('https://wa.me/66815693445'));
+ assert.doesNotMatch(dmk,/Gate 7/);
  const checklist=read(blog,'thailand-airport-taxi-booking-guide-en');
  const checklistLinks=[...checklist.matchAll(/href="(\/booking[^\"]*)"/g)].map(m=>new URL(m[1].replaceAll('&amp;','&'),'https://trider.taxi'));
  assert.equal(checklistLinks.length,3);
@@ -83,7 +91,7 @@ test('airport and localized golf guides preset the correct service without chang
   assert.ok(bookingLinks.length>=2,post.slug);
   for(const url of bookingLinks){assert.equal(url.searchParams.get('service'),service,post.slug);assert.equal(url.searchParams.get('lang'),lang,post.slug);assert.equal(url.searchParams.has('utm_source'),false,post.slug);}
  }
- for(const post of posts.filter(p=>![pickupSlug,guideSlug,...topicPosts.map(p=>p.slug)].includes(p.slug))){
+ for(const post of posts.filter(p=>![pickupSlug,guideSlug,dmkSlug,...topicPosts.map(p=>p.slug)].includes(p.slug))){
   const page=read(blog,post.slug);
   const bookingLang=post.lang;
   assert.ok(page.includes('class="book-button" href="/booking?lang='+bookingLang+'"'),post.slug);
