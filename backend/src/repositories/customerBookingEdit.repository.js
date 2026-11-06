@@ -13,7 +13,7 @@ class CustomerBookingEditRepository {
       contact_channel=IF(?, ?,contact_channel),updated_at=CURRENT_TIMESTAMP WHERE id=?`,
       [next.phone,next.email,next.specialRequests,JSON.stringify(next.metadata),resetContact,resetContact,resetContact,next.contactChannel,row.id]);
     if(flightChanged) await conn.query(`INSERT INTO booking_transfer_details(booking_id,flight_number,airline_code) VALUES(?,?,?)
-      ON DUPLICATE KEY UPDATE flight_number=VALUES(flight_number),airline_code=VALUES(airline_code),flight_scheduled_arrival_at=NULL,
+      ON DUPLICATE KEY UPDATE deleted_at=NULL,flight_number=VALUES(flight_number),airline_code=VALUES(airline_code),departure_airport_iata=NULL,arrival_airport_iata=NULL,flight_scheduled_arrival_at=NULL,
       flight_estimated_arrival_at=NULL,flight_actual_arrival_at=NULL,delay_status=NULL,delay_minutes=NULL,last_synced_at=NULL,flight_status=NULL,flight_raw_data=NULL,sync_status='NEVER',sync_error=NULL`,[row.id,next.flightNumber,extractAirlineCode(next.flightNumber)]);
   }
   async assignment(conn,id) {

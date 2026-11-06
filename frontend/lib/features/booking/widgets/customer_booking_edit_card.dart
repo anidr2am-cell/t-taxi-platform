@@ -310,7 +310,11 @@ class _EditDialogState extends State<_EditDialog> {
                         phone,
                         keyboard: TextInputType.phone,
                         validator: (v) =>
-                            v!.trim().isEmpty && widget.data['phone'] == null
+                            v!.trim().isEmpty &&
+                                widget.data['phone'] == null &&
+                                messenger == widget.data['messengerType'] &&
+                                id.text.trim() ==
+                                    (widget.data['messengerId'] ?? '')
                             ? null
                             : RegExp(r'^\+[1-9]\d{6,14}$').hasMatch(v.trim())
                             ? null
@@ -355,7 +359,10 @@ class _EditDialogState extends State<_EditDialog> {
                         ],
                         onChanged: saving
                             ? null
-                            : (v) => setState(() => messenger = v),
+                            : (v) => setState(() {
+                                if (v != messenger) id.clear();
+                                messenger = v;
+                              }),
                       ),
                       const SizedBox(height: AppTokens.spaceMd),
                       field(
