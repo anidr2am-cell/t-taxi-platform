@@ -10393,6 +10393,7 @@ class AppLocalizations {
     },
   };
   static const Map<String, String> _customerRussianTranslations = {
+    "voucher_edit_close": "Закрыть",
     "voucher_edit_title": "Изменение бронирования",
     "voucher_edit_open": "Посмотреть или изменить данные",
     "voucher_edit_help": "Можно изменить контакты, номер рейса и пожелания. Назначенный водитель получит уведомление об изменениях.",
@@ -11244,7 +11245,8 @@ class AppLocalizations {
     "voucher_edit_auth_error": "예약 조회를 다시 진행해 본인 확인을 해 주세요.",
     "voucher_edit_legacy_sms": "전화·문자 (기존 예약)",
     "admin_customer_change_request_title": "고객 예약 변경 요청",
-    "admin_customer_change_request_help": "고객이 보낸 요청입니다. 일정·경로·차량·요금은 자동 변경되지 않았습니다. 고객과 확인한 후 처리해 주세요."
+    "admin_customer_change_request_help": "고객이 보낸 요청입니다. 일정·경로·차량·요금은 자동 변경되지 않았습니다. 고객과 확인한 후 처리해 주세요.",
+    "voucher_edit_close": "닫기"
   },
   "en": {
     "voucher_edit_title": "Edit booking details",
@@ -11272,7 +11274,8 @@ class AppLocalizations {
     "voucher_edit_auth_error": "Please look up your booking again to verify access.",
     "voucher_edit_legacy_sms": "Phone / SMS (existing booking)",
     "admin_customer_change_request_title": "Customer booking change request",
-    "admin_customer_change_request_help": "The customer submitted this request. The schedule, route, vehicle and fare have not changed automatically. Confirm the details with the customer before making changes."
+    "admin_customer_change_request_help": "The customer submitted this request. The schedule, route, vehicle and fare have not changed automatically. Confirm the details with the customer before making changes.",
+    "voucher_edit_close": "Close"
   },
   "th": {
     "voucher_edit_title": "แก้ไขข้อมูลการจอง",
@@ -11300,7 +11303,8 @@ class AppLocalizations {
     "voucher_edit_auth_error": "กรุณาค้นหาการจองอีกครั้งเพื่อยืนยันสิทธิ์",
     "voucher_edit_legacy_sms": "โทรศัพท์ / SMS (การจองเดิม)",
     "admin_customer_change_request_title": "คำขอเปลี่ยนแปลงการจองจากลูกค้า",
-    "admin_customer_change_request_help": "ลูกค้าส่งคำขอนี้มา วันเวลา เส้นทาง รถ และราคายังไม่เปลี่ยนอัตโนมัติ กรุณายืนยันกับลูกค้าก่อนดำเนินการ"
+    "admin_customer_change_request_help": "ลูกค้าส่งคำขอนี้มา วันเวลา เส้นทาง รถ และราคายังไม่เปลี่ยนอัตโนมัติ กรุณายืนยันกับลูกค้าก่อนดำเนินการ",
+    "voucher_edit_close": "ปิด"
   },
   "ja": {
     "voucher_edit_title": "予約情報の変更",
@@ -11328,7 +11332,8 @@ class AppLocalizations {
     "voucher_edit_auth_error": "予約を再検索して本人確認を行ってください。",
     "voucher_edit_legacy_sms": "電話・SMS（既存予約）",
     "admin_customer_change_request_title": "お客様からの予約変更依頼",
-    "admin_customer_change_request_help": "お客様からのご依頼です。日時・経路・車種・料金は自動変更されていません。お客様と確認のうえ対応してください。"
+    "admin_customer_change_request_help": "お客様からのご依頼です。日時・経路・車種・料金は自動変更されていません。お客様と確認のうえ対応してください。",
+    "voucher_edit_close": "閉じる"
   },
   "zh": {
     "voucher_edit_title": "修改预订信息",
@@ -11356,7 +11361,8 @@ class AppLocalizations {
     "voucher_edit_auth_error": "请重新查询预订以验证访问权限。",
     "voucher_edit_legacy_sms": "电话 / 短信（已有预订）",
     "admin_customer_change_request_title": "客户预订修改申请",
-    "admin_customer_change_request_help": "这是客户提交的申请。日期、路线、车型和费用尚未自动更改。请先与客户确认，再处理修改。"
+    "admin_customer_change_request_help": "这是客户提交的申请。日期、路线、车型和费用尚未自动更改。请先与客户确认，再处理修改。",
+    "voucher_edit_close": "关闭"
   }
 };
 

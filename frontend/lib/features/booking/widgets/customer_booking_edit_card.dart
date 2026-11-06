@@ -294,7 +294,7 @@ class _EditDialogState extends State<_EditDialog> {
                   IconButton(
                     onPressed: saving ? null : () => Navigator.pop(context),
                     icon: const Icon(Icons.close),
-                    tooltip: l.t('cancel'),
+                    tooltip: l.t('voucher_edit_close'),
                   ),
                 ],
               ),
