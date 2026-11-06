@@ -26,6 +26,7 @@ class GuestBookingLookupService {
   Future<GuestBookingLookupResult> lookup({
     required String bookingNumber,
     required String phone,
+    String? name,
   }) async {
     final response = await _client.post(
       Uri.parse('$_base/public/bookings/lookup'),
@@ -33,7 +34,10 @@ class GuestBookingLookupService {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
-      body: jsonEncode({'bookingNumber': bookingNumber, 'phone': phone}),
+      body: jsonEncode({
+        'bookingNumber': bookingNumber,
+        if (name != null) 'name': name else 'phone': phone,
+      }),
     );
     final decoded = jsonDecode(response.body);
 
@@ -47,7 +51,7 @@ class GuestBookingLookupService {
 
     final result = GuestBookingLookupResult.fromJson(
       Map<String, dynamic>.from((decoded as Map)['data'] as Map),
-    ).copyWith(customerPhone: phone.trim());
+    ).copyWith(customerPhone: name == null ? phone.trim() : null);
     await persist(result);
     return result;
   }

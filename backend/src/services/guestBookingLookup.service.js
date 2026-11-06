@@ -211,6 +211,7 @@ class GuestBookingLookupService {
     return {
       bookingId: row.id,
       bookingNumber: row.booking_number,
+      customerName: row.customer_name ?? null,
       status: row.status,
       reassignmentInProgress,
       canReview,
@@ -288,7 +289,7 @@ class GuestBookingLookupService {
   async lookup(input) {
     const bookingNumber = String(input.bookingNumber).trim().toUpperCase();
     const phone = this.normalizePhone(input.phone);
-    if (!phone) {
+    if (!phone && !this.normalizeName(input.name)) {
       throw this.notFound();
     }
 
@@ -306,7 +307,10 @@ class GuestBookingLookupService {
         bookingNumber,
       );
       const storedPhone = this.normalizePhone(booking?.customer_phone);
-      if (!booking || storedPhone !== phone) {
+      const matches = input.name !== undefined
+        ? Boolean(this.normalizeName(input.name)) && this.namesMatch(input.name, booking?.customer_name)
+        : Boolean(storedPhone) && storedPhone === phone;
+      if (!booking || !matches) {
         throw this.notFound();
       }
 

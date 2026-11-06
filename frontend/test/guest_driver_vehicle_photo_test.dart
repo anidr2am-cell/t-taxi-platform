@@ -323,6 +323,7 @@ class _FakeLookupService extends GuestBookingLookupService {
   Future<GuestBookingLookupResult> lookup({
     required String bookingNumber,
     required String phone,
+    String? name,
   }) async {
     return cached;
   }

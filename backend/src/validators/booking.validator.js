@@ -226,8 +226,9 @@ const cancelBookingSchema = Joi.object({
 
 const guestBookingLookupSchema = Joi.object({
   bookingNumber: Joi.string().trim().uppercase().pattern(/^TX\d{12}$/).required(),
-  phone: Joi.string().trim().min(4).max(30).required(),
-});
+  name: unicodeText({ max: 100 }).optional(),
+  phone: Joi.string().trim().min(4).max(30).optional(),
+}).xor('name', 'phone');
 
 const guestBookingLookupByContactSchema = Joi.object({
   name: unicodeText({ max: 100 }).required(),

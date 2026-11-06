@@ -33,6 +33,7 @@ class GuestBookingLookupResult {
     this.driverPhone,
     this.vehiclePhotoUrl,
     this.customerPhone,
+    this.customerName,
     this.driverPhotoUrl,
     this.flightNumber,
     this.vehicleModel,
@@ -74,6 +75,7 @@ class GuestBookingLookupResult {
   final String? driverPhone;
   final String? vehiclePhotoUrl;
   final String? customerPhone;
+  final String? customerName;
 
   factory GuestBookingLookupResult.fromJson(Map<String, dynamic> json) {
     return _fromApiJson(json, requireGuestAccessToken: true);
@@ -193,6 +195,7 @@ class GuestBookingLookupResult {
         driverVehicle['photoUrl'],
       ]),
       customerPhone: json['customerPhone'] as String?,
+      customerName: json['customerName'] as String?,
     );
   }
 
@@ -246,6 +249,7 @@ class GuestBookingLookupResult {
       driverPhone: driverPhone,
       vehiclePhotoUrl: vehiclePhotoUrl,
       customerPhone: customerPhone ?? this.customerPhone,
+      customerName: customerName,
     );
   }
 
@@ -373,6 +377,7 @@ class GuestBookingLookupResult {
             },
           },
     if (customerPhone != null) 'customerPhone': customerPhone,
+    if (customerName != null) 'customerName': customerName,
   };
 
   bool get hasValidGuestAccess {

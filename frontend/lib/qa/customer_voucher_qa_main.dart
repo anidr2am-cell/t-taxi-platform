@@ -28,7 +28,14 @@ class QaLookup extends GuestBookingLookupService {
   Future<GuestBookingLookupResult> lookup({
     required String bookingNumber,
     required String phone,
+    String? name,
   }) async {
+    if (name != null)
+      return super.lookup(
+        bookingNumber: bookingNumber,
+        phone: phone,
+        name: name,
+      );
     final data = await load('/qa/voucher?bookingNumber=$bookingNumber');
     final r = GuestBookingLookupResult.fromJson(
       data,
@@ -86,6 +93,11 @@ class _QaBodyState extends State<QaBody> {
   Widget build(BuildContext context) {
     if (Uri.base.queryParameters['view'] == 'driver')
       return DriverNotificationsPage(api: QaDriver(), showAppBar: false);
+    if (Uri.base.queryParameters['view'] == 'lookup')
+      return GuestBookingLookupPage(
+        lookupService: QaLookup(),
+        enableCustomerTools: false,
+      );
     return FutureBuilder<Map<String, dynamic>>(
       future: future,
       builder: (context, s) {

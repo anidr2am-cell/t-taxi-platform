@@ -107,6 +107,36 @@ void main() {
     },
   );
 
+  test(
+    'name lookup sends no phone and persists customer name for refresh',
+    () async {
+      Map<String, dynamic>? sent;
+      final service = GuestBookingLookupService(
+        baseUrl: 'https://qa.example',
+        client: MockClient((request) async {
+          sent = jsonDecode(request.body) as Map<String, dynamic>;
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {..._lookupJson(), 'customerName': 'Kim Test'},
+            }),
+            200,
+          );
+        }),
+      );
+      await service.lookup(
+        bookingNumber: 'TX202607010001',
+        phone: '',
+        name: 'Kim Test',
+      );
+      expect(sent, {'bookingNumber': 'TX202607010001', 'name': 'Kim Test'});
+      final cached = await service.loadCached();
+      expect(cached?.customerName, 'Kim Test');
+      expect(cached?.copyWith(status: 'OPEN').customerName, 'Kim Test');
+      expect(cached?.customerPhone, isNull);
+    },
+  );
+
   test('lookup persists customer phone for refresh', () async {
     final service = GuestBookingLookupService(
       baseUrl: 'http://localhost:3000',
@@ -261,7 +291,7 @@ void main() {
       'TX202607010001',
     );
     await tester.enterText(
-      find.byKey(const ValueKey('guest_lookup_phone')),
+      find.byKey(const ValueKey('guest_lookup_booking_name')),
       '+66 81 234 5670',
     );
     await tester.tap(find.text('Find booking'));
@@ -269,7 +299,7 @@ void main() {
 
     expect(
       find.text(
-        'Booking not found. Please check your booking number and phone.',
+        'Booking not found. Please check your booking number and name.',
       ),
       findsWidgets,
     );
@@ -306,7 +336,7 @@ void main() {
       'TX202607010001',
     );
     await tester.enterText(
-      find.byKey(const ValueKey('guest_lookup_phone')),
+      find.byKey(const ValueKey('guest_lookup_booking_name')),
       '+66 81 234 5678',
     );
     await tester.tap(find.text('Find booking'));
@@ -471,29 +501,30 @@ void main() {
     expect(find.text('Track driver'), findsNothing);
   });
 
-  testWidgets('voucher hides tracking even when active booking capability is true', (
-    tester,
-  ) async {
-    final json = _lookupJson();
-    json['bookingId'] = 10;
-    json['status'] = 'DRIVER_ASSIGNED';
-    json['capabilities'] = _capabilities(trackingAvailable: true);
+  testWidgets(
+    'voucher hides tracking even when active booking capability is true',
+    (tester) async {
+      final json = _lookupJson();
+      json['bookingId'] = 10;
+      json['status'] = 'DRIVER_ASSIGNED';
+      json['capabilities'] = _capabilities(trackingAvailable: true);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: GuestBookingLookupPage(
-          lookupService: _FakeLookupService(
-            cached: GuestBookingLookupResult.fromJson(json),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: GuestBookingLookupPage(
+            lookupService: _FakeLookupService(
+              cached: GuestBookingLookupResult.fromJson(json),
+            ),
+            enableCustomerTools: true,
+            trackingBuilder: (_) => const Text('Track driver'),
           ),
-          enableCustomerTools: true,
-          trackingBuilder: (_) => const Text('Track driver'),
         ),
-      ),
-    );
-    await tester.pump();
+      );
+      await tester.pump();
 
-    expect(find.text('Track driver'), findsNothing);
-  });
+      expect(find.text('Track driver'), findsNothing);
+    },
+  );
 
   testWidgets('terminal booking hides tracking even when capability is true', (
     tester,
@@ -1272,6 +1303,7 @@ class _FakeLookupService extends GuestBookingLookupService {
   Future<GuestBookingLookupResult> lookup({
     required String bookingNumber,
     required String phone,
+    String? name,
   }) async {
     if (errorCode != null) {
       throw BookingApiException('Booking not found', errorCode);
