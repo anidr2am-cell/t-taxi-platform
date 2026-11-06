@@ -200,7 +200,6 @@ class AdminDispatchService {
       pickupMs - Date.now() <= 24 * 60 * 60 * 1000;
     return {
       bookingNumber: row.booking_number,
-      customerChangeRequest: metadata?.customerChangeRequest ?? null,
       status: row.status,
       serviceType: {
         code: row.service_type_code,
@@ -551,6 +550,7 @@ class AdminDispatchService {
     return {
       bookingNumber: row.booking_number,
       status: row.status,
+      customerChangeRequest: metadata?.customerChangeRequest ?? null,
       bookingSource: row.booking_source ?? "CUSTOMER",
       isAdminManualCall: isAdminManual,
       manualCallActions: {
