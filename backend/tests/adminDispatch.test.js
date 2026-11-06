@@ -2198,3 +2198,12 @@ for (const pickup of ['2020-01-01 12:00:00','2099-01-01 12:00:00']) {
     assert.equal(committed,true);
   });
 }
+
+
+test('customer itinerary request is visible in admin detail without applying it', async () => {
+ const change={message:'QA: change route please',requestedAt:'2026-11-06T01:00:00Z',requestId:'QA_REQUEST'};
+ const row=queueRow({metadata:JSON.stringify({customerChangeRequest:change}),airport_iata:'BKK',status:'DRIVER_ASSIGNED'});
+ const repository={findAdminBookingDetail:async()=>row,findChargeItemsByBookingId:async()=>[],findStatusLogsByBookingId:async()=>[],findAssignmentsByBookingId:async()=>[]};
+ const service=new AdminDispatchService({},repository,{}, {},settlementStub,null,null,scoringService);
+ const detail=await service.getBookingDetail(row.booking_number);assert.deepEqual(detail.customerChangeRequest,change);assert.equal(detail.route.destination.address,row.destination_address);assert.equal(detail.pricing.totalAmount,row.total_amount);
+});

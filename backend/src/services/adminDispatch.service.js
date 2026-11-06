@@ -550,6 +550,7 @@ class AdminDispatchService {
     return {
       bookingNumber: row.booking_number,
       status: row.status,
+      customerChangeRequest: metadata?.customerChangeRequest ?? null,
       bookingSource: row.booking_source ?? "CUSTOMER",
       isAdminManualCall: isAdminManual,
       manualCallActions: {

@@ -656,7 +656,7 @@ void main() {
         'TX202607010001',
       );
       await tester.enterText(
-        find.byKey(const ValueKey('guest_lookup_phone')),
+        find.byKey(const ValueKey('guest_lookup_booking_name')),
         '+66123456789',
       );
       await tester.tap(find.text('Find booking'));
@@ -694,6 +694,7 @@ class _StubGuestLookupService extends GuestBookingLookupService {
   Future<GuestBookingLookupResult> lookup({
     required String bookingNumber,
     required String phone,
+    String? name,
   }) async {
     return GuestBookingLookupResult(
       bookingNumber: bookingNumber,

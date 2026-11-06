@@ -556,6 +556,7 @@ class FakeGuestBookingLookupForUrgent extends GuestBookingLookupService {
   Future<GuestBookingLookupResult> lookup({
     required String bookingNumber,
     required String phone,
+    String? name,
   }) async {
     lookupCalls += 1;
     lastLookupPhone = phone;

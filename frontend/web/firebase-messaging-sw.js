@@ -17,7 +17,7 @@ self.addEventListener('push', function(event) {
 });
 
 self.addEventListener('notificationclick', function(event) {
-  if ((event.notification.data || {}).notificationType !== 'CUSTOMER_GATE_ARRIVED') return;
+  if (['CUSTOMER_GATE_ARRIVED', 'CUSTOMER_BOOKING_UPDATED'].indexOf((event.notification.data || {}).notificationType) < 0) return;
   event.notification.close();
   event.waitUntil(clients.matchAll({type:'window', includeUncontrolled:true}).then(function(windows) {
     var target = new URL('/driver', self.location.origin).href;

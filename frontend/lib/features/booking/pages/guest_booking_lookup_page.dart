@@ -20,7 +20,7 @@ import '../widgets/airport_meeting_guide_card.dart';
 import '../widgets/gate_arrival_action.dart';
 import '../widgets/guest_booking_cancel_section.dart';
 import '../widgets/customer_payment_instructions_card.dart';
-import '../../driver_location/widgets/guest_driver_tracking_section.dart';
+import '../widgets/customer_booking_edit_card.dart';
 
 enum _GuestLookupMode { bookingNumber, contactName }
 
@@ -95,6 +95,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
 
   void _applyInitialResult(GuestBookingLookupResult result) {
     _bookingNumberController.text = result.bookingNumber;
+    _nameController.text = result.customerName ?? _nameController.text;
     if (result.customerPhone != null && result.customerPhone!.isNotEmpty) {
       _phoneController.text = result.customerPhone!;
     }
@@ -122,6 +123,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
                 cached.bookingNumber);
     if (useCached) {
       _bookingNumberController.text = cached.bookingNumber;
+      _nameController.text = cached.customerName ?? _nameController.text;
       if (cached.customerPhone != null && cached.customerPhone!.isNotEmpty) {
         _phoneController.text = cached.customerPhone!;
       }
@@ -144,7 +146,8 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     }
 
     final phone = result.customerPhone?.trim();
-    if (phone == null || phone.isEmpty) {
+    if ((phone == null || phone.isEmpty) &&
+        (result.customerName?.trim().isEmpty ?? true)) {
       setState(() {
         _error = context.l10n.t('guest_lookup_refresh_needs_phone');
       });
@@ -159,7 +162,8 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     try {
       final refreshed = await _lookupService.lookup(
         bookingNumber: result.bookingNumber,
-        phone: phone,
+        phone: phone ?? '',
+        name: result.customerName,
       );
       if (!mounted) return;
       setState(() {
@@ -223,20 +227,6 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
   bool _hasBookingCustomerAuth(GuestBookingLookupResult result) =>
       _hasGuestToken(result) || _hasCustomerTokenLoaded();
 
-  bool _canShowTracking(GuestBookingLookupResult result) {
-    const trackingStatuses = {
-      'DRIVER_ASSIGNED',
-      'ON_ROUTE',
-      'DRIVER_ARRIVED',
-      'PICKED_UP',
-    };
-    return widget.enableCustomerTools &&
-        result.bookingId != null &&
-        result.capabilities.trackingAvailable &&
-        trackingStatuses.contains(result.status) &&
-        _hasBookingCustomerAuth(result);
-  }
-
   bool _canShowNotifications(GuestBookingLookupResult result) {
     return widget.enableCustomerTools &&
         result.capabilities.notificationsAvailable &&
@@ -255,19 +245,6 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         _hasBookingCustomerAuth(result);
   }
 
-  Widget _trackingSection(GuestBookingLookupResult result) {
-    return widget.trackingBuilder?.call(result) ??
-        GuestDriverTrackingSection(
-          bookingId: result.bookingId!,
-          guestAccessToken: result.guestAccessToken,
-          bookingStatus: result.status,
-          useCustomerAuth: widget.fromMyBookings,
-          customerAccessToken: widget.fromMyBookings
-              ? _customerAccessToken
-              : null,
-        );
-  }
-
   Future<void> _lookup() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -278,7 +255,8 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     try {
       final result = await _lookupService.lookup(
         bookingNumber: _bookingNumberController.text,
-        phone: _phoneController.text,
+        phone: '',
+        name: _nameController.text,
       );
       if (!mounted) return;
       setState(() {
@@ -510,21 +488,38 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
                     },
                   ),
                 if (!isContactMode) const SizedBox(height: AppTokens.spaceMd),
-                TextFormField(
-                  key: const ValueKey('guest_lookup_phone'),
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: l10n.t('guest_lookup_phone'),
-                    prefixIcon: const Icon(Icons.phone_outlined),
-                  ),
-                  validator: (value) {
-                    final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
-                    return digits.length >= 4
+                if (!isContactMode)
+                  TextFormField(
+                    key: const ValueKey('guest_lookup_booking_name'),
+                    controller: _nameController,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: InputDecoration(
+                      labelText: l10n.t('guest_lookup_name'),
+                      prefixIcon: const Icon(Icons.person_outline),
+                    ),
+                    validator: (value) => (value ?? '').trim().isNotEmpty
                         ? null
-                        : l10n.t('guest_lookup_invalid_phone');
-                  },
-                ),
+                        : l10n.t('guest_lookup_invalid_name'),
+                  )
+                else
+                  TextFormField(
+                    key: const ValueKey('guest_lookup_phone'),
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(
+                      labelText: l10n.t('guest_lookup_phone'),
+                      prefixIcon: const Icon(Icons.phone_outlined),
+                    ),
+                    validator: (value) {
+                      final digits = (value ?? '').replaceAll(
+                        RegExp(r'\D'),
+                        '',
+                      );
+                      return digits.length >= 4
+                          ? null
+                          : l10n.t('guest_lookup_invalid_phone');
+                    },
+                  ),
               ],
             ),
           ),
@@ -751,6 +746,20 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
           customerAccessToken: _customerAccessToken,
         ),
         const SizedBox(height: AppTokens.spaceMd),
+        CustomerBookingEditCard(
+          bookingNumber: result.bookingNumber,
+          guestToken: result.guestAccessToken,
+          customerToken: _customerAccessToken,
+          status: result.status,
+          onSaved: (data) async {
+            final updated = result.copyWith(
+              customerPhone: data['phone'] as String?,
+            );
+            setState(() => _result = updated);
+            await _lookupService.persist(updated);
+            await _refresh();
+          },
+        ),
         _actionSummary(result),
         const SizedBox(height: AppTokens.spaceMd),
         GuestBookingCancelSection(
@@ -861,9 +870,6 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         ],
         if (widget.enableCustomerTools) ...[
           const SizedBox(height: AppTokens.spaceMd),
-          if (_canShowTracking(result)) _trackingSection(result),
-          if (_canShowTracking(result))
-            const SizedBox(height: AppTokens.spaceMd),
           if (_canShowNotifications(result))
             BookingNotificationSection(
               bookingNumber: result.bookingNumber,

@@ -800,3 +800,5 @@ module.exports = container;
 container.register('customerGateArrivalService', (c) => new (require('../services/customerGateArrival.service'))(
   database.pool, c.get('bookingRepository'), c.get('bookingService'), c.get('notificationService'),
 ));
+
+container.register('customerBookingEditService',c=>new (require('../services/customerBookingEdit.service').CustomerBookingEditService)(database.pool,c.get('bookingRepository'),c.get('bookingService'),c.get('notificationService')));
