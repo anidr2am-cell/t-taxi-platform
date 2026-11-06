@@ -65,6 +65,18 @@ test('airport and localized golf guides preset the correct service without chang
  assert.ok(dmk.includes('EN-DMK-PATTAYA-GUIDE'));
  assert.ok(dmk.includes('https://wa.me/66815693445'));
  assert.doesNotMatch(dmk,/Gate 7/);
+ const zhAirportSlugs=['don-mueang-to-pattaya-zh','suvarnabhumi-to-pattaya-zh'];
+ for(const zhSlug of zhAirportSlugs){
+  const page=read(blog,zhSlug);
+  const links=[...page.matchAll(/href="(\/booking[^\"]*)"/g)].map(m=>new URL(m[1].replaceAll('&amp;','&'),'https://trider.taxi'));
+  assert.equal(links.length,4,zhSlug);
+  for(const url of links){assert.equal(url.searchParams.get('service'),'AIRPORT_PICKUP',zhSlug);assert.equal(url.searchParams.get('lang'),'zh',zhSlug);assert.equal(url.searchParams.has('utm_source'),false,zhSlug);}
+  assert.ok(page.includes('https://wa.me/66815693445'),zhSlug);
+  assert.ok(page.includes('并先确认沟通语言'),zhSlug);
+ }
+ assert.ok(read(blog,zhAirportSlugs[0]).includes('不要套用素万那普机场7号门的说明'));
+ assert.ok(read(blog,zhAirportSlugs[0]).includes('ZH-DMK-PATTAYA-GUIDE'));
+ assert.ok(read(blog,zhAirportSlugs[1]).includes('ZH-BKK-PATTAYA-GUIDE'));
  const checklist=read(blog,'thailand-airport-taxi-booking-guide-en');
  const checklistLinks=[...checklist.matchAll(/href="(\/booking[^\"]*)"/g)].map(m=>new URL(m[1].replaceAll('&amp;','&'),'https://trider.taxi'));
  assert.equal(checklistLinks.length,3);
@@ -91,7 +103,7 @@ test('airport and localized golf guides preset the correct service without chang
   assert.ok(bookingLinks.length>=2,post.slug);
   for(const url of bookingLinks){assert.equal(url.searchParams.get('service'),service,post.slug);assert.equal(url.searchParams.get('lang'),lang,post.slug);assert.equal(url.searchParams.has('utm_source'),false,post.slug);}
  }
- for(const post of posts.filter(p=>![pickupSlug,guideSlug,dmkSlug,...topicPosts.map(p=>p.slug)].includes(p.slug))){
+ for(const post of posts.filter(p=>![pickupSlug,guideSlug,dmkSlug,...zhAirportSlugs,...topicPosts.map(p=>p.slug)].includes(p.slug))){
   const page=read(blog,post.slug);
   const bookingLang=post.lang;
   assert.ok(page.includes('class="book-button" href="/booking?lang='+bookingLang+'"'),post.slug);

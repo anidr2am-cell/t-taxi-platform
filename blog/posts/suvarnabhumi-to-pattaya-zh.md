@@ -6,7 +6,8 @@ lang: zh
 category: airport
 translationKey: suvarnabhumi-to-pattaya
 date: 2026-10-01
-updated: 2026-10-28
+updated: 2026-11-06
+bookingService: AIRPORT_PICKUP
 related:
   - don-mueang-to-pattaya-zh
   - suvarnabhumi-airport-pickup-guide-zh
@@ -14,6 +15,8 @@ related:
 ---
 
 从素万那普机场到芭提雅，可以选择机场出租车、巴士或提前预约的接机车辆。先核对机票上的机场代码是否为 **BKK**，再根据抵达时间、同行人数和行李决定交通方式，会比落地后临时寻找车辆更从容。
+
+已经确定行程？[打开中文接机预约](/booking?service=AIRPORT_PICKUP&lang=zh)，在页面中选择**素万那普机场（BKK）**，填写芭提雅酒店的准确地址，并在确认前查看整车最终报价。
 
 ## 三种交通方式怎么选？
 
@@ -55,4 +58,6 @@ related:
 
 无需支付订金。现金可在抵达目的地后交给司机，银行卡和银行转账按管理员指引安排。行程尚未开始且距离接车时间超过2小时时，可在预订查询中免费取消并获得全额退款。
 
-返程并非到达行程的简单复制，请核对离境机场和酒店上车位置，参考[芭提雅送机指南](/blog/pattaya-to-airport-transfer-zh)。在[TRider预约页面](https://trider.taxi/)可全天24小时用中文填写素万那普机场到芭提雅的行程，并在确认前核对车辆与最终费用。
+**TRider车辆服务使用现金或银行卡支付，车辆费用相同。** 请在出行前与团队确认付款方式。若需先核对路线、行李或车型，可[通过WhatsApp咨询TRider](https://wa.me/66815693445)，提供日期、航班、酒店地址、人数和行李信息，并先确认沟通语言。也可注明 **ZH-BKK-PATTAYA-GUIDE**，方便团队了解您阅读的是哪篇指南。
+
+返程并非到达行程的简单复制，请核对离境机场和酒店上车位置，参考[芭提雅送机指南](/blog/pattaya-to-airport-transfer-zh)。在[TRider中文接机预约页面](/booking?service=AIRPORT_PICKUP&lang=zh)可全天24小时填写素万那普机场到芭提雅的行程，并在确认前核对车辆与最终费用。

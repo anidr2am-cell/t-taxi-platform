@@ -6,7 +6,8 @@ lang: zh
 category: airport
 translationKey: don-mueang-to-pattaya
 date: 2026-10-28
-updated: 2026-10-28
+updated: 2026-11-06
+bookingService: AIRPORT_PICKUP
 related:
   - suvarnabhumi-to-pattaya-zh
   - pattaya-to-airport-transfer-zh
@@ -14,6 +15,8 @@ related:
 ---
 
 廊曼机场到芭提雅的交通，应在出发前按机场、酒店位置和行李情况安排。廊曼机场常见廉航旅客，但即使机票目的地都写着曼谷，也不能把 **DMK廊曼** 与 **BKK素万那普** 混为一谈。
+
+已经确定行程？[打开中文接机预约](/booking?service=AIRPORT_PICKUP&lang=zh)，在页面中选择**廊曼机场（DMK）**，填写芭提雅酒店的准确地址，并在确认前查看整车最终报价。
 
 ## 廊曼到芭提雅有哪些方式？
 
@@ -57,4 +60,6 @@ related:
 
 无需订金。现金在抵达目的地后付给司机；银行卡与转账请按管理员指引安排。行程未开始且距离接车时间超过2小时时，可通过预订查询免费取消并获得全额退款。
 
-在[TRider预约页面](https://trider.taxi/)可全天24小时用中文预订廊曼机场到芭提雅接机。先核对DMK、实际酒店地址和行李，再确认车型与最终价格；返程另见[芭提雅送机指南](/blog/pattaya-to-airport-transfer-zh)。
+**TRider车辆服务使用现金或银行卡支付，车辆费用相同。** 请在出行前与团队确认付款方式。若需先核对路线、行李或车型，可[通过WhatsApp咨询TRider](https://wa.me/66815693445)，提供日期、航班、酒店地址、人数和行李信息，并先确认沟通语言。也可注明 **ZH-DMK-PATTAYA-GUIDE**，方便团队了解您阅读的是哪篇指南。
+
+在[TRider中文接机预约页面](/booking?service=AIRPORT_PICKUP&lang=zh)可全天24小时填写廊曼机场到芭提雅的行程。先核对DMK、实际酒店地址和行李，再确认车型与最终价格；返程另见[芭提雅送机指南](/blog/pattaya-to-airport-transfer-zh)。
