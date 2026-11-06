@@ -386,7 +386,7 @@ class _EditDialogState extends State<_EditDialog> {
                       ),
                       Text(l.t('voucher_edit_request_help')),
                       const SizedBox(height: AppTokens.spaceMd),
-                      field('request_title', change, lines: 3, max: 2000),
+                      field('change_details', change, lines: 3, max: 2000),
                       const PreferredSupportButton(chooseChannel: true),
                       if (error != null)
                         Text(
