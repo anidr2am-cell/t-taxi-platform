@@ -6,7 +6,8 @@ lang: en
 category: airport
 translationKey: don-mueang-to-pattaya
 date: 2026-10-19
-updated: 2026-10-19
+updated: 2026-11-06
+bookingService: AIRPORT_PICKUP
 related:
   - pattaya-to-airport-transfer-en
   - thailand-airport-taxi-booking-guide-en
@@ -16,6 +17,8 @@ related:
 Arriving at Don Mueang and heading straight to Pattaya? A private airport transfer lets you arrange the journey to your accommodation before you land. The important details are not just the fare: your arrival airport, hotel address, luggage and pickup instructions all help your trip run smoothly.
 
 This guide explains what to check when booking a Don Mueang Airport to Pattaya transfer with T-Rider.
+
+Ready to arrange your ride? [Open airport pickup booking in English](/booking?service=AIRPORT_PICKUP&lang=en). Choose **Don Mueang (DMK)** and enter your Pattaya destination to check the final per-vehicle quote before confirming.
 
 ## Start with the correct airport and destination
 
@@ -28,6 +31,8 @@ Enter your flight details and the full address of your Pattaya accommodation. A 
 T-Rider’s advertised airport pickup base fares are per vehicle. Highway tolls, airport parking and flight-delay waiting are included.
 
 Your final quote may also include an address-based distance charge or an optional name-sign fee. Review the fare for your exact pickup, destination and vehicle rather than treating a base fare as a universal total. If something is unclear, ask the team before booking.
+
+Need help choosing a vehicle or checking your route? [Ask TRider on WhatsApp](https://wa.me/66815693445). Share your arrival date and flight, Pattaya hotel and address, number of travellers and all luggage. You can mention **EN-DMK-PATTAYA-GUIDE** so the team knows which guide you read.
 
 ## Choose a vehicle for people and luggage
 
@@ -47,13 +52,13 @@ Follow the meeting instructions provided for your own booking. Do not use anothe
 
 ## Payment and changes
 
-T-Rider does not require a deposit. You can pay cash to the driver at your destination; card payments are arranged through the team. Confirm your preferred payment method before travel.
+T-Rider does not require a deposit. **The TRider vehicle fare is the same for cash and card payments.** You can pay cash to the driver at your destination; card payments are arranged through the team. Confirm your preferred payment method before travel.
 
 For a trip that has not started, cancellation is free when more than two hours remain before pickup. If pickup is closer, contact the team to check the applicable arrangements.
 
 ## Ready to plan your transfer?
 
 Book in English, review your final quote and keep your booking number handy:
-[Book your transfer in English](/booking?lang=en).
+[Book your Don Mueang airport pickup in English](/booking?service=AIRPORT_PICKUP&lang=en).
 
 For the journey home, see [Pattaya to Bangkok airports](/blog/pattaya-to-airport-transfer-en). You can also use our [airport transfer booking checklist](/blog/thailand-airport-taxi-booking-guide-en).
