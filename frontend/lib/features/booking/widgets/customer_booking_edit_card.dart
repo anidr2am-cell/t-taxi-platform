@@ -264,7 +264,9 @@ class _EditDialogState extends State<_EditDialog> {
         controller: c,
         enabled: !saving,
         decoration: InputDecoration(
-          labelText: l.t('voucher_edit_$key'),
+          labelText: key == 'id' && messenger == 'LINE'
+              ? 'LINE ID'
+              : l.t('voucher_edit_$key'),
           alignLabelWithHint: true,
         ),
         minLines: lines,
@@ -365,15 +367,16 @@ class _EditDialogState extends State<_EditDialog> {
                               }),
                       ),
                       const SizedBox(height: AppTokens.spaceMd),
-                      field(
-                        'id',
-                        id,
-                        max: 100,
-                        validator: (v) =>
-                            messenger == 'LINE' && v!.trim().isEmpty
-                            ? l.t('voucher_edit_required_id')
-                            : null,
-                      ),
+                      if (!['WHATSAPP', 'SMS'].contains(messenger))
+                        field(
+                          'id',
+                          id,
+                          max: 100,
+                          validator: (v) =>
+                              messenger == 'LINE' && v!.trim().isEmpty
+                              ? l.t('voucher_edit_required_id')
+                              : null,
+                        ),
                       if (widget.data['flightEditable'] == true) ...[
                         field('flight', flight, max: 20),
                         Text(l.t('voucher_edit_flight_help')),
