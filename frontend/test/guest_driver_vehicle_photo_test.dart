@@ -81,7 +81,8 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    expect(find.text('Unable to load vehicle photo.'), findsOneWidget);
+    expect(find.textContaining('Vehicle photo is not available yet.'), findsOneWidget);
+    expect(find.text('Reload photo'), findsOneWidget);
   });
 
   testWidgets('vehicle photo widget renders fetched image bytes', (
@@ -130,7 +131,7 @@ void main() {
           body: GuestDriverVehiclePhoto(
             photoPath:
                 '/api/v1/public/bookings/10/assigned-driver-vehicle-photo',
-            guestAccessToken: '',
+            guestAccessToken: 'stale-guest-token',
             customerAccessToken: 'customer-jwt',
             useCustomerAuth: true,
             apiBaseUrl: 'http://localhost:3000',

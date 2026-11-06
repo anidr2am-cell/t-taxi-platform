@@ -172,6 +172,7 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
   }
 
   String _typeBadgeLabel(Map<String, dynamic> item, AppLocalizations l10n) {
+    if (item['notificationType'] == 'CUSTOMER_BOOKING_UPDATED') return 'ลูกค้าแก้ไขการจอง / 예약 변경';
     if (item['notificationType'] == 'CUSTOMER_GATE_ARRIVED') return 'ลูกค้าถึงประตู 7 / 고객 도착';
     final payload = Map<String, dynamic>.from(item['payload'] as Map? ?? {});
     final type = item['notificationType'] as String? ?? '';

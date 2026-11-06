@@ -81,7 +81,8 @@
       "PAY_DRIVER": "현금 · 도착 후 기사에게 결제",
       "BANK_TRANSFER": "계좌이체 · 관리자 안내",
       "CARD": "카드결제 · 관리자 안내"
-    }
+    },
+    "editHelp": "예약 조회에서 연락처·항공편·요청사항을 확인하고 수정할 수 있습니다. 일정·경로·차량 변경은 관리자에게 요청해 주세요."
   },
   "en": {
     "booking": "Booking number",
@@ -165,7 +166,8 @@
       "PAY_DRIVER": "Cash · pay the driver on arrival",
       "BANK_TRANSFER": "Bank transfer · arranged by the administrator",
       "CARD": "Card · arranged by the administrator"
-    }
+    },
+    "editHelp": "You can review and edit contact details, flight number and requests through booking lookup. Please ask the administrator to change your date, route or vehicle."
   },
   "th": {
     "booking": "หมายเลขการจอง",
@@ -249,7 +251,8 @@
       "PAY_DRIVER": "เงินสด · ชำระกับคนขับเมื่อถึงจุดหมาย",
       "BANK_TRANSFER": "โอนเงิน · ติดต่อผู้ดูแล",
       "CARD": "บัตร · ติดต่อผู้ดูแล"
-    }
+    },
+    "editHelp": "ดูและแก้ไขข้อมูลติดต่อ เที่ยวบิน และคำขอได้ที่หน้าค้นหาการจอง หากต้องการเปลี่ยนวันเวลา เส้นทาง หรือรถ กรุณาติดต่อผู้ดูแล"
   },
   "ja": {
     "booking": "予約番号",
@@ -333,7 +336,8 @@
       "PAY_DRIVER": "現金 · 到着後にドライバーへお支払い",
       "BANK_TRANSFER": "銀行振込 · 管理者がご案内",
       "CARD": "カード · 管理者がご案内"
-    }
+    },
+    "editHelp": "予約照会から連絡先・便名・ご要望を確認・変更できます。日時・経路・車種の変更は管理者にご依頼ください。"
   },
   "zh": {
     "booking": "预订编号",
@@ -417,6 +421,7 @@
       "PAY_DRIVER": "现金 · 到达目的地后付给司机",
       "BANK_TRANSFER": "银行转账 · 由管理员提供指引",
       "CARD": "银行卡 · 由管理员提供指引"
-    }
+    },
+    "editHelp": "您可以在预订查询页面查看并修改联系方式、航班号及备注。如需修改日期、路线或车型，请联系管理员。"
   }
 }

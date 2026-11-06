@@ -200,6 +200,7 @@ class AdminDispatchService {
       pickupMs - Date.now() <= 24 * 60 * 60 * 1000;
     return {
       bookingNumber: row.booking_number,
+      customerChangeRequest: metadata?.customerChangeRequest ?? null,
       status: row.status,
       serviceType: {
         code: row.service_type_code,

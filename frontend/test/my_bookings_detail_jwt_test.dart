@@ -338,7 +338,7 @@ void main() {
     expect(find.text('+66 80 000 0000'), findsNothing);
   });
 
-  testWidgets('fromMyBookings shows tracking section and uses customer JWT', (
+  testWidgets('fromMyBookings does not load tracking or connect its location socket', (
     tester,
   ) async {
     final trackingApi = _FakeMyBookingsTrackingApi(
@@ -380,14 +380,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Driver location'), findsOneWidget);
-    expect(trackingApi.calls, greaterThanOrEqualTo(1));
-    expect(trackingApi.lastCustomerToken, 'customer-jwt');
-    expect(trackingApi.lastUseCustomerAuth, isTrue);
-    expect(trackingSocket.connectedAccessToken, 'customer-jwt');
+    expect(find.text('Driver location'), findsNothing);
+    expect(trackingApi.calls, 0);
+    expect(trackingSocket.connectedAccessToken, isNull);
   });
 
-  testWidgets('fromMyBookings renders default tracking section without guest token', (
+  testWidgets('fromMyBookings never renders driver location', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -404,13 +402,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(GuestDriverTrackingSection), findsOneWidget);
-    final section = tester.widget<GuestDriverTrackingSection>(
-      find.byType(GuestDriverTrackingSection),
-    );
-    expect(section.useCustomerAuth, isTrue);
-    expect(section.customerAccessToken, 'customer-jwt');
-    expect(section.guestAccessToken, isEmpty);
+    expect(find.byType(GuestDriverTrackingSection), findsNothing);
   });
 
   test('cancelBooking uses JWT when guest token is missing', () async {

@@ -471,7 +471,7 @@ void main() {
     expect(find.text('Track driver'), findsNothing);
   });
 
-  testWidgets('active booking shows tracking only when capability is true', (
+  testWidgets('voucher hides tracking even when active booking capability is true', (
     tester,
   ) async {
     final json = _lookupJson();
@@ -492,7 +492,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Track driver'), findsOneWidget);
+    expect(find.text('Track driver'), findsNothing);
   });
 
   testWidgets('terminal booking hides tracking even when capability is true', (

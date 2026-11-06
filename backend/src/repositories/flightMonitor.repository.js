@@ -145,8 +145,8 @@ class FlightMonitorRepository {
     return rows[0] ?? null;
   }
 
-  async updateFlightSync(conn, bookingId, data) {
-    await conn.query(
+  async updateFlightSync(conn, bookingId, data, expectedFlightNumber = null) {
+    const [result] = await conn.query(
       `
         UPDATE booking_transfer_details
         SET
@@ -166,6 +166,7 @@ class FlightMonitorRepository {
           updated_at = CURRENT_TIMESTAMP
         WHERE booking_id = ?
           AND deleted_at IS NULL
+          AND (? IS NULL OR flight_number = ?)
       `,
       [
         data.airlineCode,
@@ -181,9 +182,10 @@ class FlightMonitorRepository {
         data.lastSyncedAt,
         data.syncStatus,
         data.syncError,
-        bookingId,
+        bookingId, expectedFlightNumber, expectedFlightNumber,
       ],
     );
+    return result.affectedRows > 0;
   }
 
   async listAutoSyncCandidates({ windowStart, windowEnd, limit }) {

@@ -1,3 +1,4 @@
+import '../widgets/admin_customer_change_request_card.dart';
 import '../widgets/admin_gate_arrival_link.dart';
 import '../widgets/admin_receipt_email_card.dart';
 import '../../admin/widgets/admin_copy_button.dart';
@@ -1074,6 +1075,8 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                           ),
                         ],
                       ),
+                    if (detail['customerChangeRequest'] is Map)
+                      AdminCustomerChangeRequestCard(request: Map<String,dynamic>.from(detail['customerChangeRequest'] as Map)),
                     if (detail['serviceType']?['code'] == 'AIRPORT_PICKUP' && detail['flight']?['airportIata'] == 'BKK' && detail['options']?['nameSign'] != true) AdminGateArrivalLink(bookingNumber:widget.bookingNumber),
                     AdminCustomerBriefCard(detail: detail, api: widget.api),
                     const SizedBox(height: AppTokens.spaceMd),

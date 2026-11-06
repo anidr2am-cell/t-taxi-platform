@@ -34,6 +34,10 @@ const {
 
 const router = express.Router();
 
+const customerEdit=require('../controllers/customerBookingEdit.controller');
+router.get('/:bookingNumber/customer-edit',optionalAuthMiddleware,validate({params:bookingNumberParamsSchema}),customerEdit.get);
+router.patch('/:bookingNumber/customer-edit',optionalAuthMiddleware,validate({params:bookingNumberParamsSchema,body:require('../validators/customerBookingEdit.validator').update}),customerEdit.update);
+
 router.post(
   "/vehicle/recommend",
   validate({ body: vehicleRecommendSchema }),

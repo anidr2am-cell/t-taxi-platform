@@ -145,12 +145,14 @@ const lookupGuestBookingByContact = asyncHandler(async (req, res) => {
 });
 
 const getGuestAssignedDriverVehiclePhoto = asyncHandler(async (req, res) => {
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader('Vary', 'Authorization, X-Guest-Access-Token');
+
   const file = await getGuestVehiclePhotoService().getAssignedDriverVehiclePhotoFile(
     Number(req.params.bookingId),
     extractGuestAccessTokenFromHeader(req),
     req.user ?? null,
   );
-  res.setHeader('Cache-Control', 'private, max-age=300');
   res.type(file.mimeType || 'application/octet-stream');
   return res.sendFile(resolveUploadAbsolutePath(file.filePath));
 });

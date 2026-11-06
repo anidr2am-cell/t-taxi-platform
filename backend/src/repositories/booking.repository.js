@@ -1080,6 +1080,24 @@ class BookingRepository {
     return rows[0] || null;
   }
 
+  async findAssignedDriverVehiclePhotoFiles(bookingId, tokenHash = null) {
+    const [rows]=await this.pool.query(`SELECT f.id,f.file_path,f.mime_type,f.original_filename
+      FROM bookings b
+      JOIN booking_driver_assignments bda ON bda.id=(
+        SELECT history.id FROM booking_driver_assignments history WHERE history.booking_id=b.id
+          AND history.deleted_at IS NULL AND (history.is_active=1 OR b.status IN ('SETTLEMENT_PENDING','COMPLETED'))
+        ORDER BY history.is_active DESC,history.updated_at DESC,history.id DESC LIMIT 1)
+      JOIN drivers d ON d.id=bda.driver_id AND d.deleted_at IS NULL
+      JOIN driver_applications da ON da.approved_driver_id=d.id AND da.status='APPROVED' AND da.deleted_at IS NULL
+      JOIN driver_application_files daf ON daf.driver_application_id=da.id AND daf.category='DRIVER_VEHICLE_PHOTO'
+      JOIN files f ON f.id=daf.file_id AND f.deleted_at IS NULL
+      WHERE b.id=? AND b.deleted_at IS NULL AND b.is_archived=0
+        AND (? IS NULL OR EXISTS(SELECT 1 FROM guest_access_tokens gat WHERE gat.booking_id=b.id
+          AND gat.token_hash=? AND gat.revoked_at IS NULL AND gat.expires_at>CURRENT_TIMESTAMP))
+      ORDER BY daf.sort_order ASC,f.id DESC LIMIT 50`,[bookingId,tokenHash,tokenHash]);
+    return rows;
+  }
+
   async findGuestAssignedDriverVehiclePhotoFile(bookingId, tokenHash) {
     const [rows] = await this.pool.query(
       `

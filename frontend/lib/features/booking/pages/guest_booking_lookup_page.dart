@@ -20,7 +20,7 @@ import '../widgets/airport_meeting_guide_card.dart';
 import '../widgets/gate_arrival_action.dart';
 import '../widgets/guest_booking_cancel_section.dart';
 import '../widgets/customer_payment_instructions_card.dart';
-import '../../driver_location/widgets/guest_driver_tracking_section.dart';
+import '../widgets/customer_booking_edit_card.dart';
 
 enum _GuestLookupMode { bookingNumber, contactName }
 
@@ -223,20 +223,6 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
   bool _hasBookingCustomerAuth(GuestBookingLookupResult result) =>
       _hasGuestToken(result) || _hasCustomerTokenLoaded();
 
-  bool _canShowTracking(GuestBookingLookupResult result) {
-    const trackingStatuses = {
-      'DRIVER_ASSIGNED',
-      'ON_ROUTE',
-      'DRIVER_ARRIVED',
-      'PICKED_UP',
-    };
-    return widget.enableCustomerTools &&
-        result.bookingId != null &&
-        result.capabilities.trackingAvailable &&
-        trackingStatuses.contains(result.status) &&
-        _hasBookingCustomerAuth(result);
-  }
-
   bool _canShowNotifications(GuestBookingLookupResult result) {
     return widget.enableCustomerTools &&
         result.capabilities.notificationsAvailable &&
@@ -255,18 +241,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         _hasBookingCustomerAuth(result);
   }
 
-  Widget _trackingSection(GuestBookingLookupResult result) {
-    return widget.trackingBuilder?.call(result) ??
-        GuestDriverTrackingSection(
-          bookingId: result.bookingId!,
-          guestAccessToken: result.guestAccessToken,
-          bookingStatus: result.status,
-          useCustomerAuth: widget.fromMyBookings,
-          customerAccessToken: widget.fromMyBookings
-              ? _customerAccessToken
-              : null,
-        );
-  }
+
 
   Future<void> _lookup() async {
     if (!_formKey.currentState!.validate()) return;
@@ -751,6 +726,18 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
           customerAccessToken: _customerAccessToken,
         ),
         const SizedBox(height: AppTokens.spaceMd),
+        CustomerBookingEditCard(
+          bookingNumber: result.bookingNumber,
+          guestToken: result.guestAccessToken,
+          customerToken: _customerAccessToken,
+          status: result.status,
+          onSaved: (data) async {
+            final updated=result.copyWith(customerPhone:data['phone'] as String?);
+            setState(()=>_result=updated);
+            await _lookupService.persist(updated);
+            await _refresh();
+          },
+        ),
         _actionSummary(result),
         const SizedBox(height: AppTokens.spaceMd),
         GuestBookingCancelSection(
@@ -861,9 +848,6 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         ],
         if (widget.enableCustomerTools) ...[
           const SizedBox(height: AppTokens.spaceMd),
-          if (_canShowTracking(result)) _trackingSection(result),
-          if (_canShowTracking(result))
-            const SizedBox(height: AppTokens.spaceMd),
           if (_canShowNotifications(result))
             BookingNotificationSection(
               bookingNumber: result.bookingNumber,

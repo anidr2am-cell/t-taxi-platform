@@ -28,7 +28,8 @@ class GuestDriverVehiclePhoto extends StatefulWidget {
   final http.Client? client;
 
   @override
-  State<GuestDriverVehiclePhoto> createState() => _GuestDriverVehiclePhotoState();
+  State<GuestDriverVehiclePhoto> createState() =>
+      _GuestDriverVehiclePhotoState();
 }
 
 class _GuestDriverVehiclePhotoState extends State<GuestDriverVehiclePhoto> {
@@ -36,6 +37,8 @@ class _GuestDriverVehiclePhotoState extends State<GuestDriverVehiclePhoto> {
   Uint8List? _bytes;
   bool _loading = true;
   bool _failed = false;
+  bool _needsAuth = false;
+  int _generation = 0;
 
   @override
   void initState() {
@@ -65,9 +68,16 @@ class _GuestDriverVehiclePhotoState extends State<GuestDriverVehiclePhoto> {
   String _resolveUrl() {
     final path = widget.photoPath.trim();
     if (path.startsWith('http://') || path.startsWith('https://')) {
+      final target = Uri.parse(path);
+      final origin = Uri.parse(widget.apiBaseUrl ?? AppConfig.apiBaseUrl);
+      if (target.origin != origin.origin)
+        throw const FormatException('Foreign photo origin');
       return path;
     }
-    final base = (widget.apiBaseUrl ?? AppConfig.apiBaseUrl).replaceAll(RegExp(r'/$'), '');
+    final base = (widget.apiBaseUrl ?? AppConfig.apiBaseUrl).replaceAll(
+      RegExp(r'/$'),
+      '',
+    );
     final normalizedPath = path.startsWith('/') ? path : '/$path';
     return '$base$normalizedPath';
   }
@@ -76,36 +86,27 @@ class _GuestDriverVehiclePhotoState extends State<GuestDriverVehiclePhoto> {
     final guestToken = widget.guestAccessToken.trim();
     final customerToken = widget.customerAccessToken?.trim() ?? '';
 
-    if (widget.useCustomerAuth &&
-        guestToken.isEmpty &&
-        customerToken.isNotEmpty) {
-      return {
-        'Accept': 'image/*',
-        'Authorization': 'Bearer $customerToken',
-      };
+    if (widget.useCustomerAuth && customerToken.isNotEmpty) {
+      return {'Accept': 'image/*', 'Authorization': 'Bearer $customerToken'};
     }
 
     if (guestToken.isNotEmpty) {
-      return {
-        'Accept': 'image/*',
-        'X-Guest-Access-Token': guestToken,
-      };
+      return {'Accept': 'image/*', 'X-Guest-Access-Token': guestToken};
     }
 
     if (customerToken.isNotEmpty) {
-      return {
-        'Accept': 'image/*',
-        'Authorization': 'Bearer $customerToken',
-      };
+      return {'Accept': 'image/*', 'Authorization': 'Bearer $customerToken'};
     }
 
     return null;
   }
 
   Future<void> _load() async {
+    final generation = ++_generation;
     setState(() {
       _loading = true;
       _failed = false;
+      _needsAuth = false;
       _bytes = null;
     });
 
@@ -115,20 +116,21 @@ class _GuestDriverVehiclePhotoState extends State<GuestDriverVehiclePhoto> {
       setState(() {
         _loading = false;
         _failed = true;
+        _needsAuth = true;
       });
       return;
     }
 
     try {
-      final response = await _client.get(
-        Uri.parse(_resolveUrl()),
-        headers: headers,
-      );
-      if (!mounted) return;
+      final response = await _client
+          .get(Uri.parse(_resolveUrl()), headers: headers)
+          .timeout(const Duration(seconds: 12));
+      if (!mounted || generation != _generation) return;
       if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
         setState(() {
           _loading = false;
           _failed = true;
+          _needsAuth = response.statusCode == 401 || response.statusCode == 403;
         });
         return;
       }
@@ -137,7 +139,7 @@ class _GuestDriverVehiclePhotoState extends State<GuestDriverVehiclePhoto> {
         _loading = false;
       });
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || generation != _generation) return;
       setState(() {
         _loading = false;
         _failed = true;
@@ -145,10 +147,39 @@ class _GuestDriverVehiclePhotoState extends State<GuestDriverVehiclePhoto> {
     }
   }
 
+  Widget _unavailable(BuildContext context) {
+    final l10n = context.l10n;
+    return Container(
+      height: widget.height,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: AppTokens.surfaceMuted,
+        borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            l10n.t(
+              _needsAuth
+                  ? 'voucher_edit_auth_error'
+                  : 'voucher_edit_photo_pending',
+            ),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppTokens.textSecondary, height: 1.4),
+          ),
+          TextButton(
+            onPressed: _load,
+            child: Text(l10n.t('voucher_edit_retry')),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-
     if (_loading) {
       return SizedBox(
         height: widget.height,
@@ -162,25 +193,7 @@ class _GuestDriverVehiclePhotoState extends State<GuestDriverVehiclePhoto> {
       );
     }
 
-    if (_failed || _bytes == null) {
-      return Container(
-        height: widget.height,
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: AppTokens.surfaceMuted,
-          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-        ),
-        child: Text(
-          l10n.t('guest_lookup_vehicle_photo_load_failed'),
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: AppTokens.textSecondary,
-            height: 1.4,
-          ),
-        ),
-      );
-    }
+    if (_failed || _bytes == null) return _unavailable(context);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppTokens.radiusMd),
@@ -191,6 +204,7 @@ class _GuestDriverVehiclePhotoState extends State<GuestDriverVehiclePhoto> {
           _bytes!,
           fit: BoxFit.cover,
           gaplessPlayback: true,
+          errorBuilder: (_, __, ___) => _unavailable(context),
         ),
       ),
     );
