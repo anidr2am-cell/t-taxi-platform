@@ -793,7 +793,6 @@ class BookingRepository {
     const [rows] = await conn.query(
       `
         ${this.guestLookupSelectSql()}
-        , b.customer_name
         ${this.guestLookupJoinSql()}
         WHERE b.customer_phone_digits = ?
           AND b.deleted_at IS NULL
@@ -811,6 +810,7 @@ class BookingRepository {
         SELECT
           b.id,
           b.booking_number,
+          b.customer_name,
           b.status,
           COALESCE(b.driver_id, bda.driver_id) AS driver_id,
           DATE_FORMAT(b.scheduled_pickup_at, '%Y-%m-%d %H:%i:%s') AS scheduled_pickup_at_text,
