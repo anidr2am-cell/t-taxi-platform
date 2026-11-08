@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
+import '../../../widgets/calling_country_picker.dart';
 import 'booking_messenger_icon.dart';
 import '../models/booking_wizard_state.dart';
 import '../utils/booking_contact_preference.dart';
@@ -135,28 +136,23 @@ class _BookingContactPreferenceSectionState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
-                width: 105,
-                child: DropdownButtonFormField<String>(
+                width: 120,
+                child: OutlinedButton(
                   key: const ValueKey('booking-phone-dial-code'),
-                  initialValue:
-                      const [
-                        '+66',
-                        '+82',
-                        '+81',
-                        '+86',
-                        '+7',
-                      ].contains(dialCode)
-                      ? dialCode
-                      : '+66',
-                  items: const ['+66', '+82', '+81', '+86', '+7']
-                      .map(
-                        (value) =>
-                            DropdownMenuItem(value: value, child: Text(value)),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    if (value != null) widget.onDialCodeChanged(value);
+                  onPressed: () async {
+                    final country = await showCallingCountryPicker(
+                      context,
+                      selectedDialCode: dialCode,
+                    );
+                    if (!mounted || country == null) return;
+                    widget.onDialCodeChanged(country.dialCode);
                   },
+                  child: Row(
+                    children: [
+                      Expanded(child: Text(dialCode)),
+                      const Icon(Icons.arrow_drop_down),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(width: AppTokens.spaceSm),

@@ -3,6 +3,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:http/http.dart' as http;
 
 import '../config/app_config.dart';
+import '../features/booking/models/booking_wizard_state.dart';
+import '../features/booking/widgets/booking_contact_preference_section.dart';
 import '../features/booking/controllers/booking_wizard_controller.dart';
 import '../features/booking/models/service_type_option.dart';
 import '../features/booking/widgets/step_pickup_datetime.dart';
@@ -43,7 +45,9 @@ class AdminManualQaApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home: const AdminManualQaHome(),
+      home: Uri.base.queryParameters['view'] == 'contact'
+          ? const CallingCountryCustomerQa()
+          : const AdminManualQaHome(),
     );
   }
 }
@@ -132,9 +136,7 @@ class _AdminManualQaHomeState extends State<AdminManualQaHome> {
       );
     }
     if (!_ready) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -153,9 +155,16 @@ class _AdminManualQaHomeState extends State<AdminManualQaHome> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          ListTile(title: const Text('Customer flight-first schedule'),
-            subtitle: const Text('QA example flight data only - no booking creation'),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FlightFirstCustomerQa()))),
+          ListTile(
+            title: const Text('Customer flight-first schedule'),
+            subtitle: const Text(
+              'QA example flight data only - no booking creation',
+            ),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const FlightFirstCustomerQa()),
+            ),
+          ),
           ListTile(
             title: const Text('Create manual call'),
             subtitle: const Text('Input screen — luggage, flight, golf'),
@@ -271,22 +280,87 @@ class _AdminManualQaHomeState extends State<AdminManualQaHome> {
 /// Isolated preview of the production schedule widget, with no submit action.
 class FlightFirstCustomerQa extends StatefulWidget {
   const FlightFirstCustomerQa({super.key});
-  @override State<FlightFirstCustomerQa> createState()=>_FlightFirstCustomerQaState();
+  @override
+  State<FlightFirstCustomerQa> createState() => _FlightFirstCustomerQaState();
 }
+
 class _FlightFirstCustomerQaState extends State<FlightFirstCustomerQa> {
-  final controller=BookingWizardController();
-  bool ready=false;
-  @override void initState(){super.initState();_init();}
-  Future<void> _init() async {
-    await controller.initialize(initialServiceType:BookingServiceType.airportPickup, freshEntry:true);
-    await controller.updateCustomerInfo(flightNumber:'TG123',flightDate:'2026-11-12');
-    if(mounted)setState(()=>ready=true);
+  final controller = BookingWizardController();
+  bool ready = false;
+  @override
+  void initState() {
+    super.initState();
+    _init();
   }
-  @override void dispose(){controller.dispose();super.dispose();}
-  @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:Text(context.l10n.t('pickup_datetime'))),
-    body:ready?SingleChildScrollView(padding:const EdgeInsets.all(16),child:AnimatedBuilder(
-      animation:controller,builder:(_,__)=>StepPickupDateTime(state:controller.state,controller:controller,
-        embedded:true,onFlightNumberChanged:(v)=>controller.updateCustomerInfo(flightNumber:v))))
-      :const Center(child:CircularProgressIndicator()));
+
+  Future<void> _init() async {
+    await controller.initialize(
+      initialServiceType: BookingServiceType.airportPickup,
+      freshEntry: true,
+    );
+    await controller.updateCustomerInfo(
+      flightNumber: 'TG123',
+      flightDate: '2026-11-12',
+    );
+    if (mounted) setState(() => ready = true);
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: Text(context.l10n.t('pickup_datetime'))),
+    body: ready
+        ? SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: AnimatedBuilder(
+              animation: controller,
+              builder: (context, child) => StepPickupDateTime(
+                state: controller.state,
+                controller: controller,
+                embedded: true,
+                onFlightNumberChanged: (v) =>
+                    controller.updateCustomerInfo(flightNumber: v),
+              ),
+            ),
+          )
+        : const Center(child: CircularProgressIndicator()),
+  );
+}
+
+// Synthetic contact form only: no reservation creation or customer data.
+class CallingCountryCustomerQa extends StatefulWidget {
+  const CallingCountryCustomerQa({super.key});
+  @override
+  State<CallingCountryCustomerQa> createState() =>
+      _CallingCountryCustomerQaState();
+}
+
+class _CallingCountryCustomerQaState extends State<CallingCountryCustomerQa> {
+  BookingWizardState state = const BookingWizardState(
+    messengerType: 'WHATSAPP',
+    customerCountryCode: '+44',
+  );
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: Text(context.l10n.t('wizard_step_customer_title'))),
+    body: SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: BookingContactPreferenceSection(
+        state: state,
+        onTypeChanged: (v) =>
+            setState(() => state = state.copyWith(messengerType: v)),
+        onMessengerIdChanged: (v) =>
+            setState(() => state = state.copyWith(messengerId: v)),
+        onPhoneChanged: (v) =>
+            setState(() => state = state.copyWith(customerPhone: v)),
+        onDialCodeChanged: (v) =>
+            setState(() => state = state.copyWith(customerCountryCode: v)),
+      ),
+    ),
+  );
 }

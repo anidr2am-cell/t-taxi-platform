@@ -10393,6 +10393,11 @@ class AppLocalizations {
     },
   };
   static const Map<String, String> _customerRussianTranslations = {
+    'admin_phone_country_cancel': 'Отмена',
+    'admin_phone_country_title': 'Страна и телефонный код',
+    'admin_phone_country_search': 'Поиск по названию страны или коду',
+    'admin_phone_country_empty': 'Страны не найдены',
+
     "voucher_edit_change_details": "Что нужно изменить",
     "voucher_edit_close": "Закрыть",
     "voucher_edit_title": "Изменение бронирования",

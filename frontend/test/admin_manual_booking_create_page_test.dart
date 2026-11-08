@@ -458,6 +458,13 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const Key('adminManualBookingGuestPhone')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('adminManualPhoneDialCode-+66')));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.enterText(find.byKey(const Key('adminCallingCountrySearch')), 'India');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.byKey(const ValueKey('adminCallingCountry-IN')));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const ValueKey('adminManualPhoneDialCode-+91')), findsOneWidget);
     expect(
       find.text('생성 후 바로 배정', skipOffstage: false),
       findsOneWidget,
