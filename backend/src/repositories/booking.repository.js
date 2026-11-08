@@ -2169,7 +2169,7 @@ class BookingRepository {
   }
 
   adminQueueOrderSql(view) {
-    if (view === 'needs_action') {
+    if (view === 'needs_action' || view === 'in_progress') {
       return `
         ORDER BY
           b.scheduled_pickup_at ASC,
