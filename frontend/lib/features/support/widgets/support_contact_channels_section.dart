@@ -9,6 +9,14 @@ import '../../booking/models/contact_channel.dart';
 import '../../booking/services/booking_contact_connection_service.dart';
 import '../../booking/utils/contact_channel_url.dart';
 
+const _supportChannelOrder = [
+  'WHATSAPP',
+  'LINE',
+  'KAKAO',
+  'WECHAT',
+  'TELEGRAM',
+];
+
 typedef SupportContactUrlLauncher = Future<bool> Function(Uri uri);
 
 class SupportContactChannelsSection extends StatefulWidget {
@@ -67,9 +75,9 @@ class _SupportContactChannelsSectionState
         );
         break;
       case 'LINE':
+      case 'TELEGRAM':
       case 'KAKAO':
-        final url = channel.addUrl?.trim();
-        if (url == null || url.isEmpty) return;
+        final url = channel.addUrl ?? '';
         uri = parseAllowedContactChannelUrl(
           url,
           allowHttp: allowHttpContactUrlsForEnvironment(),
@@ -87,17 +95,27 @@ class _SupportContactChannelsSectionState
       return;
     }
 
-    final launch = widget.launchUrlOverride ?? _defaultLaunchUrl;
-    final launched = await launch(uri);
+    var launched = false;
+    try {
+      final override = widget.launchUrlOverride;
+      launched = override != null
+          ? await override(uri)
+          : await launchUrl(
+              uri,
+              mode: LaunchMode.externalApplication,
+              webOnlyWindowName: const {'LINE', 'TELEGRAM'}.contains(code)
+                  ? '_self'
+                  : null,
+            );
+    } catch (_) {
+      // A browser or device may reject the external link.
+    }
     if (!launched && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.t('contact_connect_launch_failed'))),
       );
     }
   }
-
-  Future<bool> _defaultLaunchUrl(Uri uri) =>
-      launchUrl(uri, mode: LaunchMode.externalApplication);
 
   Future<void> _showWeChatQrDialog(ContactChannel channel) async {
     final l10n = context.l10n;
@@ -146,12 +164,18 @@ class _SupportContactChannelsSectionState
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final locale = Localizations.localeOf(context).languageCode;
 
     return FutureBuilder<List<ContactChannel>>(
       future: _channelsFuture,
       builder: (context, snapshot) {
-        final channels = orderContactChannels(snapshot.data ?? const [], locale);
+        final byCode = {
+          for (final channel in snapshot.data ?? const <ContactChannel>[])
+            channel.code.toUpperCase(): channel,
+        };
+        final channels = [
+          for (final code in _supportChannelOrder)
+            if (byCode[code] case final channel?) channel,
+        ];
         if (channels.isEmpty) return const SizedBox.shrink();
 
         return Column(
@@ -183,10 +207,7 @@ class _SupportContactChannelsSectionState
 }
 
 class _ContactChannelButton extends StatelessWidget {
-  const _ContactChannelButton({
-    required this.channel,
-    required this.onTap,
-  });
+  const _ContactChannelButton({required this.channel, required this.onTap});
 
   final ContactChannel channel;
   final VoidCallback onTap;
@@ -239,19 +260,15 @@ class _ChannelIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (code) {
       case 'KAKAO':
-        return KakaoBrandIcon(
-          size: size,
-          style: SocialBrandIconStyle.appIcon,
-        );
+        return KakaoBrandIcon(size: size, style: SocialBrandIconStyle.appIcon);
       case 'LINE':
-        return LineBrandIcon(
-          size: size,
-          style: SocialBrandIconStyle.appIcon,
-        );
+        return LineBrandIcon(size: size, style: SocialBrandIconStyle.appIcon);
       case 'WHATSAPP':
         return WhatsappBrandIcon(size: size);
       case 'WECHAT':
         return WechatBrandIcon(size: size);
+      case 'TELEGRAM':
+        return Icon(Icons.send_outlined, size: size, color: AppTokens.primary);
       default:
         return Icon(Icons.chat_bubble_outline, size: size);
     }
