@@ -1,3 +1,4 @@
+import 'package:frontend/features/admin_dispatch/widgets/admin_manual_flight_section.dart';
 import 'dart:async';
 import 'package:frontend/features/admin_dispatch/models/admin_calling_codes.dart';
 
@@ -335,7 +336,7 @@ void main() {
     expect(find.text('VAN'), findsOneWidget);
   });
 
-  testWidgets('direct create blocks duplicate submit and opens created booking', (
+  testWidgets('drop-off direct create omits flight details and blocks duplicate submit', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(900, 2400);
@@ -350,13 +351,14 @@ void main() {
       couponApi: const _FakeCouponApi(),
       dispatchApi: dispatchApi,
       initialOrigin: const LocationOption(
-        id: 'bkk', displayName: 'BKK', kind: LocationKind.airport, code: 'BKK'),
-      initialDestination: const LocationOption(
         id: 'pattaya', displayName: 'Pattaya', kind: LocationKind.city, code: 'PATTAYA'),
-      initialServiceTypeCode: 'AIRPORT_PICKUP',
+      initialDestination: const LocationOption(
+        id: 'bkk', displayName: 'BKK', kind: LocationKind.airport, code: 'BKK'),
+      initialServiceTypeCode: 'AIRPORT_DROPOFF',
       initialPickupAt: DateTime.now().add(const Duration(days: 3)),
     )));
     await tester.pumpAndSettle();
+    expect(find.byType(AdminManualFlightSection), findsNothing);
 
     await tester.scrollUntilVisible(find.byKey(const Key('adminManualDispatchDirect')), 400, scrollable: find.byType(Scrollable).first);
     await _reveal(tester, find.byKey(const Key('adminManualDispatchDirect')));
@@ -400,7 +402,7 @@ void main() {
     await tester.pump();
     expect(tester.widget<FilledButton>(submit).onPressed, isNull);
     expect(dispatchApi.submittedAirportIata, 'BKK');
-    expect(dispatchApi.submittedTransfer?['airportIata'], 'BKK');
+    expect(dispatchApi.submittedTransfer, {'airportIata': 'BKK'});
 
     createResult.complete({'bookingNumber': 'TX202610130001'});
     await tester.pump();
@@ -611,6 +613,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.text('데이터를 불러오지 못했습니다. 다시 시도해 주세요.'), findsNothing);
+    expect(find.byType(AdminManualFlightSection), findsOneWidget);
     final scrollable = find.byType(Scrollable).first;
     await tester.scrollUntilVisible(find.text('수하물'), 400, scrollable: scrollable);
     expect(find.text('인원'), findsOneWidget);
