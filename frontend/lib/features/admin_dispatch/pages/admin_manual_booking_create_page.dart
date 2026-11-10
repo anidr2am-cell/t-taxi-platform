@@ -257,7 +257,10 @@ class _AdminManualBookingCreatePageState
         'driverIncluded': _driverIncluded,
       };
     }
-    if (!_showsFlightSection) return null;
+    if (!_showsFlightSection) {
+      final airportIata = _resolvedTransferAirportIata;
+      return airportIata == null ? null : {'airportIata': airportIata};
+    }
     final normalized = _flightNumber.trim().toUpperCase();
     return {
       if (_resolvedTransferAirportIata != null)
@@ -449,8 +452,7 @@ class _AdminManualBookingCreatePageState
   }
 
   bool get _showsFlightSection =>
-      _serviceTypeCode == 'AIRPORT_PICKUP' ||
-      _serviceTypeCode == 'AIRPORT_DROPOFF';
+      _serviceTypeCode == 'AIRPORT_PICKUP';
 
   Map<String,dynamic>? _golf;
 
