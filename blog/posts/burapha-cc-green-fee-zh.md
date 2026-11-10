@@ -7,7 +7,7 @@ category: golf
 bookingService: GOLF_TRANSFER
 translationKey: burapha-cc-green-fee
 date: 2026-10-07
-updated: 2026-10-30
+updated: 2026-11-10
 related:
   - pattaya-golf-transfer-price-zh
   - pattaya-golf-price-match-guarantee-zh
@@ -51,10 +51,10 @@ TRider球场接送将Burapha归入B组。芭提雅酒店与球场之间的往返
 
 这些只是数学示例，并非车辆载客或球包装载保证。实际应填写全部人数、球包与行李，确认匹配车型。最终球局预算仍需另加当天确认的个人球费与其他费用。
 
-## 球局、拼组与接送可以一起咨询
+## 私人球局与接送可以一起咨询
 
-Buddy Golf（버디골프）是原TRounding的新名称，目前重点服务韩国高尔夫旅客。TRider与Buddy Golf可一并咨询高尔夫行程、拼组及车辆接送；请提供希望日期、人数、球场和沟通语言，确认实际可安排的球位与开球时间。
+Buddy Golf为国际旅客的同行小组安排私人球局，至少需要2位球员实际下场。请提供希望日期、实际下场人数、球场及希望使用的语言，并确认Burapha当日能否安排私人球局和合适的开球时间。
 
-可以通过[WhatsApp统一咨询](https://wa.me/66815693445)，把球场、拼组、酒店上车地点与球包信息一起说明，核对球位、接送安排和完整费用。
+可从[TRider中文网站查看咨询方式](/zh/)，一并说明球场、酒店上车地点与球包信息，核对球位、接送安排和完整费用。也可使用[官方WhatsApp](https://wa.me/66815693445)并确认可用的沟通语言。
 
-在[TRider预约页面](/booking?service=GOLF_TRANSFER&lang=zh)可全天24小时用中文安排Burapha球场接送。也可先通过WhatsApp一并沟通球场与交通需求，确认开球时间、酒店、人数、球包和最终报价后安排预约。
+在[TRider中文车辆预约页面](/booking?service=GOLF_TRANSFER&lang=zh)可全天24小时填写Burapha球场接送行程。只需接送时可按实际乘车人数及行李预约，球位则由Buddy Golf单独确认。

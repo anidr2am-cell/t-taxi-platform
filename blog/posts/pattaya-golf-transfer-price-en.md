@@ -7,7 +7,7 @@ lang: en
 category: golf
 bookingService: GOLF_TRANSFER
 date: 2026-10-29
-updated: 2026-10-30
+updated: 2026-11-10
 related:
   - pattaya-solo-golf-join-en
   - burapha-cc-green-fee-en
@@ -56,11 +56,11 @@ The Group A and B van base fare for an 18-hole round is THB 2,300 per vehicle. I
 
 This is a cost-sharing example, not a promise about vehicle capacity or luggage space. Confirm that the vehicle suits the group's actual luggage. Green fees, caddie fees, cart fees and tips are separate golf costs; they are not divided or included simply because travellers share a transfer.
 
-## Discuss golf, joining a round and transport together
+## Discuss private golf and transport together
 
-Send your preferred course, date, tee time, accommodation, passenger count and luggage through [WhatsApp](https://wa.me/66815693445). We can check tee-time and playing-partner availability and help coordinate your round and vehicle pickup together.
+Send your preferred course, date, tee time, hotel, number of golfers and luggage through [WhatsApp](https://wa.me/66815693445). Buddy Golf can check tee-time availability for your own group of **at least two golfers** and discuss TRider pickup together.
 
-For golf travel and joining arrangements with Buddy Golf, ask about participation requirements and share your preferred language. The team can check the available arrangements before confirmation.
+If you have your own tee time and only need transport, use the TRider vehicle booking page below. The two-player minimum applies to Buddy Golf’s private round arrangements.
 
 ## Check the details before booking
 
@@ -70,4 +70,4 @@ For golf travel and joining arrangements with Buddy Golf, ask about participatio
 - Ask about multiple vehicles if required.
 - Check the round-trip arrangements, driver waiting and final vehicle quote.
 
-Read our [solo golf planning guide](/blog/pattaya-solo-golf-join-en) and [Burapha CC guide](/blog/burapha-cc-green-fee-en) if you are still choosing your golf arrangements. Once your itinerary is agreed, you can book the vehicle through the [TRider golf transfer booking page in English](/booking?service=GOLF_TRANSFER&lang=en), available 24 hours a day. The booking screen also supports Korean, Chinese, Japanese and Thai.
+Read our [private golf planning guide](/blog/pattaya-solo-golf-join-en) and [Burapha CC guide](/blog/burapha-cc-green-fee-en) if you are still choosing your golf arrangements. Once your itinerary is agreed, you can book the vehicle through the [TRider golf transfer booking page in English](/booking?service=GOLF_TRANSFER&lang=en), available 24 hours a day. The booking screen also supports Korean, Chinese, Japanese and Thai.
