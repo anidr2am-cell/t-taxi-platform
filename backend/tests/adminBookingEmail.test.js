@@ -4,8 +4,8 @@ const actor={id:77,role:'ADMIN'};
 function harness({status='CONFIRMED',history=[],configured=true,outcome='ACCEPTED'}={}){
  const h={row:{id:1,booking_number:'TX209901010201',status,customer_email:null,total_amount:'1100',currency:'THB',payment_status:'PAID',payment_method:'ADMIN_COLLECTED',metadata:{locale:'ko'},vehicle_type_code:'SEDAN',scheduled_pickup_at:'2026-11-06 23:40:00',origin_address:'QA BKK',destination_address:'QA Hotel'},history:structuredClone(history),smtp:0,activities:[],notifications:[],queries:[]};let tail=Promise.resolve();
  const pool={async getConnection(){let release,snapshot;return {async beginTransaction(){const previous=tail;tail=new Promise(r=>{release=r});await previous;snapshot=structuredClone({row:h.row,history:h.history,notifications:h.notifications,activities:h.activities})},async commit(){release();release=null},async rollback(){Object.assign(h,snapshot);release?.();release=null},release(){},async query(sql,args){h.queries.push(sql);if(sql.includes("SET delivery_status='PENDING'")){const row=h.history.find(x=>x.id===args[0]);row.delivery_status='PENDING';row.last_error=null;}return [{}]}}}};
- const repo={async approveBookingEmail(_c,row,email,record){h.row.customer_email=email;h.row.metadata={...h.row.metadata,adminBookingConfirmationEmail:record};for(const x of h.history)if(x.type==='BOOKING_CREATED'&&x.id!==record.deliveryId&&!x.smtp_attempts)x.delivery_status='SKIPPED'},async decideDriverCollection(_c,row,record){h.row.payment_status=record.choice==='PAID'?'PAID':row.payment_status;h.row.metadata={...h.row.metadata,driverCollectionDecision:record}},async confirmPayment(_c,row,record){h.row.payment_status='PAID';h.row.metadata={...h.row.metadata,customerPaymentConfirmation:record}},async booking(){return structuredClone(h.row)},async history(){return structuredClone(h.history)},async approve(_c,row,email,record){h.row.customer_email=email;h.row.metadata={...h.row.metadata,adminReceiptEmail:record};for(const x of h.history)if(x.id!==record.deliveryId&&!x.smtp_attempts&&x.delivery_status!=='DELIVERED'){x.delivery_status='SKIPPED';x.last_error='EMAIL_POLICY_SUPERSEDED_BY_ADMIN_RECEIPT'}}};
- const notifications={async findByIdempotencyKey(_c,key){return h.notifications.find(x=>x.idempotencyKey===key)},async insertEmailOnly(_c,n){h.notifications.push({...n,id:101,channel:'EMAIL'});return 101},async insertDelivery(_c,d){h.history.push({id:201,notification_id:d.notificationId,type:'BOOKING_CREATED',delivery_status:'PENDING',smtp_attempts:0,attempt_count:0});return 201}};
+ const repo={async approveBookingEmailResend(_c,row,record){h.row.metadata={...h.row.metadata,adminBookingEmailResend:record}},async approveBookingEmail(_c,row,email,record){h.row.customer_email=email;h.row.metadata={...h.row.metadata,adminBookingConfirmationEmail:record};for(const x of h.history)if(x.type==='BOOKING_CREATED'&&x.id!==record.deliveryId&&!x.smtp_attempts)x.delivery_status='SKIPPED'},async decideDriverCollection(_c,row,record){h.row.payment_status=record.choice==='PAID'?'PAID':row.payment_status;h.row.metadata={...h.row.metadata,driverCollectionDecision:record}},async confirmPayment(_c,row,record){h.row.payment_status='PAID';h.row.metadata={...h.row.metadata,customerPaymentConfirmation:record}},async booking(){return structuredClone(h.row)},async history(){return structuredClone(h.history)},async approve(_c,row,email,record){h.row.customer_email=email;h.row.metadata={...h.row.metadata,adminReceiptEmail:record};for(const x of h.history)if(x.id!==record.deliveryId&&!x.smtp_attempts&&x.delivery_status!=='DELIVERED'){x.delivery_status='SKIPPED';x.last_error='EMAIL_POLICY_SUPERSEDED_BY_ADMIN_RECEIPT'}}};
+ const notifications={async findByIdempotencyKey(_c,key){return h.notifications.find(x=>x.idempotencyKey===key)},async insertEmailOnly(_c,n){h.notifications.push({...n,id:101+h.notifications.length,channel:'EMAIL'});return h.notifications.at(-1).id},async insertDelivery(_c,d){h.history.push({id:201+h.notifications.length-1,notification_id:d.notificationId,event_name:h.notifications.at(-1).eventName,type:'BOOKING_CREATED',delivery_status:'PENDING',smtp_attempts:0,attempt_count:0});return h.history.at(-1).id}};
  const booking={async insertActivityLog(_c,_id,a){h.activities.push(a)}};
  const notificationService={adapters:{EMAIL:{isConfigured:()=>configured,googleReviewUrlProvider:async()=>'',customerWebOrigin:'https://trider.taxi'}},async processDeliveries(id){const d=h.history.find(x=>x.notification_id===id);if(d.delivery_status!=='PENDING')return;h.smtp++;d.smtp_attempts=1;d.outcome=outcome;d.delivery_status=outcome==='ACCEPTED'?'DELIVERED':'FAILED';d.last_error=outcome==='UNKNOWN'?'PERMANENT_EMAIL_SEND_UNCERTAIN':null}};
  h.service=new Service(pool,repo,notifications,booking,notificationService,()=>new Date('2026-10-31T02:00:00Z'));return h;
@@ -25,13 +25,13 @@ test('missing-address mail repairs only receipt slot and freezes recipient/conte
  assert.equal(h.smtp,1);assert.equal(h.row.customer_email,input.email);assert.equal(h.row.payment_status,old.payment_status);assert.equal(h.row.status,old.status);assert.equal(h.row.total_amount,old.total_amount);assert.equal(h.history[0].delivery_status,'SKIPPED');assert.equal(h.activities.length,1);
  const n=h.notifications[0];assert.equal(n.notificationType,'BOOKING_CREATED');assert.equal(n.channel,'EMAIL');assert.equal(n.payload.adminBookingConfirmation,true);
  const {decrypt}=require('../src/utils/tokenEncryption.util');const envelope=JSON.parse(decrypt(n.payload.approvedEmail));assert.equal(envelope.to,input.email);assert.equal(envelope.text,p.text);
- await assert.rejects(h.service.preview(h.row.booking_number,input,actor));assert.equal(h.smtp,1);
+ await assert.rejects(h.service.send(h.row.booking_number,{...input,previewHash:p.previewHash,confirmed:true},actor),/PREVIEW_CHANGED/);assert.equal(h.smtp,1);
 });
 test('concurrent approval is one mail and one activity',async()=>{
  const h=harness(),p=await h.service.preview(h.row.booking_number,input,actor);const a={...input,previewHash:p.previewHash,confirmed:true};
  const r=await Promise.allSettled([h.service.send(h.row.booking_number,a,actor),h.service.send(h.row.booking_number,a,actor)]);assert.equal(r.filter(x=>x.status==='fulfilled').length,1);assert.equal(h.smtp,1);assert.equal(h.activities.length,1);
 });
-for(const item of [{delivery_status:'DELIVERED'},{smtp_attempts:1,outcome:'UNKNOWN'},{smtp_attempts:1,outcome:'NOT_ACCEPTED'},{smtp_attempts:1,outcome:'SENDING'},{accepted_confirmed:1}])test('sent/uncertain SMTP is never bypassed '+JSON.stringify(item),async()=>{
+for(const item of [{smtp_attempts:1,outcome:'UNKNOWN'},{smtp_attempts:1,outcome:'NOT_ACCEPTED'},{smtp_attempts:1,outcome:'SENDING'}])test('unconfirmed SMTP is never bypassed '+JSON.stringify(item),async()=>{
  const h=harness({history:[{type:'BOOKING_CREATED',id:1,...item}]});await assert.rejects(h.service.preview(h.row.booking_number,input,actor));assert.equal(h.smtp,0);assert.equal(h.row.customer_email,null);
 });
 test('changed preview, unsupported trip state, configuration and role are protected',async()=>{
@@ -56,4 +56,36 @@ test('approved booking mail uses frozen address and content with a mock transpor
  const adapter=new EmailNotificationAdapter({smtp:{host:'smtp.example.invalid',fromEmail:'qa@example.invalid'},transport:{sendMail:async(m)=>{sent.push(m);return {messageId:'QA_ONLY',accepted:[m.to]}}}});
  const result=await adapter.send({type:'BOOKING_CREATED',audience_role:'CUSTOMER',recipient_type:'GUEST_BOOKING',recipient_email:'other@example.invalid',booking_number:h.row.booking_number,booking_total_amount:9999,payload:h.notifications[0].payload});
  assert.equal(result.status,'DELIVERED');assert.equal(sent.length,1);assert.equal(sent[0].to,input.email);assert.equal(sent[0].text,p.text);assert.equal(sent[0].subject,p.subject);
+});
+
+
+test('confirmed booking email can be resent once with a new approval and without changing the stored address',async()=>{
+ const h=harness({history:[{id:8,type:'BOOKING_CREATED',delivery_status:'DELIVERED',smtp_attempts:1}]});
+ h.row.customer_email='original@example.invalid';
+ const state=await h.service.get(h.row.booking_number,actor);assert(state.eligible);assert(state.resend);
+ const preview=await h.service.preview(h.row.booking_number,input,actor);assert.equal(h.smtp,0);
+ const request={...input,previewHash:preview.previewHash,confirmed:true,resend:true};
+ const results=await Promise.allSettled([h.service.send(h.row.booking_number,request,actor),h.service.send(h.row.booking_number,request,actor)]);
+ assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
+ assert.equal(h.smtp,1);assert.equal(h.row.customer_email,'original@example.invalid');
+ assert.equal(h.row.metadata.adminBookingEmailResend.sourceDeliveryId,8);
+ assert.equal(h.notifications[0].eventName,'ADMIN_BOOKING_EMAIL_RESEND');
+ assert.equal(h.activities[0].activityType,'BOOKING_EMAIL_RESEND_APPROVED');
+ assert.equal(h.history[0].delivery_status,'DELIVERED');
+ assert.equal((await h.service.get(h.row.booking_number,actor)).eligible,false);
+});
+
+test('claim permits only the recorded resend and reserves a fresh SMTP attempt',async()=>{
+ const Repo=require('../src/repositories/notification.repository');let reserved=false;
+ const conn={async beginTransaction(){},async commit(){},async rollback(){},release(){},async query(sql){
+   if(sql.startsWith('SELECT id, metadata'))return [[{metadata:{adminBookingConfirmationEmail:{notificationId:1},adminBookingEmailResend:{notificationId:2,deliveryId:20}}}]];
+   if(sql.startsWith('SELECT delivery_status'))return [[{delivery_status:'PENDING',last_error:reserved?'PERMANENT_EMAIL_SEND_RESERVED':null}]];
+   if(sql.startsWith('INSERT INTO notification_email_attempts'))return [{insertId:30}];
+   if(sql.startsWith('UPDATE notification_deliveries')){reserved=true;return [{}]}
+   throw Error('Unexpected claim SQL');
+ }};
+ const repo=new Repo({getConnection:async()=>conn});const resend={id:2,booking_id:1,type:'BOOKING_CREATED',event_name:'ADMIN_BOOKING_EMAIL_RESEND'};
+ assert.equal((await repo.claimCustomerEmail(resend,{id:21})).allowed,false);
+ assert.equal((await repo.claimCustomerEmail(resend,{id:20})).attempt.id,30);
+ assert.equal((await repo.claimCustomerEmail(resend,{id:20})).alreadyProcessed,true);
 });

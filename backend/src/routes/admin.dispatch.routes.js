@@ -45,7 +45,7 @@ router.get('/bookings/:bookingNumber/booking-email',adminOnly,validate({params:b
   asyncHandler(async(req,res)=>success(res,await container.get('adminBookingEmailService').get(req.params.bookingNumber,req.user))));
 router.post('/bookings/:bookingNumber/booking-email/preview',adminOnly,validate({params:bookingNumberParamsSchema,body:receiptEmailInput}),
   asyncHandler(async(req,res)=>success(res,await container.get('adminBookingEmailService').preview(req.params.bookingNumber,req.body,req.user))));
-router.post('/bookings/:bookingNumber/booking-email/send',adminOnly,validate({params:bookingNumberParamsSchema,body:receiptEmailInput.keys({previewHash:Joi.string().hex().length(64).required(),confirmed:Joi.boolean().valid(true).required()})}),
+router.post('/bookings/:bookingNumber/booking-email/send',adminOnly,validate({params:bookingNumberParamsSchema,body:receiptEmailInput.keys({resend:Joi.boolean().valid(true).optional(),previewHash:Joi.string().hex().length(64).required(),confirmed:Joi.boolean().valid(true).required()})}),
   asyncHandler(async(req,res)=>success(res,await container.get('adminBookingEmailService').send(req.params.bookingNumber,req.body,req.user))));
 router.post('/bookings/:bookingNumber/driver-collection',adminOnly,
   validate({params:bookingNumberParamsSchema,body:Joi.object({choice:Joi.string().valid('PAID','CUSTOMER_DIRECT').required(),confirmed:Joi.boolean().valid(true).required(),expectedAmount:Joi.number().min(0).required(),expectedCurrency:Joi.string().valid('THB').required(),expectedStatus:Joi.string().valid('UNPAID','PENDING','PAID').required()}).unknown(false)}),
