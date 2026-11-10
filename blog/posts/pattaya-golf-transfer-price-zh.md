@@ -7,7 +7,7 @@ category: golf
 bookingService: GOLF_TRANSFER
 translationKey: pattaya-golf-transfer-price
 date: 2026-10-28
-updated: 2026-10-30
+updated: 2026-11-10
 related:
   - burapha-cc-green-fee-zh
   - pattaya-solo-golf-join-zh
@@ -64,4 +64,4 @@ Royal Lakeside、Bangpakong Riverside。
 - 实际人数、球包、行李箱与较大物品。
 - 是否另有停靠或其他行程。
 
-TRider与Buddy Golf可通过[WhatsApp一并咨询](https://wa.me/66815693445)高尔夫行程、拼组及车辆接送，确认实际开球时间、球场安排和酒店往返需求。在[TRider预约页面](/booking?service=GOLF_TRANSFER&lang=zh)可全天24小时用中文填写芭提雅高尔夫球场接送行程，核对车辆与最终费用后再确认。
+只需接送时，可在[TRider中文车辆预约页面](/booking?service=GOLF_TRANSFER&lang=zh)全天24小时填写行程，按实际乘车人数和行李核对车型与最终费用。如需同时安排球局，Buddy Golf为国际旅客的同行小组安排私人球局，至少需要2位球员实际下场。可在[TRider中文网站查看咨询方式](/zh/)，一起确认球场、开球时间和酒店往返需求。也可使用[官方WhatsApp](https://wa.me/66815693445)并确认可用的沟通语言。

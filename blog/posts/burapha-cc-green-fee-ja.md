@@ -7,7 +7,7 @@ category: golf
 bookingService: GOLF_TRANSFER
 translationKey: burapha-cc-green-fee
 date: 2026-10-06
-updated: 2026-10-30
+updated: 2026-11-10
 related:
   - pattaya-golf-price-match-guarantee-ja
   - pattaya-golf-transfer-price-ja
@@ -52,6 +52,6 @@ related:
 
 ## ゴルフ日程と車両送迎をまとめて相談
 
-TRiderとBuddy Golf（버디골프、旧TRounding）では、ゴルフ日程・組み合わせ・車両送迎をまとめて相談できます。[LINE](https://lin.ee/55A9phq)で希望日、コース、人数、ホテル住所と荷物をお知らせください。希望する案内言語も伝え、実際のティータイムと手配内容を確認しましょう。[WhatsApp](https://wa.me/66815693445)でも同じ内容をまとめて相談できます。
+Buddy Golf（버디골프）では、海外からのお客様にプレーヤー2名以上でご自身のグループだけで回るラウンドをご案内します。[LINE](https://lin.ee/55A9phq)で希望日、コース、プレー人数、ホテル住所、荷物をお知らせください。実際のティータイムと手配内容を確認し、TRiderの送迎もまとめてご相談いただけます。[WhatsApp](https://wa.me/66815693445)でも相談できます。
 
 ブラパーCCの費用を計画する際は、プレー枠と最新料金の確認後に移動を整えましょう。[TRiderの日本語ゴルフ場送迎予約画面](/booking?service=GOLF_TRANSFER&lang=ja)では車両送迎を24時間予約できます。
