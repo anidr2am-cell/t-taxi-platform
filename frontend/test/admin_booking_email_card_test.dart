@@ -11,13 +11,15 @@ import 'package:frontend/l10n/app_localizations.dart';
 
 class BookingApi extends AdminDispatchApiService {
   int previews = 0, sends = 0;
+  bool resend = false;
   bool approved = false, lost = false;
   Map<String, dynamic>? last;
   @override
   Future<Map<String, dynamic>> getBookingEmailState(String n) async => {
     'eligible': !approved,
     'configured': true,
-    'email': '',
+    'email': resend ? 'qa@example.invalid' : '',
+    'resend': resend,
     'locale': 'ko',
     if (approved) 'delivery': {'status': 'DELIVERED'},
   };
@@ -206,6 +208,26 @@ void main() {
       expect(find.text('이 주소로 발송'), findsNothing);
     },
   );
+  testWidgets('accepted booking email can be explicitly resent once', (
+    t,
+  ) async {
+    final api = BookingApi()..resend = true;
+    await t.pumpWidget(host(api));
+    await t.pumpAndSettle();
+    await t.tap(find.text('미리보기'));
+    await t.pumpAndSettle();
+    final resend = find.text('예약 안내 이메일 재발송');
+    await t.ensureVisible(resend);
+    await t.tap(resend);
+    await t.pumpAndSettle();
+    expect(find.textContaining('qa@example.invalid로 한 번 더'), findsOneWidget);
+    expect(api.sends, 0);
+    await t.tap(find.text('발송 확정'));
+    await t.pumpAndSettle();
+    expect(api.sends, 1);
+    expect(api.last?['resend'], true);
+    expect(resend, findsNothing);
+  });
   testWidgets('lost response refreshes approved state without resending', (
     t,
   ) async {

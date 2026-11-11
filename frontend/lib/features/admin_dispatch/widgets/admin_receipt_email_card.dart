@@ -196,6 +196,9 @@ class _AdminReceiptEmailCardState extends State<AdminReceiptEmailCard> {
     }
   }
 
+  bool get _resending =>
+      widget.bookingConfirmation && _state?['resend'] == true;
+
   Future<void> _send() async {
     if (_busy || _confirming) return;
     final l = context.l10n;
@@ -213,7 +216,9 @@ class _AdminReceiptEmailCardState extends State<AdminReceiptEmailCard> {
         content: Text(
           l
               .t(
-                widget.bookingConfirmation
+                _resending
+                    ? 'admin_booking_email_resend_confirm'
+                    : widget.bookingConfirmation
                     ? 'admin_booking_email_confirm_body'
                     : 'admin_receipt_confirm_body',
               )
@@ -245,6 +250,7 @@ class _AdminReceiptEmailCardState extends State<AdminReceiptEmailCard> {
         'locale': _locale,
         'previewHash': preview!['previewHash'],
         'confirmed': true,
+        if (_resending) 'resend': true,
       };
       final s = await (widget.bookingConfirmation
           ? widget.api.sendBookingEmail(widget.bookingNumber, body)
@@ -306,7 +312,9 @@ class _AdminReceiptEmailCardState extends State<AdminReceiptEmailCard> {
             const SizedBox(height: AppTokens.spaceSm),
             Text(
               l.t(
-                widget.bookingConfirmation
+                _resending && eligible
+                    ? 'admin_booking_email_resend_intro'
+                    : widget.bookingConfirmation
                     ? 'admin_booking_email_intro'
                     : 'admin_receipt_intro',
               ),
@@ -424,7 +432,13 @@ class _AdminReceiptEmailCardState extends State<AdminReceiptEmailCard> {
                       _busy || _confirming || state?['configured'] != true
                       ? null
                       : _send,
-                  child: Text(l.t('admin_receipt_send')),
+                  child: Text(
+                    l.t(
+                      _resending
+                          ? 'admin_booking_email_resend'
+                          : 'admin_receipt_send',
+                    ),
+                  ),
                 ),
               ],
             ],
