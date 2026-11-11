@@ -4,6 +4,7 @@ import '../../features/admin_pricing/pages/admin_golf_prices_panel.dart';
 
 import '../../features/admin/widgets/admin_auth_gate.dart';
 import '../../features/admin_dashboard/pages/admin_dashboard_page.dart';
+import '../../features/admin_dashboard/pages/admin_statistics_page.dart';
 import '../../features/admin_dispatch/pages/admin_dispatch_queue_page.dart';
 import '../../features/admin_dispatch/services/admin_dispatch_api_service.dart';
 import '../../features/admin_settlement/pages/admin_settlement_queue_page.dart';
@@ -54,12 +55,13 @@ class _AdminScreenState extends State<AdminScreen> {
     14,
     15,
     16,
+    17,
   };
 
   @override
   void initState() {
     super.initState();
-    _selectedIndex = widget.initialTab.clamp(0, 16);
+    _selectedIndex = widget.initialTab.clamp(0, 17);
   }
 
   @override
@@ -101,6 +103,7 @@ class _AdminScreenState extends State<AdminScreen> {
       l10n.t('admin_coupons_menu'),
       l10n.t('admin_home_banner_menu'),
       l10n.t('admin_manual_booking_menu'),
+      l10n.t('admin_statistics'),
     ];
 
     final icons = [
@@ -121,6 +124,7 @@ class _AdminScreenState extends State<AdminScreen> {
       Icons.local_offer_outlined,
       Icons.view_carousel_outlined,
       Icons.call_outlined,
+      Icons.bar_chart_outlined,
     ];
 
     final selectedIcons = [
@@ -141,6 +145,7 @@ class _AdminScreenState extends State<AdminScreen> {
       Icons.local_offer,
       Icons.view_carousel,
       Icons.call,
+      Icons.bar_chart,
     ];
 
     void selectIndex(int index) {
@@ -326,6 +331,8 @@ class _AdminScreenState extends State<AdminScreen> {
         return const AdminAuthGate(child: AdminHomeBannerPage());
       case 16:
         return const AdminAuthGate(child: AdminManualBookingCreatePage());
+      case 17:
+        return const AdminAuthGate(child: AdminStatisticsPage());
       default:
         return const SizedBox.shrink();
     }

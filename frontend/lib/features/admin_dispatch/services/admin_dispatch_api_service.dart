@@ -55,6 +55,13 @@ class AdminDispatchApiService {
 
   String get _base => '${_baseUrl ?? AppConfig.apiBaseUrl}/api/v1';
 
+  Future<Map<String, dynamic>> getStatistics(String from, String to) async {
+    final result = await _request(
+      'GET', '/admin/statistics', query: {'from': from, 'to': to},
+    );
+    return Map<String, dynamic>.from(result as Map);
+  }
+
   Future<String?> getSavedToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_tokenKey);
