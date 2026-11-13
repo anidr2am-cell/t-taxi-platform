@@ -106,7 +106,8 @@ test('airport and localized golf guides preset the correct service without chang
  for(const post of posts.filter(p=>![pickupSlug,guideSlug,dmkSlug,...zhAirportSlugs,...topicPosts.map(p=>p.slug)].includes(p.slug))){
   const page=read(blog,post.slug);
   const bookingLang=post.lang;
-  assert.ok(page.includes('class="book-button" href="/booking?lang='+bookingLang+'"'),post.slug);
-  assert.ok(page.includes('class="cta-primary" href="/booking?lang='+bookingLang+'"'),post.slug);
+  const bookingHref=post.bookingService?'/booking?service='+post.bookingService+'&amp;lang='+bookingLang:'/booking?lang='+bookingLang;
+  assert.ok(page.includes('class="book-button" href="'+bookingHref+'"'),post.slug);
+  assert.ok(page.includes('class="cta-primary" href="'+bookingHref+'"'),post.slug);
  }
 });
