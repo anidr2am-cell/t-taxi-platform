@@ -5,6 +5,7 @@ const ERROR_CODES = require('../constants/errorCodes');
 const { hashPassword } = require('../utils/passwordHash.util');
 const config = require('../config');
 const logger = require('../utils/logger');
+const { thaiMobileNumber } = require('../utils/driverResetIdentifier.util');
 
 const CODE_TTL_MS = 10 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
@@ -26,15 +27,24 @@ class DriverPasswordResetService {
   async findDriver(identifier) {
     const normalized = String(identifier || '').trim();
     if (!normalized) return null;
-    const user = normalized.includes('@')
-      ? await this.userRepository.findByEmail(normalized.toLowerCase())
-      : await this.userRepository.findDriverByPhone(normalized);
+    const national = thaiMobileNumber(normalized);
+    let user;
+    if (normalized.includes('@')) {
+      user = await this.userRepository.findByEmail(normalized.toLowerCase());
+    } else if (national) {
+      user = await this.userRepository.findUniqueDriverForReset([
+        normalized, `0${national}`, `+66${national}`, `66${national}`, `0066${national}`,
+      ]);
+    } else {
+      user = await this.userRepository.findDriverByPhone(normalized);
+    }
     return user?.role === 'DRIVER' && user.is_active ? user : null;
   }
 
   async requestCode(identifier) {
     const user = await this.findDriver(identifier);
-    if (!user?.email) return;
+    const email = user?.email?.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || /\.local$/i.test(email)) return;
     const code = String(this.randomInt(100000, 1000000));
     await this.resetRepository.createCode({
       userId: user.id,
@@ -42,7 +52,7 @@ class DriverPasswordResetService {
       expiresAt: new Date(this.now() + CODE_TTL_MS),
     });
     try {
-      await this.emailService.sendCode({ email: user.email, code, locale: user.locale });
+      await this.emailService.sendCode({ email, code, locale: user.locale });
     } catch (err) {
       logger.error('Driver password reset email delivery failed', {
         driverUserId: user.id,
