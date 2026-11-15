@@ -90,8 +90,10 @@ test('two driver accounts with equivalent numbers are not selected by phone', as
   const UserRepository = require('../src/repositories/user.repository');
   const repository = new UserRepository({
     async query(sql, params) {
-      assert.match(sql, /phone IN \(\?\).*role = 'DRIVER'/);
-      assert.deepEqual(params, [['0812345678', '+66812345678']]);
+      assert.match(sql, /REGEXP_REPLACE\(phone, '\[ \(\)-\]', ''\) IN \(\?\)/);
+      assert.deepEqual(params, [
+        ['0812345678', '+66812345678'], ['0812345678', '+66812345678'],
+      ]);
       return [[{ id: 10 }, { id: 11 }]];
     },
   });
