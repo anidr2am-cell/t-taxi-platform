@@ -8,13 +8,14 @@ import { marked } from 'marked';
 const BLOG_ORIGIN = 'https://trider.taxi';
 const AUTHOR = 'TRider';
 const CATEGORIES = ['airport', 'golf', 'travel', 'faq'];
-const LANGUAGES = ['ko', 'en', 'ja', 'zh', 'ru', 'th'];
-const HREFLANG = { ko: 'ko', en: 'en', ja: 'ja', zh: 'zh-Hans', ru: 'ru', th: 'th' };
-const LANGUAGE_NAMES = { ko: '한국어', en: 'English', ja: '日本語', zh: '中文', ru: 'Русский', th: 'ไทย' };
-// The customer booking application supports every published blog language.
-const bookingLanguage = (lang) => lang;
+const LANGUAGES = ['ko', 'en', 'ja', 'zh', 'zh-TW', 'ru', 'th'];
+const HREFLANG = { ko: 'ko', en: 'en', ja: 'ja', zh: 'zh-Hans', 'zh-TW': 'zh-TW', ru: 'ru', th: 'th' };
+const LANGUAGE_NAMES = { ko: '한국어', en: 'English', ja: '日本語', zh: '簡體中文', 'zh-TW': '繁體中文', ru: 'Русский', th: 'ไทย' };
+// Traditional Chinese blog content uses the existing Chinese booking form.
+const bookingLanguage = (lang) => lang === 'zh-TW' ? 'zh' : lang;
 const DEFAULT_OG_IMAGE = `${BLOG_ORIGIN}/blog/assets/og-default.png`;
 const UI = {
+  'zh-TW': { blog: '部落格', title: 'TRider 部落格｜繁體中文', intro: '泰國機場接送與芭達雅旅行資訊。', updated: '最後更新', related: '相關文章', categories: '分類', all: '所有文章', cta: '泰國機場接送', book: '預約車輛（簡體中文）', support: '官方聯絡方式', supportUrl: '/zh/#support' },
   ko: { blog: '블로그', title: 'TRider 블로그', intro: '태국 공항 이동과 여행에 필요한 정보를 확인하세요.', updated: '최종 업데이트', related: '관련 글', categories: '카테고리', all: '전체', cta: '✈️ 공항 이동 차량 · 24시간 예약', book: '지금 예약하기', support: '카카오톡 상담', supportUrl: 'https://open.kakao.com/o/suG4krMi' },
   en: { blog: 'Blog', title: 'TRider Blog', intro: 'Practical guides for airport transfers and travel in Thailand.', updated: 'Last updated', related: 'Related articles', categories: 'Categories', all: 'All posts', cta: '✈️ Fixed-price airport transfers · Book 24/7', book: 'Book now', support: 'WhatsApp', supportUrl: 'https://wa.me/66815693445' },
   ja: { blog: 'ブログ', title: 'TRiderブログ', intro: 'タイの空港送迎と旅行に役立つ情報をご案内します。', updated: '最終更新', related: '関連記事', categories: 'カテゴリー', all: 'すべての記事', cta: '✈️ 定額の空港送迎・24時間予約', book: '今すぐ予約', support: 'LINEで相談', supportUrl: 'https://lin.ee/55A9phq' },
@@ -28,6 +29,7 @@ const SERVICE_CTA = {
     en: '⛳ Golf course transfers · Book your vehicle 24/7',
     ja: '⛳ ゴルフ場への車両送迎・24時間予約',
     zh: '⛳ 高尔夫球场接送车辆 · 24小时预约',
+    'zh-TW': '⛳ 高爾夫球場接送車輛',
     ru: '⛳ Трансфер на поле для гольфа · Онлайн-бронирование',
     th: '⛳ รถรับส่งสนามกอล์ฟ · จองรถออนไลน์',
   },
@@ -49,6 +51,7 @@ const SERVICE_CTA = {
   },
 };
 const CATEGORY_LABELS = {
+  'zh-TW': { airport: '機場', golf: '高爾夫', travel: '旅遊', faq: '常見問題' },
   ko: { airport: '공항', golf: '골프', travel: '여행', faq: '자주 묻는 질문' },
   en: { airport: 'Airport', golf: 'Golf', travel: 'Travel', faq: 'FAQ' },
   ja: { airport: '空港', golf: 'ゴルフ', travel: '旅行', faq: 'よくある質問' },
@@ -265,8 +268,9 @@ function build() {
       ? `<img class="cover" src="${escapeHtml(post.cover)}" alt="" loading="lazy" decoding="async" width="${Number(post.coverWidth)}" height="${Number(post.coverHeight)}">`
       : '';
     const bookingHref = post.bookingService ? `/booking?service=${post.bookingService}&lang=${bookingLanguage(post.lang)}` : `/booking?lang=${bookingLanguage(post.lang)}`;
+    const supportUrl = post.lang === 'ko' && post.translationKey === 'pattaya-one-day-golf' ? 'https://open.kakao.com/o/s1NCCSWi' : ui.supportUrl;
     const ctaTitle = SERVICE_CTA[post.bookingService]?.[post.lang] || ui.cta;
-    const body = `<main><article class="article"><nav><a href="${listPath(post.lang)}">${ui.blog}</a> / <a href="${categoryPath(post.lang, post.category)}">${CATEGORY_LABELS[post.lang][post.category]}</a></nav>${languageSwitcher(translations, post.lang)}<h1>${escapeHtml(post.title)}</h1><p class="updated">${ui.updated}: <time datetime="${post.updated}">${post.updated}</time></p>${cover}<div class="content">${localizeBookingLinks(marked.parse(post.content), post.lang)}</div>${relatedBlock(post, posts)}<aside class="cta"><strong>${escapeHtml(ctaTitle)}</strong><div><a class="cta-primary" href="${escapeHtml(bookingHref)}">${ui.book}</a><a class="cta-secondary" href="${ui.supportUrl}" rel="noopener noreferrer">${ui.support}</a></div></aside></article></main>`;
+    const body = `<main><article class="article"><nav><a href="${listPath(post.lang)}">${ui.blog}</a> / <a href="${categoryPath(post.lang, post.category)}">${CATEGORY_LABELS[post.lang][post.category]}</a></nav>${languageSwitcher(translations, post.lang)}<h1>${escapeHtml(post.title)}</h1><p class="updated">${ui.updated}: <time datetime="${post.updated}">${post.updated}</time></p>${cover}<div class="content">${localizeBookingLinks(marked.parse(post.content), post.lang)}</div>${relatedBlock(post, posts)}<aside class="cta"><strong>${escapeHtml(ctaTitle)}</strong><div><a class="cta-primary" href="${escapeHtml(bookingHref)}">${ui.book}</a><a class="cta-secondary" href="${supportUrl}" rel="noopener noreferrer">${ui.support}</a></div></aside></article></main>`;
     write(path.join(post.slug, 'index.html'), page({
       title: `${post.title} | TRider`, description: post.description,
       canonical, lang: post.lang, body, image: post.cover, jsonLd, bookingHref,
@@ -292,7 +296,7 @@ function build() {
     for (const category of CATEGORIES) {
       const categoryPosts = languagePosts.filter((post) => post.category === category);
       const label = CATEGORY_LABELS[lang][category];
-      const empty = { ko: '등록된 글이 없습니다.', en: 'No articles yet.', ja: '記事はまだありません。', zh: '暂无文章。', ru: 'Статей пока нет.', th: 'ยังไม่มีบทความ' }[lang];
+      const empty = { ko: '등록된 글이 없습니다.', en: 'No articles yet.', ja: '記事はまだありません。', zh: '暂无文章。', 'zh-TW': '尚無文章。', ru: 'Статей пока нет.', th: 'ยังไม่มีบทความ' }[lang];
       const body = `<main><section class="hero"><p class="eyebrow">${ui.categories}</p><h1>${escapeHtml(label)}</h1><p><a href="${listPath(lang)}">${ui.all}</a></p></section><section class="post-list">${categoryPosts.length ? categoryPosts.map(postCard).join('') : `<p>${empty}</p>`}</section></main>`;
       const relative = lang === 'ko' ? path.join('category', category, 'index.html') : path.join('lang', lang, 'category', category, 'index.html');
       write(relative, page({ title: `${label} | ${ui.title}`, description: `${ui.title} · ${label}`, canonical: `${BLOG_ORIGIN}${categoryPath(lang, category)}`, lang, body }));
