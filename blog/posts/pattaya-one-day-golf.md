@@ -6,7 +6,7 @@ lang: ko
 category: golf
 bookingService: GOLF_TRANSFER
 date: 2026-11-13
-updated: 2026-11-13
+updated: 2026-11-16
 translationKey: pattaya-one-day-golf
 cover: /blog/assets/photos/chee-chan-course.jpg
 coverWidth: 1200
@@ -26,10 +26,10 @@ related:
 
 예를 들어 두 사람이 여행하지만 한 사람만 라운드한다면 조인 문의에는 실제 플레이 인원 1명을 적으세요. 차량을 함께 이용한다면 탑승 인원과 골프백 수량을 따로 알려주세요. 일정 상담에서 골프장과 티타임, 집결 장소를 확인하고, 골프 비용은 1인 기준으로, 차량 비용은 1대 기준으로 확인하면 견적을 읽기 쉽습니다.
 
-[버디골프 밴드에서 조인 일정 보기](https://www.band.us/band/90363824) · [카카오톡으로 희망일과 대체일 보내기](https://open.kakao.com/o/suG4krMi)
+[버디골프 첫 상담 안내](https://www.band.us/band/90363824/post/4110) · [카카오톡으로 희망일과 대체일 보내기](https://open.kakao.com/o/s1NCCSWi)
 
 > 파타야 조인 문의입니다. 희망일은 여행 둘째 날 오전, 대체일은 셋째 날 오전입니다. 실제 플레이 1명이고 숙소에서 골프장까지 왕복 차량도 함께 확인하고 싶습니다.
 
-실제 날짜와 숙소를 넣어 보내주세요. 버디골프와 TRider에서 골프 일정·조인·차량을 한 번에 상담합니다. 코스·티타임·비용은 확인 후 안내합니다.
+아직 날짜나 숙소를 정하지 않았다면 대략적인 체류 시기와 실제 플레이 인원부터 보내주세요. 버디골프와 TRider에서 골프 일정·조인·차량을 한 번에 상담합니다. 코스·티타임·비용은 확인 후 안내합니다.
 
 [WhatsApp으로도 골프와 차량을 함께 문의할 수 있습니다](https://wa.me/66815693445).
