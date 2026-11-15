@@ -1,4 +1,5 @@
 const createRateLimit = require('./rateLimit.middleware');
+const { normalizeDriverResetIdentifier } = require('../utils/driverResetIdentifier.util');
 
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
 const ONE_HOUR_MS = 60 * 60 * 1000;
@@ -45,13 +46,13 @@ const refreshRateLimit = createRateLimit({
 const passwordResetRequestRateLimit = createRateLimit({
   windowMs: ONE_HOUR_MS,
   max: 5,
-  keyFn: (req) => `auth:password-reset:request:${req.ip}:${String(req.body?.identifier || '').trim().toLowerCase()}`,
+  keyFn: (req) => `auth:password-reset:request:${req.ip}:${normalizeDriverResetIdentifier(req.body?.identifier)}`,
 });
 
 const passwordResetConfirmRateLimit = createRateLimit({
   windowMs: FIFTEEN_MINUTES_MS,
   max: 10,
-  keyFn: (req) => `auth:password-reset:confirm:${req.ip}:${String(req.body?.identifier || '').trim().toLowerCase()}`,
+  keyFn: (req) => `auth:password-reset:confirm:${req.ip}:${normalizeDriverResetIdentifier(req.body?.identifier)}`,
 });
 
 module.exports = {

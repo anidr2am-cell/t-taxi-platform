@@ -10,6 +10,7 @@ function harness({ user = { id: 10, email: 'driver@example.com', phone: '0812345
   const users = {
     findByEmail: async (email) => email === user?.email ? user : null,
     findDriverByPhone: async (phone) => phone === user?.phone ? user : null,
+    findUniqueDriverForReset: async (phones) => phones.includes(user?.phone) ? user : null,
   };
   const resets = {
     createCode: async (value) => { state.created = value; },
@@ -57,4 +58,42 @@ test('resetPassword rejects an invalid code without revealing account details', 
     service.resetPassword({ identifier: '0812345678', code: '654321', newPassword: 'NewPassword123!' }),
     (err) => err.errorCode === ERROR_CODES.PASSWORD_RESET_CODE_INVALID,
   );
+});
+
+test('Thai mobile aliases resolve to the same account for request and confirmation', async () => {
+  const user = { id: 10, email: 'driver@example.com', phone: '+66812345678', role: 'DRIVER', is_active: 1 };
+  const { service, state } = harness({ user });
+  await service.requestCode('081-234-5678');
+  await service.resetPassword({ identifier: '0066812345678', code: '123456', newPassword: 'NewPassword123!' });
+  assert.equal(state.created.userId, 10);
+  assert.equal(state.consumed.userId, 10);
+});
+
+test('placeholder and missing emails do not create a code or send mail', async () => {
+  for (const email of ['driver+1@driver.local', null]) {
+    const { service, state } = harness({ user: { id: 10, email, phone: '0812345678', role: 'DRIVER', is_active: 1 } });
+    await service.requestCode('+66812345678');
+    assert.equal(state.created, null);
+    assert.equal(state.email, null);
+  }
+});
+
+test('phone aliases share a single reset rate-limit identifier', () => {
+  const { normalizeDriverResetIdentifier } = require('../src/utils/driverResetIdentifier.util');
+  for (const value of ['0812345678', '+66 81 234 5678', '0066812345678', '66812345678']) {
+    assert.equal(normalizeDriverResetIdentifier(value), '+66812345678');
+  }
+  assert.equal(normalizeDriverResetIdentifier(' DRIVER@example.com '), 'driver@example.com');
+});
+
+test('two driver accounts with equivalent numbers are not selected by phone', async () => {
+  const UserRepository = require('../src/repositories/user.repository');
+  const repository = new UserRepository({
+    async query(sql, params) {
+      assert.match(sql, /phone IN \(\?\).*role = 'DRIVER'/);
+      assert.deepEqual(params, [['0812345678', '+66812345678']]);
+      return [[{ id: 10 }, { id: 11 }]];
+    },
+  });
+  assert.equal(await repository.findUniqueDriverForReset(['0812345678', '+66812345678']), null);
 });
