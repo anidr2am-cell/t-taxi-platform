@@ -2,7 +2,7 @@ const crypto = require('node:crypto');
 const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
-const { hashPassword } = require('../utils/passwordHash.util');
+const { hashPassword, verifyPassword } = require('../utils/passwordHash.util');
 const config = require('../config');
 const logger = require('../utils/logger');
 const { thaiMobileNumber } = require('../utils/driverResetIdentifier.util');
@@ -72,6 +72,35 @@ class DriverPasswordResetService {
       maxAttempts: MAX_ATTEMPTS,
     });
     if (!updated) this.throwInvalidCode();
+  }
+
+  async changePassword(userId, currentPassword, newPassword) {
+    const user = await this.userRepository.findById(userId);
+    if (user?.role !== 'DRIVER' || !user.is_active || !user.password_hash
+        || !(await verifyPassword(currentPassword, user.password_hash))) {
+      throw new AppError('Current password is incorrect', {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.CURRENT_PASSWORD_INCORRECT,
+      });
+    }
+    if (await verifyPassword(newPassword, user.password_hash)) {
+      throw new AppError('New password must differ from current password', {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.PASSWORD_UNCHANGED,
+      });
+    }
+
+    const updated = await this.resetRepository.changePassword({
+      userId,
+      currentHash: user.password_hash,
+      passwordHash: await hashPassword(newPassword),
+    });
+    if (!updated) {
+      throw new AppError('Password changed during the request', {
+        statusCode: HTTP_STATUS.CONFLICT,
+        errorCode: ERROR_CODES.PASSWORD_CHANGE_CONFLICT,
+      });
+    }
   }
 
   throwInvalidCode() {
