@@ -11,6 +11,7 @@ import '../../support/data/support_contact_api.dart';
 import '../../support/presentation/driver_support_page.dart';
 import '../data/account_api.dart';
 import '../data/account_models.dart';
+import 'driver_password_change_dialog.dart';
 import 'profile_edit_page.dart';
 import 'vehicle_list_page.dart';
 
@@ -116,6 +117,29 @@ class _AccountPageState extends State<AccountPage> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  Future<void> _changePassword() async {
+    final result = await showDialog<DriverPasswordChangeResult>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => DriverPasswordChangeDialog(
+        changePassword: widget.accountApi.changePassword,
+      ),
+    );
+    if (!mounted || result == null) return;
+    if (result == DriverPasswordChangeResult.sessionExpired) {
+      await widget.onUnauthorized();
+      return;
+    }
+    _message(
+      driverPasswordText(
+        context,
+        '비밀번호를 변경했습니다. 다시 로그인해 주세요.',
+        'เปลี่ยนรหัสผ่านแล้ว โปรดเข้าสู่ระบบใหม่',
+      ),
+    );
+    await widget.onLogout();
   }
 
   @override
@@ -248,6 +272,15 @@ class _AccountPageState extends State<AccountPage> {
                         ),
                       );
                     },
+                  ),
+                  ListTile(
+                    key: const Key('openDriverPasswordChange'),
+                    leading: const Icon(Icons.lock_outline),
+                    title: Text(
+                      driverPasswordText(context, '비밀번호 변경', 'เปลี่ยนรหัสผ่าน'),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: _changePassword,
                   ),
                   const SizedBox(height: 8),
                   ListTile(

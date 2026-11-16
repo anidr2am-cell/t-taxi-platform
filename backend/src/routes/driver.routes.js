@@ -1,5 +1,6 @@
 const express = require("express");
 const driverController = require("../controllers/driver.controller");
+const { changeDriverPassword } = require("../controllers/auth.controller");
 const driverProfileController = require("../controllers/driverProfile.controller");
 const driverVehicleController = require("../controllers/driverVehicle.controller");
 const driverLocationController = require("../controllers/driverLocation.controller");
@@ -10,6 +11,7 @@ const driverOperationalMiddleware = require("../middlewares/driverOperational.mi
 const validate = require("../middlewares/validate.middleware");
 const createRateLimit = require("../middlewares/rateLimit.middleware");
 const ROLES = require("../constants/roles");
+const { driverPasswordChangeSchema } = require("../validators/auth.validator");
 const {
   locationUpdateSchema,
 } = require("../validators/driverLocation.validator");
@@ -30,6 +32,11 @@ const { single, upload } = require("../config/multer");
 
 const router = express.Router();
 const driverLocationRateLimit = createRateLimit({ windowMs: 60_000, max: 60 });
+const driverPasswordChangeRateLimit = createRateLimit({
+  windowMs: 15 * 60_000,
+  max: 5,
+  keyFn: (req) => req.user.id,
+});
 const vehicleFiles = upload.fields([
   { name: "vehiclePhotos", maxCount: 6 },
   { name: "insuranceCertificate", maxCount: 1 },
@@ -38,6 +45,12 @@ const vehicleFiles = upload.fields([
 ]);
 
 router.use(authMiddleware, roleMiddleware([ROLES.DRIVER]));
+router.post(
+  "/profile/password",
+  driverPasswordChangeRateLimit,
+  validate({ body: driverPasswordChangeSchema }),
+  changeDriverPassword,
+);
 router.use(driverOperationalMiddleware);
 
 router.get("/status", driverController.getStatus);

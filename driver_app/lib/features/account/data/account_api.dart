@@ -6,6 +6,7 @@ import 'account_models.dart';
 abstract interface class AccountDataSource {
   Future<DriverProfile> getProfile();
   Future<DriverProfile> updateProfile(Map<String, dynamic> changes);
+  Future<void> changePassword(String currentPassword, String newPassword);
   Future<void> uploadAvatar(AccountUploadFile file);
   Future<void> uploadVehiclePhoto(AccountUploadFile file);
   Future<List<DriverVehicle>> getVehicles();
@@ -57,6 +58,18 @@ class AccountApi implements AccountDataSource {
           body: changes,
         ),
       ),
+    );
+  }
+
+  @override
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    await _client.postJson(
+      '/api/v1/driver/profile/password',
+      bearerToken: await _token(),
+      body: {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      },
     );
   }
 

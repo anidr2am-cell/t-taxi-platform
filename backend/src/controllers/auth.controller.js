@@ -71,6 +71,12 @@ const confirmDriverPasswordReset = asyncHandler(async (req, res) => {
   return success(res, null, 'Password reset successful.');
 });
 
+const changeDriverPassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  await getDriverPasswordResetService().changePassword(req.user.id, currentPassword, newPassword);
+  return success(res, null, 'Password changed successfully.');
+});
+
 module.exports = {
   register,
   login,
@@ -82,4 +88,5 @@ module.exports = {
   me,
   requestDriverPasswordReset,
   confirmDriverPasswordReset,
+  changeDriverPassword,
 };

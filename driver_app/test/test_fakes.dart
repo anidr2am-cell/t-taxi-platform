@@ -963,6 +963,9 @@ DriverVehicle driverVehicle({
 );
 
 class FakeAccountApi implements AccountDataSource {
+  @override
+  Future<void> changePassword(String currentPassword, String newPassword) async {}
+
   DriverProfile profile = driverProfile();
   RatingSummary rating = const RatingSummary(
     averageRating: 4.8,

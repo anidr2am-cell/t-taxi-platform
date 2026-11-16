@@ -79,6 +79,38 @@ class DriverPasswordResetRepository {
       conn.release();
     }
   }
+
+  async changePassword({ userId, currentHash, passwordHash }) {
+    const conn = await this.pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      // Lock reset codes before updating the user, as the reset flow does.
+      await conn.query(
+        `UPDATE driver_password_reset_codes SET used_at = CURRENT_TIMESTAMP
+         WHERE user_id = ? AND used_at IS NULL`,
+        [userId],
+      );
+      const [result] = await conn.execute(
+        `UPDATE users
+         SET password_hash = ?, auth_token_version = auth_token_version + 1,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND role = 'DRIVER' AND is_active = 1 AND deleted_at IS NULL
+           AND CAST(password_hash AS BINARY) = CAST(? AS BINARY)`,
+        [passwordHash, userId, currentHash],
+      );
+      if (result.affectedRows !== 1) {
+        await conn.rollback();
+        return false;
+      }
+      await conn.commit();
+      return true;
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
 }
 
 module.exports = DriverPasswordResetRepository;
