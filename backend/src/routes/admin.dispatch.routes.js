@@ -40,6 +40,33 @@ const { LOCALES, CHANNELS } = require('../utils/reviewRequest.util');
 const { success } = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
 const container = require('../helpers/container');
+const vehicleMediaParams = Joi.object({
+  id: Joi.number().integer().positive().required(),
+  vehicleId: Joi.number().integer().positive().required(),
+});
+router.get('/drivers/:id/vehicles/:vehicleId/media', adminOnly,
+  validate({ params: vehicleMediaParams }),
+  asyncHandler(async (req, res) => success(res, await require('../services/adminDriverVehicleMedia.service')
+    .files(Number(req.params.id), Number(req.params.vehicleId)))),
+);
+router.get('/drivers/:id/vehicles/:vehicleId/media/:fileId', adminOnly,
+  validate({ params: vehicleMediaParams.keys({ fileId: Joi.number().integer().positive().required() }) }),
+  asyncHandler(async (req, res) => {
+    const file = await require('../services/adminDriverVehicleMedia.service')
+      .files(Number(req.params.id), Number(req.params.vehicleId), Number(req.params.fileId));
+    return res.sendFile(require('../utils/uploadPath.util').resolveUploadAbsolutePath(file.file_path), {
+      headers: { 'Content-Type': file.mime_type, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' },
+    });
+  }),
+);
+router.patch('/drivers/:id/vehicles/:vehicleId/insurance', adminOnly,
+  validate({ params: vehicleMediaParams, body: Joi.object({
+    expiresOn: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).allow(null).required(),
+  }) }),
+  asyncHandler(async (req, res) => success(res,
+    await require('../services/adminDriverVehicleMedia.service').updateInsurance(
+      Number(req.params.id), Number(req.params.vehicleId), req.body.expiresOn, req.user))),
+);
 router.post('/drivers/:id/delete', adminOnly,
   validate({
     params: driverIdParamsSchema,

@@ -416,6 +416,26 @@ class AdminDispatchApiService {
     await _request('POST', '/admin/drivers/$driverId/delete', body: {'reason': reason});
   }
 
+  Future<List<dynamic>> getDriverVehicleMedia(int driverId, int vehicleId) async =>
+      List<dynamic>.from(await _request('GET', '/admin/drivers/$driverId/vehicles/$vehicleId/media') as List);
+
+  Future<Uint8List> getDriverVehicleMediaBytes(int driverId, int vehicleId, int fileId) async {
+    final token = await getSavedToken();
+    if (token == null || token.isEmpty) throw const AdminDispatchApiException('Unauthorized');
+    final uri = Uri.parse('$_base/admin/drivers/$driverId/vehicles/$vehicleId/media/$fileId');
+    final headers = {'Authorization': 'Bearer $token'};
+    final response = await (_client == null ? http.get(uri, headers: headers) : _client.get(uri, headers: headers));
+    final mime = response.headers['content-type'] ?? '';
+    if (response.statusCode != 200 || !(mime.startsWith('image/') || mime.startsWith('application/pdf'))) {
+      throw const AdminDispatchApiException('File unavailable');
+    }
+    return response.bodyBytes;
+  }
+
+  Future<Map<String, dynamic>> updateDriverInsurance(int driverId, int vehicleId, String? expiresOn) async =>
+      Map<String, dynamic>.from(await _request('PATCH', '/admin/drivers/$driverId/vehicles/$vehicleId/insurance',
+        body: {'expiresOn': expiresOn}) as Map);
+
   Future<Map<String, dynamic>> assignDriver(
     String bookingNumber,
     int driverId,

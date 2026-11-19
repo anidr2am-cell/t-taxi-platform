@@ -4,15 +4,18 @@ import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../services/admin_dispatch_api_service.dart';
 import '../utils/admin_customer_brief.dart';
+import 'admin_driver_vehicle_media.dart';
 
 class AdminDriverDetailDialog extends StatefulWidget {
   const AdminDriverDetailDialog({
     super.key,
     required this.driverId,
     required this.api,
+    this.onChanged,
   });
   final int driverId;
   final AdminDispatchApiService api;
+  final VoidCallback? onChanged;
   @override
   State<AdminDriverDetailDialog> createState() =>
       _AdminDriverDetailDialogState();
@@ -187,6 +190,11 @@ class _AdminDriverDetailDialogState extends State<AdminDriverDetailDialog> {
                         row('vehicle', v['typeCode']),
                         row('color', v['color']),
                         row('vehicle_status', v['approvalStatus']),
+                        if (v['vehicleId'] is num) AdminDriverVehicleMedia(
+                          key: ValueKey(v['vehicleId']),
+                          driverId: widget.driverId, vehicle: v,
+                          api: widget.api, onChanged: widget.onChanged,
+                        ),
                         const SizedBox(height: AppTokens.spaceSm),
                       ],
                     ],

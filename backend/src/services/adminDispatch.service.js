@@ -1,4 +1,5 @@
 const { resolveBookingAirport } = require('../utils/bookingAirport.util');
+const { driverInsurance } = require('../utils/driverInsurance.util');
 const { buildAdminDriverFinancialSummary } = require('../utils/adminDriverFinancialSummary');
 const { randomUUID } = require("node:crypto");
 const AppError = require("../utils/AppError");
@@ -292,6 +293,12 @@ class AdminDispatchService {
       driverId: row.id,
       displayName: row.name,
       phone: row.phone,
+      insurance: {
+        ...driverInsurance(row.earliest_insurance_expiry),
+        missingDates: Number(row.missing_insurance_dates ?? 0),
+      },
+      vehiclePlateNumbers: String(row.search_vehicle_plates ?? '')
+        .split('|').filter(Boolean),
       activeState: row.is_active ? "ACTIVE" : "INACTIVE",
       onlineState: row.is_online ? "ONLINE" : "OFFLINE",
       driverStatus: row.status,
@@ -916,6 +923,7 @@ class AdminDispatchService {
         vehicleId: v.id, typeCode: v.vehicle_type_code, modelName: v.model_name,
         plateNumber: v.plate_number, color: v.color, isPrimary: Boolean(v.is_primary),
         isActive: Boolean(v.is_active), approvalStatus: v.approval_status,
+        insurance: driverInsurance(v.insurance_expires_on),
       })),
     };
   }
