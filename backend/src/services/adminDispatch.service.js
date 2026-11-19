@@ -292,6 +292,8 @@ class AdminDispatchService {
       driverId: row.id,
       displayName: row.name,
       phone: row.phone,
+      vehiclePlateNumbers: String(row.search_vehicle_plates ?? '')
+        .split('|').filter(Boolean),
       activeState: row.is_active ? "ACTIVE" : "INACTIVE",
       onlineState: row.is_online ? "ONLINE" : "OFFLINE",
       driverStatus: row.status,

@@ -25,3 +25,9 @@ test('actual routes enforce roles and URL contract',async()=>{
  const admin='Bearer '+token('ADMIN');assert.equal((await request(app).get('/api/v1/admin/drivers/6').set('Authorization',admin)).status,200);assert.equal((await request(app).get('/api/v1/admin/bookings/TX209901010206/customer-brief/photos').set('Authorization',admin)).status,200);assert.equal(count,1);
  assert.equal((await request(app).get('/api/v1/admin/bookings/TX209901010206/customer-brief/photos/0').set('Authorization',admin)).status,400);
 });
+
+test('driver search includes additional vehicle plates with legacy empty fallback', () => {
+  const s = service();
+  assert.deepEqual(s.mapDriverListItem({ id: 6, search_vehicle_plates: 'AB1234|CD5678' }).vehiclePlateNumbers, ['AB1234', 'CD5678']);
+  assert.deepEqual(s.mapDriverListItem({ id: 2 }).vehiclePlateNumbers, []);
+});
