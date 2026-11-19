@@ -6,7 +6,7 @@ lang: ru
 category: airport
 translationKey: suvarnabhumi-airport-pickup-guide
 date: 2026-10-28
-updated: 2026-10-28
+updated: 2026-11-01
 related:
   - suvarnabhumi-to-pattaya-ru
   - suvarnabhumi-to-bangkok-city-ru
@@ -55,4 +55,4 @@ Gate 7 в этом руководстве относится к **Суварна
 - Все пассажиры и багаж учтены.
 - Именная табличка заказана отдельно, если нужна.
 
-Для маршрута к отелю воспользуйтесь руководством [BKK — Бангкок](/blog/suvarnabhumi-to-bangkok-city-ru) или [BKK — Паттайя](/blog/suvarnabhumi-to-pattaya-ru). [Забронировать встречу в Суварнабхуми](/booking?lang=en) можно круглосуточно; форма откроется на английском.
+Для маршрута к отелю воспользуйтесь руководством [BKK — Бангкок](/blog/suvarnabhumi-to-bangkok-city-ru) или [BKK — Паттайя](/blog/suvarnabhumi-to-pattaya-ru). [Забронировать встречу в Суварнабхуми](/booking?lang=ru) можно круглосуточно; форма откроется на русском.

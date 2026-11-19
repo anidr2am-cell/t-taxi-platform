@@ -281,6 +281,7 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
         break;
       case 'LINE':
       case 'KAKAO':
+      case 'TELEGRAM':
         final url = channel.addUrl?.trim();
         if (url == null || url.isEmpty) return false;
         uri = parseAllowedContactChannelUrl(
@@ -817,7 +818,7 @@ class _WeChatPanel extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            l10n.t('contact_connect_wechat_body'),
+            l10n.t('booking_wechat_qr_help'),
             style: const TextStyle(height: 1.45),
           ),
           if (qrUrl != null && qrUrl.isNotEmpty) ...[
@@ -827,9 +828,8 @@ class _WeChatPanel extends StatelessWidget {
                 borderRadius: AppTokens.borderRadiusMd,
                 child: Image.network(
                   qrUrl,
-                  width: 180,
-                  height: 180,
-                  fit: BoxFit.cover,
+                  width: 280,
+                  fit: BoxFit.contain,
                   errorBuilder: (_, error, stackTrace) => const SizedBox(
                     width: 180,
                     height: 180,
@@ -839,6 +839,19 @@ class _WeChatPanel extends StatelessWidget {
               ),
             ),
           ],
+          if (qrUrl != null && qrUrl.isNotEmpty)
+            TextButton.icon(
+              onPressed: () async {
+                final uri = parseAllowedContactChannelUrl(
+                  qrUrl,
+                  allowHttp: allowHttpContactUrlsForEnvironment(),
+                );
+                if (uri != null)
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+              },
+              icon: const Icon(Icons.open_in_new),
+              label: Text(l10n.t('booking_wechat_open_qr')),
+            ),
           if (accountId != null && accountId.isNotEmpty) ...[
             const SizedBox(height: 12),
             Row(

@@ -22,6 +22,7 @@ const CONTACT_TEXT_KEYS = [
   'contactKakaoEnabled', 'contactKakaoDisplayName', 'contactKakaoAddUrl', 'contactKakaoAccountId',
   'contactWhatsappEnabled', 'contactWhatsappDisplayName', 'contactWhatsappPhoneNumber',
   'contactWechatEnabled', 'contactWechatDisplayName', 'contactWechatAccountId',
+  'contactTelegramEnabled', 'contactTelegramDisplayName', 'contactTelegramAddUrl',
 ];
 const IMAGE_KEYS = {
   lineQr: 'lineQrImagePath',
@@ -165,6 +166,9 @@ class PlatformSettingsService {
       contactWechatEnabled: this.truthy(values.contactWechatEnabled),
       contactWechatDisplayName: values.contactWechatDisplayName || '',
       contactWechatAccountId: values.contactWechatAccountId || '',
+      contactTelegramEnabled: this.truthy(values.contactTelegramEnabled),
+      contactTelegramDisplayName: values.contactTelegramDisplayName || 'Telegram',
+      contactTelegramAddUrl: values.contactTelegramAddUrl || '',
     };
   }
 
@@ -201,20 +205,27 @@ class PlatformSettingsService {
         enabled: this.truthy(values.contactWechatEnabled),
         displayName: values.contactWechatDisplayName || 'WeChat',
         accountId: values.contactWechatAccountId || '',
-        qrImageUrl: settingsAssetUrl('contactWechatQr', values.contactWechatQrImagePath),
+        qrImageUrl: settingsAssetUrl('contactWechatQr', values.contactWechatQrImagePath || 'bundled-wechat-20261031'),
+      },
+      {
+        code: 'TELEGRAM',
+        enabled: this.truthy(values.contactTelegramEnabled),
+        displayName: values.contactTelegramDisplayName || 'Telegram',
+        addUrl: values.contactTelegramAddUrl || '',
       },
     ];
     return channels.filter((channel) => channel.enabled);
   }
 
   async updateContactChannels(input, userId) {
-    const normalized = { ...input };
+    const normalized = { ...await this.getContactChannelValues(), ...input };
     for (const key of [
       'guestLookupInquiryBannerEnabled',
       'contactLineEnabled',
       'contactKakaoEnabled',
       'contactWhatsappEnabled',
       'contactWechatEnabled',
+      'contactTelegramEnabled',
     ]) {
       if (Object.prototype.hasOwnProperty.call(normalized, key)) {
         normalized[key] = this.toStorageBoolean(normalized[key]);
@@ -231,6 +242,7 @@ class PlatformSettingsService {
     const urlFields = [
       { key: 'contactLineAddUrl', label: 'LINE add URL' },
       { key: 'contactKakaoAddUrl', label: 'Kakao add URL' },
+      { key: 'contactTelegramAddUrl', label: 'Telegram URL' },
     ];
     for (const field of urlFields) {
       const raw = String(input[field.key] ?? '').trim();
@@ -284,6 +296,7 @@ class PlatformSettingsService {
     const key = IMAGE_KEYS[kind];
     if (!key) throw this.notFound();
     const row = await this.settingsRepository.findByGroupAndKey(GROUP, key);
+    if (!row?.value && kind==='contactWechatQr') return path.resolve(__dirname,'../../assets/contact-channels/wechat-qr.jpg');
     if (!row?.value) throw this.notFound();
     const absolutePath = path.resolve(uploadDir, row.value);
     const root = `${path.resolve(uploadDir)}${path.sep}`;

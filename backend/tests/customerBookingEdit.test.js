@@ -1,0 +1,34 @@
+const test=require('node:test'),assert=require('node:assert/strict');
+const {CustomerBookingEditService,snapshot}=require('../src/services/customerBookingEdit.service');
+const validator=require('../src/validators/customerBookingEdit.validator').update;
+function harness({status='DRIVER_ASSIGNED',assigned=true,pushFails=false}={}){
+ let row={id:1,booking_number:'TX209901010218',status,service_type_code:'AIRPORT_PICKUP',customer_phone:'+821012345678',customer_email:null,special_requests:null,flight_number:'KE651',metadata:{messengerType:'LINE',messengerId:'qa_line',emailDelivery:{receiptClaim:true}},contact_channel:'LINE',total_amount:1000,scheduled_pickup_at:'2099-01-01 12:00:00'};
+ let saved=0,notifications=[],deliveries=0,logs=[],committed=false,flightCleared=false,reset=false;let rollbackRow;
+ const conn={beginTransaction:async()=>{rollbackRow=structuredClone(row);committed=false;},commit:async()=>{committed=true;},rollback:async()=>{row=rollbackRow;},release(){}};
+ const repo={find:async()=>row,save:async(_,old,next,fc,rc)=>{saved++;row={...row,customer_phone:next.phone,customer_email:next.email,special_requests:next.specialRequests,metadata:next.metadata,flight_number:next.flightNumber};flightCleared=fc;reset=rc;},assignment:async()=>assigned?{id:10,driver_id:2,user_id:20,status:'ONLINE'}:null};
+ const bookings={insertActivityLog:async(_,id,data)=>logs.push(data)};
+ const bookingService={assertCustomerOrGuestAccess:async(_,b,user,token)=>{if(!(user?.id===42&&user?.role==='CUSTOMER')&&token!=='qa-token')throw Object.assign(Error('not accessible'),{statusCode:403});},resolveInitialContactChannel:async(c)=>c.messengerType};
+ const n={persistDirectNotificationTx:async(_,spec,options)=>{assert.equal(committed,false);notifications.push({spec,options});return {notificationId:1};},processDeliveries:async()=>{assert.equal(committed,true);deliveries++;if(pushFails)throw Error('network');}};
+ return {service:new CustomerBookingEditService({getConnection:async()=>conn},bookings,bookingService,n,repo),row:()=>row,result:()=>({saved,notifications,deliveries,logs,flightCleared,reset})};
+}
+async function read(h,user=null,token='qa-token'){return h.service.run('TX209901010218',user,token);}
+async function edit(h,body,revision){const s=await read(h);return h.service.run('TX209901010218',null,'qa-token',{revision:revision??s.revision,...body});}
+test('guest/member authorization, including expired or another reservation token',async()=>{
+ const h=harness();assert.equal((await read(h)).phone,'+821012345678');assert.equal((await read(h,{id:42,role:'CUSTOMER'},null)).canEdit,true);
+ for(const [user,token] of [[null,null],[null,'expired'],[{id:99,role:'CUSTOMER'},null],[{id:42,role:'DRIVER'},null]])await assert.rejects(read(h,user,token),e=>e.statusCode===403);
+ assert.equal(h.result().saved,0);
+});
+test('contact/flight/requests save retains assignment, fare, schedule and mail history; notification has no contacts',async()=>{
+ const h=harness(),initial=structuredClone(h.row());await edit(h,{customer:{phone:'+66812345678',email:'qa@example.com'},flightNumber:'TG 123',specialRequests:'Need child seat'});
+ const r=h.result();assert.equal(r.saved,1);assert.equal(r.notifications.length,1);assert.equal(r.deliveries,1);assert(r.flightCleared);assert(r.reset);
+ assert.equal(h.row().total_amount,initial.total_amount);assert.equal(h.row().scheduled_pickup_at,initial.scheduled_pickup_at);assert.deepEqual(h.row().metadata.emailDelivery,initial.metadata.emailDelivery);
+ const s=JSON.stringify(r.notifications);for(const secret of ['+66812345678','qa@example.com','qa_line','Need child seat'])assert(!s.includes(secret));assert.equal(r.notifications[0].spec.recipientDriverId,2);assert.equal(r.notifications[0].spec.payload.assignmentId,10);
+});
+test('identical request retry creates no duplicate notification even with stale revision',async()=>{const h=harness(),s=await read(h);const body={specialRequests:'QA request'};await edit(h,body,s.revision);const second=await edit(h,body,s.revision);assert.equal(second.changed,false);assert.equal(h.result().notifications.length,1);});
+test('stale revision rejects a different edit without overwriting',async()=>{const h=harness(),s=await read(h);await edit(h,{specialRequests:'first'},s.revision);await assert.rejects(edit(h,{specialRequests:'second'},s.revision),e=>e.errorCode==='BOOKING_EDIT_CONFLICT');assert.equal(h.row().special_requests,'first');assert.equal(h.result().notifications.length,1);});
+test('change request is recorded but does not change itinerary, fare or assignment; duplicate suppressed',async()=>{const h=harness(),s=await read(h);const body={changeRequest:'Please change pickup to 15:00'};await edit(h,body,s.revision);await edit(h,body,s.revision);assert.equal(h.result().saved,1);assert.equal(h.row().scheduled_pickup_at,'2099-01-01 12:00:00');assert.equal(h.row().metadata.customerChangeRequest.message,body.changeRequest);assert.equal(h.row().total_amount,1000);assert.equal(h.result().logs[0].activityType,'CUSTOMER_BOOKING_CHANGE_REQUESTED');assert(!JSON.stringify(h.result().notifications).includes(body.changeRequest));});
+for(const status of ['PICKED_UP','SETTLEMENT_PENDING','COMPLETED','CANCELLED','NO_SHOW'])test(status+' is read only',async()=>{const h=harness({status});assert.equal((await read(h)).canEdit,false);await assert.rejects(edit(h,{specialRequests:'x'}),e=>e.errorCode==='BOOKING_EDIT_CLOSED');assert.equal(h.result().saved,0);});
+test('unassigned booking is saved without driver notifications',async()=>{const h=harness({assigned:false});await edit(h,{specialRequests:'QA'});assert.equal(h.result().saved,1);assert.equal(h.result().notifications.length,0);});
+test('push error cannot undo a committed save or cause a duplicate on retry',async()=>{const h=harness({pushFails:true}),s=await read(h);await edit(h,{specialRequests:'QA'},s.revision);await edit(h,{specialRequests:'QA'},s.revision);assert.equal(h.result().notifications.length,1);assert.equal(h.row().special_requests,'QA');});
+test('validator permits only approved editable fields and international phone; no price/status/schedule mutation',()=>{const revision='a'.repeat(64);for(const body of [{totalAmount:1},{status:'COMPLETED'},{scheduledPickupAt:'2099-01-01'},{origin:{lat:1}},{customer:{phone:'0812345678'}},{customer:{email:'bad'}},{flightNumber:'bad flight'}])assert(validator.validate({revision,...body}).error);assert(!validator.validate({revision,customer:{phone:'+66812345678',email:'qa@example.com'}}).error);});
+test('LINE contact cannot be changed to an empty ID; new SMS preference is not offered',async()=>{const h=harness();await assert.rejects(edit(h,{customer:{messengerId:null}}),e=>e.statusCode===422);await assert.rejects(edit(h,{customer:{messengerType:'SMS'}}),e=>e.statusCode===422);assert.equal(h.result().saved,0);});

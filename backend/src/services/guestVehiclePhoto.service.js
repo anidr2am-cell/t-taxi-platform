@@ -1,3 +1,5 @@
+const fs = require('node:fs/promises');
+const {resolveUploadAbsolutePath}=require('../utils/uploadPath.util');
 const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
@@ -28,6 +30,14 @@ class GuestVehiclePhotoService {
     const file = await this.bookingRepository.findAssignedDriverAvatarFile(bookingId, authorized ? null : hashToken(token));
     if (!file) throw new AppError('Photo not found', {statusCode: HTTP_STATUS.NOT_FOUND,errorCode:ERROR_CODES.NOT_FOUND});
     return this.mapPhotoFileRow(file);
+  }
+
+  async availablePhoto(files) {
+    for(const file of files){
+      if(!String(file.mime_type||'').startsWith('image/'))continue;
+      try{if((await fs.stat(resolveUploadAbsolutePath(file.file_path))).isFile())return file;}catch(_){/* Missing legacy originals must not hide another valid assigned-driver photo. */}
+    }
+    throw new AppError('Vehicle photo unavailable',{statusCode:404,errorCode:'VEHICLE_PHOTO_UNAVAILABLE'});
   }
 
   buildPublicPhotoPath(bookingId) {
@@ -97,9 +107,9 @@ class GuestVehiclePhotoService {
       conn.release();
     }
 
-    const file = await this.bookingRepository.findAssignedDriverVehiclePhotoFileByBookingId(
-      bookingId,
-    );
+    const file = typeof this.bookingRepository.findAssignedDriverVehiclePhotoFiles === 'function'
+      ? await this.availablePhoto(await this.bookingRepository.findAssignedDriverVehiclePhotoFiles(bookingId))
+      : await this.bookingRepository.findAssignedDriverVehiclePhotoFileByBookingId(bookingId);
     if (!file) {
       throw new AppError('Vehicle photo not found', {
         statusCode: HTTP_STATUS.NOT_FOUND,
@@ -119,10 +129,9 @@ class GuestVehiclePhotoService {
       });
     }
 
-    const file = await this.bookingRepository.findGuestAssignedDriverVehiclePhotoFile(
-      bookingId,
-      hashToken(token),
-    );
+    const file = typeof this.bookingRepository.findAssignedDriverVehiclePhotoFiles === 'function'
+      ? await this.availablePhoto(await this.bookingRepository.findAssignedDriverVehiclePhotoFiles(bookingId,hashToken(token)))
+      : await this.bookingRepository.findGuestAssignedDriverVehiclePhotoFile(bookingId,hashToken(token));
     if (!file) {
       throw new AppError('Vehicle photo not found', {
         statusCode: HTTP_STATUS.NOT_FOUND,

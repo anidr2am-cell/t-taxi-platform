@@ -1,7 +1,7 @@
 const database = require('../config/database');
 const NOTIFICATION_CHANNELS = require('../constants/notificationChannels');
 const DELIVERY_STATUS = require('../constants/notificationDeliveryStatus');
-const { customerEmailSlot, CUSTOMER_EMAIL_TYPES } = require('../policies/notificationEmail.policy');
+const { customerEmailSlot, CUSTOMER_EMAIL_TYPES, ADMIN_BOOKING_EMAIL_RESEND } = require('../policies/notificationEmail.policy');
 const { canRecoverAttempt } = require('../policies/emailAttempt.policy');
 const { randomUUID } = require('node:crypto');
 const { formatServiceDateTimeIso } = require('../utils/serviceDateTime.util');
@@ -130,6 +130,17 @@ class NotificationRepository {
     );
   }
 
+  async isGateArrivalCurrent(notification) {
+    const [rows] = await this.pool.query(`SELECT a.id FROM booking_driver_assignments a
+      JOIN bookings b ON b.id=a.booking_id JOIN drivers d ON d.id=a.driver_id
+      WHERE a.booking_id=? AND a.driver_id=? AND a.is_active=1 AND a.deleted_at IS NULL
+      AND d.deleted_at IS NULL AND d.status <> 'SUSPENDED' AND b.deleted_at IS NULL
+      AND b.status IN ('DRIVER_ASSIGNED','ON_ROUTE','DRIVER_ARRIVED')
+      AND a.id=? LIMIT 1`,
+      [notification.booking_id, notification.recipient_driver_id, notification.payload?.assignmentId]);
+    return rows.length > 0;
+  }
+
   async findById(notificationId) {
     const [rows] = await this.pool.query(
       `
@@ -138,7 +149,7 @@ class NotificationRepository {
           n.audience_role, n.event_id, n.event_name, n.type, n.title, n.body, n.payload,
           n.read_at, n.created_at, n.updated_at,
           CASE
-            WHEN n.recipient_type = 'USER' AND (n.type = 'TRIP_ENDED' OR (n.type = 'TRIP_COMPLETED' AND JSON_UNQUOTE(JSON_EXTRACT(n.payload, '$.tripEndedDirectly')) = 'true')) AND u.role = 'CUSTOMER'
+            WHEN n.recipient_type = 'USER' AND u.role = 'CUSTOMER'
               THEN COALESCE(NULLIF(TRIM(b.customer_email), ''), u.email)
             WHEN n.recipient_type = 'USER' THEN u.email
             WHEN n.recipient_type = 'GUEST_BOOKING' THEN b.customer_email
@@ -186,6 +197,16 @@ class NotificationRepository {
       }
       let receiptMetadata=bookings[0].metadata;
       if(typeof receiptMetadata==='string'){try{receiptMetadata=JSON.parse(receiptMetadata)}catch{receiptMetadata={}}}
+      const resend = notification.event_name === ADMIN_BOOKING_EMAIL_RESEND;
+      if (resend && (notification.type !== 'BOOKING_CREATED'
+        || Number(receiptMetadata?.adminBookingEmailResend?.notificationId) !== Number(notification.id)
+        || Number(receiptMetadata?.adminBookingEmailResend?.deliveryId) !== Number(delivery.id))) {
+        await conn.commit();return {allowed:false,error:'EMAIL_POLICY_RESEND_NOT_APPROVED'};
+      }
+      if(!resend && notification.type==='BOOKING_CREATED' && receiptMetadata?.adminBookingConfirmationEmail?.notificationId
+        && Number(receiptMetadata.adminBookingConfirmationEmail.notificationId)!==Number(notification.id)) {
+        await conn.commit();return {allowed:false,error:'EMAIL_POLICY_SUPERSEDED_BY_ADMIN_BOOKING'};
+      }
       if(receiptMetadata?.adminReceiptEmail?.notificationId && Number(receiptMetadata.adminReceiptEmail.notificationId)!==Number(notification.id)) {
         await conn.commit();return {allowed:false,error:'EMAIL_POLICY_SUPERSEDED_BY_ADMIN_RECEIPT'};
       }
@@ -205,19 +226,23 @@ class NotificationRepository {
         }
         previousEnvelope = attempt.envelope_encrypted;
       }
-      // Count historical sends too, including other customer event types. Failed
-      // attempts may have been accepted by SMTP; count conservatively, not twice.
-      const [history] = await conn.query(`SELECT n.type FROM notification_deliveries d
-        JOIN notifications n ON n.id = d.notification_id LEFT JOIN users u ON u.id = n.user_id
-        WHERE n.booking_id = ? AND d.channel = 'EMAIL' AND d.id <> ?
-          AND COALESCE(n.audience_role, IF(n.recipient_type = 'GUEST_BOOKING', 'CUSTOMER', u.role)) = 'CUSTOMER'
-          AND (d.delivery_status = 'DELIVERED' OR d.last_error LIKE 'PERMANENT_EMAIL_%'
-            OR EXISTS (SELECT 1 FROM notification_email_reviews hr WHERE hr.delivery_id=d.id AND hr.action='ACCEPTED_CONFIRMED')
-            OR (d.attempt_count > 0 AND d.delivery_status <> 'SKIPPED'
-              AND COALESCE(d.last_error, '') <> 'PERMANENT_INVALID_RECIPIENT'))`, [notification.booking_id, recovery ? delivery.id : 0]);
-      let error = history.length >= 2 ? 'EMAIL_POLICY_BOOKING_LIMIT' : null;
-      if (history.some((row) => customerEmailSlot(row.type) === customerEmailSlot(notification.type))) {
-        error = 'EMAIL_POLICY_SLOT_ALREADY_USED';
+      let error = null;
+      if (!resend) {
+        // An approved manual resend is separate from the automatic mail slots.
+        const [history] = await conn.query(`SELECT n.type FROM notification_deliveries d
+          JOIN notifications n ON n.id = d.notification_id LEFT JOIN users u ON u.id = n.user_id
+          WHERE n.booking_id = ? AND d.channel = 'EMAIL' AND d.id <> ?
+            AND COALESCE(n.event_name, '') <> ?
+            AND COALESCE(n.audience_role, IF(n.recipient_type = 'GUEST_BOOKING', 'CUSTOMER', u.role)) = 'CUSTOMER'
+            AND (d.delivery_status = 'DELIVERED' OR d.last_error LIKE 'PERMANENT_EMAIL_%'
+              OR EXISTS (SELECT 1 FROM notification_email_reviews hr WHERE hr.delivery_id=d.id AND hr.action='ACCEPTED_CONFIRMED')
+              OR (d.attempt_count > 0 AND d.delivery_status <> 'SKIPPED'
+                AND COALESCE(d.last_error, '') <> 'PERMANENT_INVALID_RECIPIENT'))`,
+          [notification.booking_id, recovery ? delivery.id : 0, ADMIN_BOOKING_EMAIL_RESEND]);
+        if (history.length >= 2) error = 'EMAIL_POLICY_BOOKING_LIMIT';
+        if (history.some(row => customerEmailSlot(row.type) === customerEmailSlot(notification.type))) {
+          error = 'EMAIL_POLICY_SLOT_ALREADY_USED';
+        }
       }
       if (notification.type === 'BOOKING_CANCELLED') {
         const [[started]] = await conn.query(`SELECT COUNT(*) AS n FROM booking_status_logs

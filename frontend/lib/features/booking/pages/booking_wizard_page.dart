@@ -185,7 +185,9 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
         _controller
             .initialize(
               initialServiceType: args?.serviceType,
-              freshEntry: args != null && (args.freshEntry || consumeFreshBookingEntry(Uri.base)),
+              freshEntry:
+                  args != null &&
+                  (args.freshEntry || consumeFreshBookingEntry(Uri.base)),
             )
             .then((_) {
               if (mounted) _controller.syncDerivedData();
@@ -664,7 +666,10 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
                                 ),
                               ),
                             _buildStepContent(state.step, state, locale, l10n),
-                            const PreferredSupportButton(),
+                            PreferredSupportButton(
+                              chooseChannel:
+                                  state.step == BookingWizardSteps.customer,
+                            ),
                           ],
                         ),
                       ),

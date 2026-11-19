@@ -49,6 +49,8 @@ function harness({ started = false, failSmtp = false, historical = [] } = {}) {
     };
   } };
   const repo = new NotificationRepository(pool);
+  // These policy-only fixtures represent a current assignment; lifecycle guards have separate tests.
+  repo.isGateArrivalCurrent = async () => true;
   repo.findById = async (id) => rows.find((r) => r.n.id === id).n;
   repo.findDeliveriesByNotificationId = async (id) => {
     const row = rows.find((r) => r.n.id === id);

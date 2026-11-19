@@ -690,3 +690,25 @@ test('contact lookup burst limit returns 429 with Retry-After 300 after 20 reque
   assert.equal(blocked.statusCode, 429);
   assert.equal(res.headers['retry-after'], '300');
 });
+
+
+test('booking number and normalized customer name authorize without a phone', async () => {
+  const { service, calls } = buildService(bookingRow({customer_phone: null}));
+  const result = await service.lookup({bookingNumber: 'TX202607010001', name: '  KIM   test  '});
+  assert.equal(result.customerName, 'Kim  Test');
+  assert.equal(calls.insertedTokens.length, 1);
+});
+test('wrong or empty customer name never issues a token even with a matching phone', async () => {
+  for (const name of ['Other person', '']) {
+    const { service, calls } = buildService();
+    await assert.rejects(service.lookup({bookingNumber: 'TX202607010001', name, phone: '+66812345678'}), {errorCode: 'BOOKING_NOT_FOUND'});
+    assert.equal(calls.insertedTokens.length, 0);
+  }
+});
+test('lookup schema accepts name credentials and rejects ambiguous or missing credentials', () => {
+  const { guestBookingLookupSchema } = require('../src/validators/booking.validator');
+  const base = {bookingNumber: 'TX202607010001'};
+  assert.equal(guestBookingLookupSchema.validate({...base, name: 'Kim Test'}).error, undefined);
+  assert.ok(guestBookingLookupSchema.validate(base).error);
+  assert.ok(guestBookingLookupSchema.validate({...base, name: 'Kim', phone: '+66812345678'}).error);
+});

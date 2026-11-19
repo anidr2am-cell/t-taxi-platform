@@ -1,7 +1,7 @@
 {
   "capturedAt": "2026-10-14T03:43:10.723Z",
   "fareSource": "https://thanks-procurement-hosting-transaction.trycloudflare.com",
-  "contactSource": "https://thanks-procurement-hosting-transaction.trycloudflare.com/api/v1/public/landing-data",
+  "contactSource": "https://trider.taxi/api/v1/public/landing-data",
   "rows": [
     {
       "serviceTypeCode": "AIRPORT_PICKUP",
@@ -290,6 +290,22 @@
       "displayName": "WhatsApp",
       "addUrl": null,
       "phoneNumber": "+66815693445",
+      "accountId": null,
+      "qrImageUrl": null
+    },
+    {
+      "code": "WECHAT",
+      "displayName": "WeChat",
+      "addUrl": null,
+      "phoneNumber": null,
+      "accountId": null,
+      "qrImageUrl": "/api/v1/settings/assets/contactWechatQr?v=ff9e021d7533"
+    },
+    {
+      "code": "TELEGRAM",
+      "displayName": "Telegram",
+      "addUrl": "https://t.me/TRider_taxi",
+      "phoneNumber": null,
       "accountId": null,
       "qrImageUrl": null
     }

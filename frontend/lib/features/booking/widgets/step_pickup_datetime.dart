@@ -12,6 +12,7 @@ import '../utils/pickup_time_format.dart';
 import 'pickup_time_picker_sheet.dart';
 import 'wizard_compact.dart';
 import 'wizard_ui.dart';
+import 'step_flight_lookup.dart';
 
 enum _PickupTimeSource { manual, flight }
 
@@ -192,6 +193,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
       minute: value.minute,
       amLabel: amLabel,
       pmLabel: pmLabel,
+      use24Hour: l10n.languageCode == 'ru',
     );
     return '$date $time';
   }
@@ -394,13 +396,13 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
           const SizedBox(height: 8),
           Text(
             '${l10n.t('flight_lookup_departure')}: '
-            '${FlightTimeFormat.formatBangkokDisplay(result.departure.scheduledAt, amLabel: amLabel, pmLabel: pmLabel)}',
+            '${FlightTimeFormat.formatBangkokDisplay(result.departure.scheduledAt, amLabel: amLabel, pmLabel: pmLabel, use24Hour: l10n.languageCode == 'ru')}',
             style: TextStyle(color: AppTokens.textSecondary, height: 1.4),
           ),
           const SizedBox(height: 4),
           Text(
             '${l10n.t('flight_lookup_arrival')}: '
-            '${FlightTimeFormat.formatBangkokDisplay(result.arrival.scheduledAt, amLabel: amLabel, pmLabel: pmLabel)}',
+            '${FlightTimeFormat.formatBangkokDisplay(result.arrival.scheduledAt, amLabel: amLabel, pmLabel: pmLabel, use24Hour: l10n.languageCode == 'ru')}',
             style: TextStyle(color: AppTokens.textSecondary, height: 1.4),
           ),
           if (result.arrival.estimatedAt != null &&
@@ -408,7 +410,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
             const SizedBox(height: 4),
             Text(
               '${l10n.t('flight_lookup_estimated_arrival')}: '
-              '${FlightTimeFormat.formatBangkokDisplay(result.arrival.estimatedAt, amLabel: amLabel, pmLabel: pmLabel)}',
+              '${FlightTimeFormat.formatBangkokDisplay(result.arrival.estimatedAt, amLabel: amLabel, pmLabel: pmLabel, use24Hour: l10n.languageCode == 'ru')}',
               style: TextStyle(color: AppTokens.textSecondary, height: 1.4),
             ),
           ],
@@ -507,6 +509,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
       minute: selected.minute,
       amLabel: l10n.t('pickup_time_am'),
       pmLabel: l10n.t('pickup_time_pm'),
+      use24Hour: l10n.languageCode == 'ru',
     );
     if (_manualTimeController.text != display) {
       _manualTimeController.text = display;
@@ -537,6 +540,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
             minute: minute,
             amLabel: l10n.t('pickup_time_am'),
             pmLabel: l10n.t('pickup_time_pm'),
+            use24Hour: l10n.languageCode == 'ru',
           );
         }
       }
@@ -657,6 +661,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
                       minute: 30,
                       amLabel: l10n.t('pickup_time_am'),
                       pmLabel: l10n.t('pickup_time_pm'),
+                      use24Hour: l10n.languageCode == 'ru',
                     ),
                   ).copyWith(
                     errorText: _manualTimeErrorKey != null
@@ -690,22 +695,22 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                StepFlightLookup(
+                  state: widget.state,
+                  controller: widget.controller,
+                  flightLookupApi: widget.flightLookupApi,
+                ),
+                Text(
+                  l10n.t('flight_first_manual'),
+                  key: const Key('pickup_manual_section'),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: AppTokens.spaceSm),
+                Text(l10n.t('flight_first_manual_help')),
+                const SizedBox(height: AppTokens.spaceSm),
                 dateTimeCard,
                 const SizedBox(height: WizardCompact.fieldGap),
                 manualTimeField,
-                const SizedBox(height: WizardCompact.fieldGap),
-                TextField(
-                  key: const Key('flight_number_field'),
-                  controller: _flightController,
-                  focusNode: widget.focusNode,
-                  decoration: WizardCompact.inputDecoration(
-                    label: l10n.t('flight_number'),
-                    hint: l10n.t('flight_number_hint'),
-                    prefixIcon: const Icon(Icons.flight_outlined, size: 20),
-                  ),
-                  textCapitalization: TextCapitalization.characters,
-                  onChanged: _onFlightNumberChanged,
-                ),
               ],
             );
           },
@@ -747,68 +752,14 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
 
 class _FlightPickupConflictCopy {
   _FlightPickupConflictCopy(this.languageCode);
-
   final String languageCode;
-
-  String warning(int minutes) {
-    switch (languageCode) {
-      case 'ko':
-        return '입력하신 픽업 시간과 항공편 도착 예정 시간이 $minutes분 차이납니다.';
-      case 'zh':
-        return '您输入的接送时间与航班预计到达时间相差 $minutes 分钟。';
-      case 'ja':
-        return '入力したピックアップ時間とフライト到着予定時間が $minutes 分異なります。';
-      case 'th':
-        return 'เวลารับที่คุณกรอกกับเวลาถึงตามกำหนดของเที่ยวบินต่างกัน $minutes นาที';
-      default:
-        return 'Your pickup time and the flight scheduled arrival differ by $minutes minutes.';
-    }
-  }
-
-  String get useManualTime {
-    switch (languageCode) {
-      case 'ko':
-        return '직접 입력한 시간 사용';
-      case 'zh':
-        return '使用我输入的时间';
-      case 'ja':
-        return '入力した時間を使用';
-      case 'th':
-        return 'ใช้เวลาที่กรอกเอง';
-      default:
-        return 'Keep my entered time';
-    }
-  }
-
-  String get useFlightTime {
-    switch (languageCode) {
-      case 'ko':
-        return '항공편 시간 기준으로 변경';
-      case 'zh':
-        return '按航班到达时间更改';
-      case 'ja':
-        return 'フライト到着時間に変更';
-      case 'th':
-        return 'เปลี่ยนตามเวลาเที่ยวบิน';
-      default:
-        return 'Use flight arrival time';
-    }
-  }
-
-  String get finalPickupLabel {
-    switch (languageCode) {
-      case 'ko':
-        return '최종 픽업 요청시간';
-      case 'zh':
-        return '最终接送请求时间';
-      case 'ja':
-        return '最終ピックアップ希望時間';
-      case 'th':
-        return 'เวลารับสุดท้ายที่ขอ';
-      default:
-        return 'Final pickup request time';
-    }
-  }
+  AppLocalizations get _l10n => AppLocalizations(languageCode);
+  String warning(int minutes) => _l10n
+      .t('flight_pickup_conflict_warning')
+      .replaceAll('{minutes}', '$minutes');
+  String get useManualTime => _l10n.t('flight_pickup_keep_manual');
+  String get useFlightTime => _l10n.t('flight_pickup_use_arrival');
+  String get finalPickupLabel => _l10n.t('flight_pickup_final_time');
 }
 
 class _PickerRow extends StatelessWidget {

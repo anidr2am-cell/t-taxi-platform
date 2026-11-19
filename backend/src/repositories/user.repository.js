@@ -64,6 +64,18 @@ class UserRepository {
     return rows[0] || null;
   }
 
+  async findUniqueDriverForReset(phones) {
+    const [rows] = await this.pool.query(
+      `SELECT id, email, role, locale, is_active
+       FROM users
+       WHERE role = 'DRIVER' AND deleted_at IS NULL
+         AND (phone IN (?) OR REGEXP_REPLACE(phone, '[ ()-]', '') IN (?))
+       LIMIT 2`,
+      [phones, phones],
+    );
+    return rows.length === 1 ? rows[0] : null;
+  }
+
   async findById(id) {
     const [rows] = await this.pool.query(
       `

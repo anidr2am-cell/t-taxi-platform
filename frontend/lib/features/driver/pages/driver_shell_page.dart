@@ -9,6 +9,7 @@ import '../services/driver_api_service.dart';
 import '../widgets/driver_status_control.dart';
 import '../../../theme/app_tokens.dart';
 import 'driver_account_page.dart';
+import '../widgets/driver_arrival_readiness_card.dart';
 import 'driver_jobs_page.dart';
 import 'driver_today_page.dart';
 
@@ -143,6 +144,13 @@ class _DriverShellPageState extends State<DriverShellPage> {
         appBar: AppBar(title: Text(_titleForIndex(l10n))),
         body: Column(
           children: [
+            if (!_suspended)
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 260),
+                child: SingleChildScrollView(
+                  child: DriverArrivalReadinessCard(api: _api),
+                ),
+              ),
             if (_suspended)
               Container(
                 width: double.infinity,

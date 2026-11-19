@@ -13,6 +13,7 @@ import '../models/service_type_option.dart';
 import '../services/flight_lookup_api_service.dart';
 import 'wizard_compact.dart';
 import 'golf_trip_fields.dart';
+import 'booking_service_selection_summary.dart';
 
 class StepRouteSelect extends StatefulWidget {
   const StepRouteSelect({
@@ -59,14 +60,9 @@ class _StepRouteSelectState extends State<StepRouteSelect> {
         if (controller.entryServiceCollapsed &&
             !_serviceExpanded &&
             state.serviceType != null)
-          Row(
-            children: [
-              Expanded(child: Text(l10n.t(state.serviceType!.labelKey))),
-              TextButton(
-                onPressed: () => setState(() => _serviceExpanded = true),
-                child: Text(l10n.t('change_location')),
-              ),
-            ],
+          BookingServiceSelectionSummary(
+            service: state.serviceType!,
+            onChange: () => setState(() => _serviceExpanded = true),
           )
         else
           StepServiceSelect(

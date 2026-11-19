@@ -259,12 +259,14 @@ class AdminFlightMonitorService {
   }
 
   async persistSyncResult(conn, bookingId, actorUserId, previousRow, update, syncMeta) {
-    await this.flightMonitorRepository.updateFlightSync(conn, bookingId, {
+    const updated = await this.flightMonitorRepository.updateFlightSync(conn, bookingId, {
       ...update,
       lastSyncedAt: syncMeta.lastSyncedAt,
       syncStatus: syncMeta.syncStatus,
       syncError: syncMeta.syncError,
-    });
+    }, previousRow.flight_number);
+    // A customer may correct the flight while the provider request is pending.
+    if (updated === false) return [];
 
     await this.bookingRepository.insertActivityLog(conn, bookingId, {
       activityType: 'FLIGHT_SYNC_UPDATED',

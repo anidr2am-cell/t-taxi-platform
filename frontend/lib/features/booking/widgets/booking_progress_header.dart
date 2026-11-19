@@ -5,10 +5,7 @@ import '../../../theme/app_tokens.dart';
 import '../models/booking_wizard_steps.dart';
 
 class BookingProgressHeader extends StatelessWidget {
-  const BookingProgressHeader({
-    super.key,
-    required this.currentStep,
-  });
+  const BookingProgressHeader({super.key, required this.currentStep});
 
   final int currentStep;
 
@@ -33,9 +30,9 @@ class BookingProgressHeader extends StatelessWidget {
         children: [
           Text(
             label,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -50,10 +47,7 @@ class BookingProgressHeader extends StatelessWidget {
 }
 
 class _DesktopStepRow extends StatelessWidget {
-  const _DesktopStepRow({
-    required this.currentStep,
-    required this.l10n,
-  });
+  const _DesktopStepRow({required this.currentStep, required this.l10n});
 
   final int currentStep;
   final AppLocalizations l10n;
@@ -67,14 +61,16 @@ class _DesktopStepRow extends StatelessWidget {
             Expanded(
               child: Container(
                 height: 2,
-                color: i <= currentStep
-                    ? AppTokens.primary
-                    : AppTokens.border,
+                color: i <= currentStep ? AppTokens.primary : AppTokens.border,
               ),
             ),
           _StepDot(
             index: i + 1,
-            label: l10n.t(BookingWizardSteps.titleKey(i)),
+            label: l10n.t(
+              i == BookingWizardSteps.vehicle
+                  ? 'wizard_step_vehicle_short'
+                  : BookingWizardSteps.titleKey(i),
+            ),
             isActive: i == currentStep,
             isComplete: i < currentStep,
           ),

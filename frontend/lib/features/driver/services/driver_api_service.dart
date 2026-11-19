@@ -378,6 +378,13 @@ class DriverApiService {
     return Map<String, dynamic>.from(data as Map);
   }
 
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    await _post('/driver/profile/password', body: {
+      'currentPassword': currentPassword,
+      'newPassword': newPassword,
+    });
+  }
+
   Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> body) async {
     final data = await _patch('/driver/profile', body: body);
     final profile = Map<String, dynamic>.from(data as Map);

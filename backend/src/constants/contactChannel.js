@@ -3,5 +3,6 @@ module.exports = {
   KAKAO: 'KAKAO',
   WHATSAPP: 'WHATSAPP',
   WECHAT: 'WECHAT',
+  TELEGRAM: 'TELEGRAM',
   EMAIL: 'EMAIL',
 };

@@ -70,6 +70,27 @@ class AdminReceiptEmailService {
     // Payment acknowledgement never sends email or changes commission/assignments.
     return this.get(number,actor);
   }
+  async decideDriverCollection(number,input,actor){
+    this.authorize(actor);
+    if(!['PAID','CUSTOMER_DIRECT'].includes(input.choice)||input.confirmed!==true)fail('DRIVER_COLLECTION_CONFIRM_REQUIRED',400);
+    const conn=await this.pool.getConnection();
+    try{
+      await conn.beginTransaction();
+      const row=await this.repo.booking(conn,number,true);if(!row)fail('BOOKING_NOT_FOUND',404);
+      const m=meta(row.metadata);
+      const method=String(m.customerPayment?.method||row.payment_method||'').toUpperCase();
+      if(!['ONLINE','BANK_TRANSFER','CARD','CREDIT_CARD'].includes(method))fail('DRIVER_COLLECTION_METHOD_BLOCKED');
+      if(['CANCELLED','NO_SHOW'].includes(row.status)||!['PAID','UNPAID','PENDING'].includes(row.payment_status))fail('CUSTOMER_PAYMENT_STATE_BLOCKED');
+      if(Number(row.total_amount)!==input.expectedAmount||row.currency!==input.expectedCurrency||row.payment_status!==input.expectedStatus)fail('CUSTOMER_PAYMENT_CHANGED');
+      if(input.choice==='CUSTOMER_DIRECT'&&row.payment_status==='PAID')fail('CUSTOMER_PAYMENT_ALREADY_PAID');
+      const record={choice:input.choice,amount:Number(row.total_amount),currency:row.currency,
+        decidedAt:this.now().toISOString(),decidedByUserId:actor.id,previousPaymentStatus:row.payment_status};
+      await this.repo.decideDriverCollection(conn,row,record,actor.id);
+      await this.bookings.insertActivityLog(conn,row.id,{activityType:'DRIVER_COLLECTION_DECIDED',actorUserId:actor.id,
+        actorRole:actor.role,description:'Administrator selected driver collection instructions; no message sent',payload:record});
+      await conn.commit();return {decision:record};
+    }catch(e){await conn.rollback();throw e}finally{conn.release()}
+  }
   async document(row,input,googleOverride){
     const adapter=this.notificationService.adapters.EMAIL;
     let google=googleOverride;
