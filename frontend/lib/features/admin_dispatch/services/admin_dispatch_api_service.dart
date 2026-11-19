@@ -412,6 +412,10 @@ class AdminDispatchApiService {
     return Map<String, dynamic>.from(data as Map);
   }
 
+  Future<void> deleteDriver(int driverId, String reason) async {
+    await _request('POST', '/admin/drivers/$driverId/delete', body: {'reason': reason});
+  }
+
   Future<Map<String, dynamic>> assignDriver(
     String bookingNumber,
     int driverId,
