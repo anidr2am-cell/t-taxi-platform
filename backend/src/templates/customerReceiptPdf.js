@@ -1,7 +1,22 @@
 const PDFDocument=require('pdfkit');
 const fs=require('node:fs');
 const path=require('node:path');
-const PDF_TEMPLATE_VERSION=2;
+const PDF_TEMPLATE_VERSION=3;
+const SIGNATURE_PATH=path.join(__dirname,'../../assets/receipt-pdf/authorized-signature.jpg');
+const AUTHORIZATION_LABELS={ko:'직인 및 서명',en:'Authorized Stamp & Signature',th:'ตราประทับและลายมือชื่อผู้มีอำนาจ',ja:'社印および署名',zh:'授权印章及签名'};
+// Company artwork is drawn as vectors; the signature is the owner's supplied image.
+function drawCompanySeal(doc,cx,cy){
+ doc.save().strokeColor('#245a84').fillColor('#245a84').lineWidth(.9);
+ doc.circle(cx,cy,36).stroke();doc.circle(cx,cy,23).stroke();
+ const letters='TRIDER COMPANY LTD ***';
+ for(let i=0;i<letters.length;i++){
+  const degrees=-151+i*302/(letters.length-1),radians=degrees*Math.PI/180;
+  doc.save().translate(cx+29.2*Math.sin(radians),cy-29.2*Math.cos(radians)).rotate(degrees);
+  doc.font('Helvetica-Bold').fontSize(6.9).text(letters[i],-doc.widthOfString(letters[i])/2,-3.4,{lineBreak:false});doc.restore();
+ }
+ doc.font('Helvetica-Bold').fontSize(8).text('TRIDER',cx-20,cy-6,{width:40,align:'center',lineBreak:false});
+ doc.restore();
+}
 let fonts;
 function fontData(){if(!fonts)fonts={cjk:fs.readFileSync(path.join(__dirname,'../../assets/receipt-pdf/NotoSansCJKkr-Regular.otf')),thai:fs.readFileSync(path.join(__dirname,'../../assets/receipt-pdf/NotoSansThai.ttf'))};return fonts;}
 function createReceiptPdf(model){
@@ -29,6 +44,15 @@ function createReceiptPdf(model){
     }
    });
    const note=lines(model.statusNote,507,9);if(y+note.length*14+24>735)nextPage();paragraph(note,44,y+20,9,'#5b6e70');
+   if(model.kind==='RECEIPT'){
+    // Reserve a single block on the last page, above the legal/support footer.
+    // An unpaid statement must never carry a payment authorization seal.
+    if(y+20+note.length*14+20>600)nextPage();
+    doc.image(SIGNATURE_PATH,314,613,{width:169});
+    drawCompanySeal(doc,510,678);
+    const label=lines(AUTHORIZATION_LABELS[model.locale]||AUTHORIZATION_LABELS.en,237,8);
+    paragraph(label,314,733,8,'#5b6e70');
+   }
    const range=doc.bufferedPageRange();for(let i=range.start;i<range.start+range.count;i++){doc.switchToPage(i);paragraph(lines(model.note,507,8),44,771,8,'#5b6e70');text('https://trider.taxi/support?lang='+model.locale,44,810,8,'#006a60');text((i+1)+' / '+range.count,518,810,8,'#5b6e70');}
    doc.end();
   }catch(e){reject(e);}

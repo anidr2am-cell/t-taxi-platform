@@ -7,3 +7,22 @@ for(const locale of ['ko','en','th','ja','zh'])for(const paid of [true,false])te
 test('automatic trip-end mail includes downloadable PDF; SMTP MIME decodes to identical bytes',async()=>{const sent=[],adapter=new EmailNotificationAdapter({smtp:{host:'smtp.invalid',fromEmail:'qa@example.invalid'},googleReviewUrlProvider:async()=>'',transport:{async sendMail(m){sent.push(m);return {response:'250 accepted'}}}});await adapter.send(n());assert.equal(sent.length,1);const a=sent[0].attachments[0],mime=(await new MailComposer(sent[0]).compile().build()).toString();assert(mime.includes('Content-Type: application/pdf'));const data=mime.match(/Content-Type: application\/pdf[\s\S]*?\r\n\r\n([\s\S]*?)(?:\r\n--)/)[1];assert.equal(crypto.createHash('sha256').update(Buffer.from(data.replace(/\s/g,''),'base64')).digest('hex'),crypto.createHash('sha256').update(Buffer.from(a.content,'base64')).digest('hex'));});
 test('approved envelope and recovery preserve original PDF without regeneration',async()=>{const original={from:'qa@example.invalid',to:'qa@example.invalid',...await withReceiptPdf(renderCustomerEmail(n()))},envelope=encrypt(JSON.stringify(original));for(const approved of [false,true]){const sent=[],adapter=new EmailNotificationAdapter({smtp:{host:'smtp.invalid',fromEmail:'qa@example.invalid'},transport:{async sendMail(m){sent.push(m);return {response:'250 accepted'}}}});const notification={...n('en',false),booking_total_amount:9999,...(approved?{payload:{adminReceipt:true,approvedEmail:envelope}}:{})};await adapter.send(notification,approved?{}:{emailAttempt:{envelope,messageId:'<qa@invalid>',traceId:'qa'}});assert.equal(sent.length,1);assert.deepEqual(sent[0].attachments,original.attachments);assert.equal(sent[0].text,original.text);assert.equal(JSON.parse(decrypt(envelope)).attachments[0].content,original.attachments[0].content);}});
 test('long multilingual route paginates instead of clipping; other mail types have no PDF',async()=>{const value={...n(),destination_address:'QA Bangkok พัทยา 파타야 パタヤ 芭堤雅 '.repeat(200)+'END_OF_ROUTE'};const msg=await withReceiptPdf(renderCustomerEmail(value));assert(Buffer.from(msg.attachments[0].content,'base64').toString('latin1').match(/\/Type \/Page\b/g).length>1);const created=await withReceiptPdf(renderCustomerEmail({...n(),type:'BOOKING_CREATED'}));assert(!created.attachments);});
+
+test('only paid receipts embed the supplied signature; long receipts authorize once on the last page',async()=>{
+ const {inflateSync}=require('node:zlib');
+ for(const [paid,long] of [[true,false],[false,false],[true,true]]){
+  const notification={...n(),booking_payment_status:paid?'PAID':'UNPAID',...(long?{destination_address:'QA long route '.repeat(1000)}:{})};
+  const msg=await withReceiptPdf(renderCustomerEmail(notification)),pdf=Buffer.from(msg.attachments[0].content,'base64'),raw=pdf.toString('latin1');
+  assert.equal((raw.match(/\/Subtype \/Image\b/g)||[]).length,paid?1:0);
+  // Inspect actual PDF drawing streams, not just a model flag.
+  const streams=[...raw.matchAll(/<<([^]*?)>>\s*stream\r?\n([^]*?)\r?\nendstream/g)].flatMap(m=>{
+   if(!m[1].includes('/FlateDecode'))return [];
+   try{return [inflateSync(Buffer.from(m[2],'latin1')).toString('latin1')];}catch{return [];}
+  });
+  const pages=streams.filter(s=>s.includes('1 0 0 -1 0 841.89 cm'));
+  assert(pages.length>0);
+  const signed=pages.filter(s=>/\/I\d+ Do/.test(s));
+  assert.equal(signed.length,paid?1:0);
+  if(paid){assert.equal(signed[0],pages.at(-1));}
+ }
+});
