@@ -1,6 +1,7 @@
 // EMAIL only. IN_APP/FCM and domain events are deliberately unaffected.
 const ADMIN_BOOKING_EMAIL_RESEND = 'ADMIN_BOOKING_EMAIL_RESEND';
-const CUSTOMER_EMAIL_TYPES = new Set(['BOOKING_CREATED', 'TRIP_ENDED', 'TRIP_COMPLETED', 'BOOKING_CANCELLED']);
+const CUSTOMER_EMAIL_LIMIT = 3;
+const CUSTOMER_EMAIL_TYPES = new Set(['BOOKING_CREATED', 'DRIVER_ASSIGNED', 'TRIP_ENDED', 'TRIP_COMPLETED', 'BOOKING_CANCELLED']);
 function isTripEndEmail(notification) {
   const type=notification.type || notification.notificationType;
   let payload=notification.payload;
@@ -26,6 +27,6 @@ function emailPolicyError(notification) {
   return null;
 }
 function customerEmailSlot(type) {
-  return type === 'BOOKING_CREATED' ? 'RECEIPT' : 'TERMINAL';
+  return type === 'BOOKING_CREATED' ? 'RECEIPT' : type === 'DRIVER_ASSIGNED' ? 'ASSIGNMENT' : 'TERMINAL';
 }
-module.exports = { ADMIN_BOOKING_EMAIL_RESEND, isTripEndEmail, CUSTOMER_EMAIL_TYPES, emailAudience, emailPolicyError, customerEmailSlot };
+module.exports = { ADMIN_BOOKING_EMAIL_RESEND, isTripEndEmail, CUSTOMER_EMAIL_LIMIT, CUSTOMER_EMAIL_TYPES, emailAudience, emailPolicyError, customerEmailSlot };

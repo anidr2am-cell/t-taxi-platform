@@ -2,7 +2,7 @@ const {createHash,randomUUID}=require('node:crypto');
 const Parent=require('./adminReceiptEmail.service');
 const AppError=require('../utils/AppError');
 const {encrypt}=require('../utils/tokenEncryption.util');
-const {ADMIN_BOOKING_EMAIL_RESEND}=require('../policies/notificationEmail.policy');
+const {ADMIN_BOOKING_EMAIL_RESEND,CUSTOMER_EMAIL_LIMIT}=require('../policies/notificationEmail.policy');
 const {renderCustomerEmail}=require('../templates/customerEmail');
 function meta(value){try{return typeof value==='string'?JSON.parse(value)||{}:value||{}}catch{return {}}}
 function fail(code){throw new AppError(code,{statusCode:409,errorCode:code})}
@@ -30,7 +30,7 @@ class AdminBookingEmailService extends Parent {
       || Number(h.attempt_count)>0&&!['PERMANENT_INVALID_RECIPIENT','CONFIG_MISSING'].includes(h.last_error))))return 'RECEIPT_EMAIL_EXISTING_ATTEMPT';
     if(this.originalDelivery(history))return null;
     if(m.adminBookingConfirmationEmail?.approvedAt)return 'RECEIPT_EMAIL_ALREADY_APPROVED';
-    if(history.filter(h=>this.isAccepted(h)||Number(h.smtp_attempts)).length>=2)return 'RECEIPT_EMAIL_LIMIT';
+    if(history.filter(h=>this.isAccepted(h)||Number(h.smtp_attempts)).length>=CUSTOMER_EMAIL_LIMIT)return 'RECEIPT_EMAIL_LIMIT';
     return null;
   }
   state(row,history){
