@@ -1,9 +1,12 @@
+import '../widgets/admin_customer_change_request_card.dart';
+import '../widgets/admin_gate_arrival_link.dart';
 import '../widgets/admin_receipt_email_card.dart';
 import '../../admin/widgets/admin_copy_button.dart';
 import '../../admin/widgets/admin_selection_area.dart';
 import 'package:flutter/material.dart';
 import '../widgets/admin_review_request_card.dart';
 import '../widgets/admin_driver_check_cards.dart';
+import '../widgets/admin_customer_brief_card.dart';
 
 import '../../booking/utils/booking_status_display.dart';
 import '../../booking/utils/review_tags.dart';
@@ -1056,7 +1059,42 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                       child: _operationsSummarySection(l10n, detail),
                     ),
                     const SizedBox(height: AppTokens.spaceMd),
-                    AdminDriverCheckCards(detail: detail),
+                    if (!['SETTLEMENT_PENDING','COMPLETED','CANCELLED','NO_SHOW'].contains(detail['status']))
+                      ExpansionTile(
+                        key: PageStorageKey('booking_email_section_${widget.bookingNumber}'),
+                        tilePadding: EdgeInsets.zero,
+                        title: Text(l10n.t('admin_booking_email_title')),
+                        children: [
+                          AdminReceiptEmailCard(
+                            key: ValueKey('booking_email_${widget.bookingNumber}'),
+                            bookingNumber: widget.bookingNumber,
+                            api: widget.api,
+                            bookingConfirmation: true,
+                            showTitle: false,
+                            onChanged: _load,
+                          ),
+                        ],
+                      ),
+                    if (detail['customerChangeRequest'] is Map)
+                      AdminCustomerChangeRequestCard(request: Map<String,dynamic>.from(detail['customerChangeRequest'] as Map)),
+                    if (detail['serviceType']?['code'] == 'AIRPORT_PICKUP' && detail['flight']?['airportIata'] == 'BKK' && detail['options']?['nameSign'] != true) AdminGateArrivalLink(bookingNumber:widget.bookingNumber),
+                    AdminCustomerBriefCard(detail: detail, api: widget.api),
+                    const SizedBox(height: AppTokens.spaceMd),
+                    AdminDriverCheckCards(
+                      detail: detail,
+                      onDecision: (choice) async {
+                        final summary = detail['driverFinancialSummary'] as Map;
+                        await widget.api
+                            .decideDriverCollection(widget.bookingNumber, {
+                              'choice': choice,
+                              'confirmed': true,
+                              'expectedAmount': summary['customerTotalAmount'],
+                              'expectedCurrency': summary['currency'],
+                              'expectedStatus': summary['paymentStatus'],
+                            });
+                        await _load();
+                      },
+                    ),
                     const SizedBox(height: AppTokens.spaceMd),
                     _notesSection(l10n),
                     const SizedBox(height: AppTokens.spaceMd),

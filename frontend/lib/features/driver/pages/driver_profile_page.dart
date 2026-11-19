@@ -9,6 +9,7 @@ import '../../notification/services/notification_device_registration_service.dar
 import '../driver_auth.dart';
 import '../driver_ux.dart';
 import '../services/driver_api_service.dart';
+import '../widgets/driver_password_change_dialog.dart';
 import '../widgets/driver_status_control.dart';
 
 class DriverProfilePage extends StatefulWidget {
@@ -242,6 +243,27 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
     driverRedirectToLogin(context);
   }
 
+  Future<void> _changePassword() async {
+    final result = await showDialog<DriverPasswordChangeResult>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) =>
+          DriverPasswordChangeDialog(changePassword: _api.changePassword),
+    );
+    if (!mounted || result == null) return;
+    if (result == DriverPasswordChangeResult.changed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            '비밀번호를 변경했습니다. 다시 로그인해 주세요. / '
+            'เปลี่ยนรหัสผ่านแล้ว โปรดเข้าสู่ระบบใหม่',
+          ),
+        ),
+      );
+    }
+    await _logout();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -250,6 +272,13 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
       body: ListView(
         padding: AppUi.pagePadding(context),
         children: [
+          OutlinedButton.icon(
+            key: const Key('openDriverPasswordChange'),
+            onPressed: _changePassword,
+            icon: const Icon(Icons.lock_outline),
+            label: const Text('비밀번호 변경 / เปลี่ยนรหัสผ่าน'),
+          ),
+          const SizedBox(height: AppTokens.spaceMd),
           FutureBuilder<Map<String, dynamic>>(
             future: _ratingFuture,
             builder: (context, snapshot) {

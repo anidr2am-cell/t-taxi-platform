@@ -86,7 +86,7 @@ class BookingListItem extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium,
                       children: [
                         TextSpan(
-                          text: '출발 요청시간 : ',
+                          text: '${AppLocalizations.of(context).pickupRequestedTimeLabel} : ',
                           style: TextStyle(
                             fontWeight: FontWeight.normal,
                             color: Theme.of(context)
@@ -140,13 +140,13 @@ class BookingListItem extends StatelessWidget {
                   const SizedBox(height: 14),
                   _RouteLine(
                     icon: Icons.trip_origin,
-                    label: '출발지',
+                    label: l10n.labelOrigin,
                     location: booking.pickupLocation,
                   ),
                   const SizedBox(height: 8),
                   _RouteLine(
                     icon: Icons.location_on_outlined,
-                    label: '도착지',
+                    label: l10n.labelDestination,
                     location: booking.destinationLocation,
                   ),
                   const SizedBox(height: 14),

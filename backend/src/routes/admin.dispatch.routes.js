@@ -40,7 +40,54 @@ const { LOCALES, CHANNELS } = require('../utils/reviewRequest.util');
 const { success } = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
 const container = require('../helpers/container');
+const vehicleMediaParams = Joi.object({
+  id: Joi.number().integer().positive().required(),
+  vehicleId: Joi.number().integer().positive().required(),
+});
+router.get('/drivers/:id/vehicles/:vehicleId/media', adminOnly,
+  validate({ params: vehicleMediaParams }),
+  asyncHandler(async (req, res) => success(res, await require('../services/adminDriverVehicleMedia.service')
+    .files(Number(req.params.id), Number(req.params.vehicleId)))),
+);
+router.get('/drivers/:id/vehicles/:vehicleId/media/:fileId', adminOnly,
+  validate({ params: vehicleMediaParams.keys({ fileId: Joi.number().integer().positive().required() }) }),
+  asyncHandler(async (req, res) => {
+    const file = await require('../services/adminDriverVehicleMedia.service')
+      .files(Number(req.params.id), Number(req.params.vehicleId), Number(req.params.fileId));
+    return res.sendFile(require('../utils/uploadPath.util').resolveUploadAbsolutePath(file.file_path), {
+      headers: { 'Content-Type': file.mime_type, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' },
+    });
+  }),
+);
+router.patch('/drivers/:id/vehicles/:vehicleId/insurance', adminOnly,
+  validate({ params: vehicleMediaParams, body: Joi.object({
+    expiresOn: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).allow(null).required(),
+  }) }),
+  asyncHandler(async (req, res) => success(res,
+    await require('../services/adminDriverVehicleMedia.service').updateInsurance(
+      Number(req.params.id), Number(req.params.vehicleId), req.body.expiresOn, req.user))),
+);
+router.post('/drivers/:id/delete', adminOnly,
+  validate({
+    params: driverIdParamsSchema,
+    body: Joi.object({ reason: Joi.string().trim().min(1).max(500).required() }).unknown(false),
+  }),
+  asyncHandler(async (req, res) => {
+    const { pool } = require('../config/database');
+    const { deleteDriver } = require('../services/adminDriverDeletion.service');
+    return success(res, await deleteDriver(pool, Number(req.params.id), req.body.reason, req.user));
+  }),
+);
 const receiptEmailInput=Joi.object({email:Joi.string().trim().email({tlds:{allow:false}}).max(254).required(),locale:Joi.string().valid(...LOCALES).required()}).unknown(false);
+router.get('/bookings/:bookingNumber/booking-email',adminOnly,validate({params:bookingNumberParamsSchema}),
+  asyncHandler(async(req,res)=>success(res,await container.get('adminBookingEmailService').get(req.params.bookingNumber,req.user))));
+router.post('/bookings/:bookingNumber/booking-email/preview',adminOnly,validate({params:bookingNumberParamsSchema,body:receiptEmailInput}),
+  asyncHandler(async(req,res)=>success(res,await container.get('adminBookingEmailService').preview(req.params.bookingNumber,req.body,req.user))));
+router.post('/bookings/:bookingNumber/booking-email/send',adminOnly,validate({params:bookingNumberParamsSchema,body:receiptEmailInput.keys({resend:Joi.boolean().valid(true).optional(),previewHash:Joi.string().hex().length(64).required(),confirmed:Joi.boolean().valid(true).required()})}),
+  asyncHandler(async(req,res)=>success(res,await container.get('adminBookingEmailService').send(req.params.bookingNumber,req.body,req.user))));
+router.post('/bookings/:bookingNumber/driver-collection',adminOnly,
+  validate({params:bookingNumberParamsSchema,body:Joi.object({choice:Joi.string().valid('PAID','CUSTOMER_DIRECT').required(),confirmed:Joi.boolean().valid(true).required(),expectedAmount:Joi.number().min(0).required(),expectedCurrency:Joi.string().valid('THB').required(),expectedStatus:Joi.string().valid('UNPAID','PENDING','PAID').required()}).unknown(false)}),
+  asyncHandler(async(req,res)=>success(res,await container.get('adminReceiptEmailService').decideDriverCollection(req.params.bookingNumber,req.body,req.user))));
 router.post('/bookings/:bookingNumber/customer-payment/confirm',adminOnly,
   validate({params:bookingNumberParamsSchema,body:Joi.object({confirmed:Joi.boolean().valid(true).required(),reason:Joi.string().trim().min(1).max(500).required(),expectedAmount:Joi.number().min(0).required(),expectedCurrency:Joi.string().valid('THB').required()}).unknown(false)}),
   asyncHandler(async(req,res)=>success(res,await container.get('adminReceiptEmailService').confirmPayment(req.params.bookingNumber,req.body,req.user))));
@@ -281,4 +328,13 @@ router.post(
   bookingContactConnectionController.adminRetryContactDispatch,
 );
 
+router.get('/drivers/:id', adminOnly, validate({ params: driverIdParamsSchema }), adminController.getDriverDetail);
+router.get('/bookings/:bookingNumber/customer-brief/photos', adminOnly,
+  validate({ params: bookingNumberParamsSchema }), adminController.getCustomerBriefPhotos);
+router.get('/bookings/:bookingNumber/customer-brief/photos/:fileId', adminOnly,
+  (req, res, next) => {
+    if (!/^TX\d{12}$/.test(req.params.bookingNumber) || !/^[1-9]\d*$/.test(req.params.fileId))
+      return res.status(400).json({ success: false, message: 'Invalid photo request' });
+    next();
+  }, adminController.getCustomerBriefPhoto);
 module.exports = router;

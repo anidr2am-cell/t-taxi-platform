@@ -1,30 +1,39 @@
 ---
-title: "Solo Golf in Pattaya: Joining a Round and Arranging Your Transfer"
-description: "Plan solo or small-group golf in Pattaya. Discuss playing partners, tee-time availability, golf costs and TRider transfers together through WhatsApp."
+title: "Private Golf in Pattaya: Book for Your Group of 2 or More"
+description: "Plan a private Pattaya golf round with Buddy Golf for at least two players in your own group. Check tee times, golf fees and optional TRider transfers."
 slug: pattaya-solo-golf-join-en
 translationKey: pattaya-solo-golf-join
 lang: en
 category: golf
 bookingService: GOLF_TRANSFER
 date: 2026-10-29
-updated: 2026-10-30
+updated: 2026-11-10
 related:
   - pattaya-golf-transfer-price-en
   - pattaya-golf-price-match-guarantee-en
   - trounding-golf-join-bar-benefits-en
 ---
 
-Planning solo golf in Pattaya? Send your preferred date, course and accommodation so we can help you discuss golf, joining a round and vehicle transfers together. Playing-partner and tee-time availability need to be checked before the itinerary is confirmed.
+Planning a private golf round in Pattaya? International visitors can enquire with Buddy Golf for a round with their own group of **at least two golfers**. Share your dates, preferred course and hotel through [WhatsApp](https://wa.me/66815693445). You can discuss golf and TRider airport or course transfers in the same conversation.
 
-## Check joining availability for your dates
+## Bring your own group of at least two golfers
 
-Prepare your preferred date, course and possible tee times. If you are travelling alone or with a small group, other players' plans need to match yours. An enquiry does not confirm a playing group or tee time; check actual availability and wait for confirmation of the arrangements.
+Count only the people who will play. Buddy Golf accepts private golf requests for international visitors with two or more golfers in their party. We check whether your preferred course can accommodate your party size and date, then confirm available tee times and prices. You can book a TRider transfer on its own under the regular vehicle booking terms.
 
 ## Discuss your golf plans with Buddy Golf
 
-Buddy Golf is the new name for TRounding. Through [WhatsApp](https://wa.me/66815693445), share your golf dates and transport plans, and ask about group arrangements, participation requirements and playing-partner availability.
+Through [WhatsApp](https://wa.me/66815693445), share your golf dates, player count and transport plans. Copy the short enquiry below and fill in what you know; write “not decided” where needed.
 
-Share your preferred language when enquiring so the available arrangements can be checked before confirmation.
+> I would like a private golf round in Pattaya for my group.\
+> Preferred dates and times:\
+> Preferred courses:\
+> Number of players:\
+> Hotel name and address:\
+> Golf bags and suitcases, including sizes:\
+> Airport or golf-course transfers needed:\
+> Preferred language:
+
+Tell us your preferred language so we can confirm the communication arrangements along with your itinerary.
 
 ## Keep golf fees and shared vehicle costs clear
 
@@ -46,6 +55,6 @@ Once the playing arrangements are confirmed, check the pickup location and sched
 
 ## Book around your confirmed itinerary
 
-Read the [golf cost checklist](/blog/pattaya-golf-price-match-guarantee-en) and [Buddy Golf joining guide](/blog/trounding-golf-join-bar-benefits-en), then discuss golf and transport together through [WhatsApp](https://wa.me/66815693445). We can check playing-partner and tee-time availability and help you coordinate the round and pickup arrangements.
+Read the [golf cost checklist](/blog/pattaya-golf-price-match-guarantee-en) and [Buddy Golf private trip checklist](/blog/trounding-golf-join-bar-benefits-en), then discuss golf and transport together through [WhatsApp](https://wa.me/66815693445). Start with your dates and number of golfers, then confirm the round and pickup arrangements before booking.
 
 You can book the agreed vehicle arrangements through the [TRider golf transfer booking page in English](/booking?service=GOLF_TRANSFER&lang=en), available 24 hours a day. Confirm the golf arrangements and vehicle quote before finalising your trip.

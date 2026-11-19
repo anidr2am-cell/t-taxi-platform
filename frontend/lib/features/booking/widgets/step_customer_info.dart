@@ -41,11 +41,13 @@ class StepCustomerInfo extends StatefulWidget {
 class _StepCustomerInfoState extends State<StepCustomerInfo> {
   late final TextEditingController _nameController;
   late final TextEditingController _requestsController;
+  late final TextEditingController _emailController;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.state.customerName);
+    _emailController = TextEditingController(text: widget.state.customerEmail);
     _requestsController = TextEditingController(
       text: widget.state.additionalRequests,
     );
@@ -55,7 +57,16 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
   void dispose() {
     _nameController.dispose();
     _requestsController.dispose();
+    _emailController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(StepCustomerInfo oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_emailController.text != widget.state.customerEmail) {
+      _emailController.text = widget.state.customerEmail;
+    }
   }
 
   InputDecoration _fieldDecoration(
@@ -115,6 +126,31 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
             onDialCodeChanged: widget.onCountryChanged,
             loginPrompt: widget.loginPrompt,
           ),
+        ),
+        SizedBox(height: gap),
+        Text(
+          l10n.t('booking_email_explanation'),
+          style: const TextStyle(color: AppTokens.textSecondary, height: 1.4),
+        ),
+        const SizedBox(height: AppTokens.spaceSm),
+        TextField(
+          key: const ValueKey('booking-customer-email'),
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          autofillHints: const [AutofillHints.email],
+          textInputAction: TextInputAction.next,
+          decoration: _fieldDecoration(l10n, l10n.t('booking_email_optional'))
+              .copyWith(
+                errorText:
+                    widget.state.customerEmail.trim().isNotEmpty &&
+                        (widget.state.customerEmail.trim().length > 254 ||
+                            !RegExp(
+                              r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
+                            ).hasMatch(widget.state.customerEmail.trim()))
+                    ? l10n.t('booking_email_invalid')
+                    : null,
+              ),
+          onChanged: widget.onEmailChanged,
         ),
         SizedBox(height: gap),
         TextField(

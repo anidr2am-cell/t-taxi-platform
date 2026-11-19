@@ -98,7 +98,7 @@ const placeSchema = Joi.object({
 
 const createBookingSchema = Joi.object({
   golf: require('./golf.validator').optional(),
-  locale: Joi.string().valid('ko', 'en', 'zh', 'ja', 'th').optional(),
+  locale: Joi.string().valid('ko', 'en', 'zh', 'ja', 'th', 'ru').optional(),
   bookingMode: Joi.string().valid('STANDARD', 'URGENT').default('STANDARD'),
   serviceTypeCode: Joi.string().valid(...Object.values(SERVICE_TYPES)).required(),
   vehicleTypeCode: Joi.string().valid(...Object.values(VEHICLE_TYPES)).required(),
@@ -179,10 +179,10 @@ const createBookingSchema = Joi.object({
       return helpers.message('messengerType is required when messengerId is supplied');
     }
     const phone = customer.phone?.trim();
-    if (['KAKAO','LINE','WHATSAPP','SMS'].includes(type) && !/^\+[1-9]\d{6,14}$/.test(phone || '')) {
+    if (['KAKAO','LINE','WHATSAPP','WECHAT','TELEGRAM','SMS'].includes(type) && !/^\+[1-9]\d{6,14}$/.test(phone || '')) {
       return helpers.message('Selected messenger requires an international customer phone number');
     }
-    if (type !== 'KAKAO' && !id) {
+    if (!['KAKAO','WECHAT','TELEGRAM'].includes(type) && !id) {
       return helpers.message('messengerId is required for the selected messengerType');
     }
     if (['WHATSAPP', 'SMS'].includes(type) && !/^\+[1-9]\d{6,14}$/.test(id)) {
@@ -226,8 +226,9 @@ const cancelBookingSchema = Joi.object({
 
 const guestBookingLookupSchema = Joi.object({
   bookingNumber: Joi.string().trim().uppercase().pattern(/^TX\d{12}$/).required(),
-  phone: Joi.string().trim().min(4).max(30).required(),
-});
+  name: unicodeText({ max: 100 }).optional(),
+  phone: Joi.string().trim().min(4).max(30).optional(),
+}).xor('name', 'phone');
 
 const guestBookingLookupByContactSchema = Joi.object({
   name: unicodeText({ max: 100 }).required(),

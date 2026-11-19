@@ -820,7 +820,7 @@ class _DetailBody extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                   children: [
                     TextSpan(
-                      text: '출발 요청시간 : ',
+                      text: '${AppLocalizations.of(context).pickupRequestedTimeLabel} : ',
                       style: TextStyle(
                         fontWeight: FontWeight.normal,
                         color: Theme.of(context).colorScheme.onSurfaceVariant,

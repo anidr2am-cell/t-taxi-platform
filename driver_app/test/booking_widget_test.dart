@@ -24,9 +24,11 @@ Future<void> pumpBookingList(
   FakeBookingReader reader, {
   Future<void> Function()? onUnauthorized,
   Stream<DriverSocketEvent>? socketEvents,
+  Locale locale = const Locale('ko'),
 }) async {
   await tester.pumpWidget(
     localizedMaterialApp(
+      locale: locale,
       home: BookingListScreen(
         repository: reader,
         onUnauthorized: onUnauthorized ?? () async {},
@@ -44,10 +46,12 @@ Future<void> pumpDetail(
   ExternalUrlLauncher? externalUrlLauncher,
   DateTime Function()? now,
   Stream<DriverSocketEvent>? socketEvents,
+  Locale locale = const Locale('ko'),
   NameSignPhotoPicker? nameSignPhotoPicker,
 }) async {
   await tester.pumpWidget(
     localizedMaterialApp(
+      locale: locale,
       home: BookingDetailScreen(
         bookingNumber: 'TX209912319999',
         repository: reader,
@@ -78,6 +82,29 @@ Future<void> selectNameSignPhotoFromGallery(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('Thai assigned list translates pickup and route labels', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..listResult = bookingList(
+        items: [bookingSummary(scheduledPickupAt: '2026-07-18T10:15:00+07:00')],
+      );
+    await pumpBookingList(tester, reader, locale: const Locale('th'));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('เวลารับที่ลูกค้าขอ : 2026-07-18 10:15'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('จุดเริ่มต้น :'), findsOneWidget);
+    expect(find.textContaining('จุดหมาย :'), findsOneWidget);
+    expect(find.textContaining('출발 요청시간'), findsNothing);
+  });
+  testWidgets('Thai detail translates requested pickup label', (tester) async {
+    await pumpDetail(tester, FakeBookingReader(), locale: const Locale('th'));
+    expect(find.textContaining('เวลารับที่ลูกค้าขอ :'), findsOneWidget);
+    expect(find.textContaining('출발 요청시간'), findsNothing);
+  });
+
   testWidgets('shows list loading state', (tester) async {
     final reader = FakeBookingReader()..listCompleter = Completer();
     await pumpBookingList(tester, reader);
@@ -102,11 +129,8 @@ void main() {
     expect(find.text('기사 배정'), findsOneWidget);
     expect(find.textContaining('출발 요청시간 : 2026-07-18 10:15'), findsOneWidget);
     expect(find.text('대기 기준 2026-07-18 09:45'), findsOneWidget);
-    expect(
-      find.textContaining('출발지 : Suvarnabhumi Airport'),
-      findsOneWidget,
-    );
-    expect(find.textContaining('도착지 : Test Hotel'), findsOneWidget);
+    expect(find.textContaining('출발지 : Suvarnabhumi Airport'), findsOneWidget);
+    expect(find.textContaining('목적지 : Test Hotel'), findsOneWidget);
     expect(find.text('예상 수입 THB 900'), findsOneWidget);
   });
 
@@ -128,11 +152,8 @@ void main() {
     await pumpBookingList(tester, reader);
     await tester.pumpAndSettle();
 
-    expect(
-      find.textContaining('출발지 : ท่าอากาศยานสุวรรณภูมิ'),
-      findsOneWidget,
-    );
-    expect(find.textContaining('도착지 : โรงแรมทดสอบ'), findsOneWidget);
+    expect(find.textContaining('출발지 : ท่าอากาศยานสุวรรณภูมิ'), findsOneWidget);
+    expect(find.textContaining('목적지 : โรงแรมทดสอบ'), findsOneWidget);
   });
 
   testWidgets('shows empty list state', (tester) async {
@@ -236,18 +257,13 @@ void main() {
     tester,
   ) async {
     final reader = FakeBookingReader()
-      ..detailResult = bookingDetail(
-        createdAt: '2026-07-12T08:30:00.000Z',
-      );
+      ..detailResult = bookingDetail(createdAt: '2026-07-12T08:30:00.000Z');
     await pumpBookingList(tester, reader);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('booking-TX209912319999')));
     await tester.pumpAndSettle();
 
-    expect(
-      find.textContaining('출발 요청시간 : 2026-07-18 09:30'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('출발 요청시간 : 2026-07-18 09:30'), findsOneWidget);
     expect(find.text('예약: 7월 12일 15시 30분'), findsOneWidget);
     expect(find.byKey(const Key('bookingCreatedAtLabel')), findsOneWidget);
   });
@@ -258,10 +274,7 @@ void main() {
     await tester.tap(find.byKey(const Key('booking-TX209912319999')));
     await tester.pumpAndSettle();
 
-    expect(
-      find.textContaining('출발 요청시간 : 2026-07-18 09:30'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('출발 요청시간 : 2026-07-18 09:30'), findsOneWidget);
     expect(find.textContaining('예약:'), findsNothing);
     expect(find.byKey(const Key('bookingCreatedAtLabel')), findsNothing);
   });
@@ -739,7 +752,10 @@ void main() {
     expect(find.byKey(const Key('bkkMeetingGateBanner')), findsOneWidget);
     expect(find.text('미팅 장소: 3번 게이트 (피켓 요청됨)'), findsOneWidget);
     expect(find.textContaining('7번 게이트'), findsNothing);
-    expect(find.byKey(const Key('bkkMeetingGateNameSignLabel')), findsOneWidget);
+    expect(
+      find.byKey(const Key('bkkMeetingGateNameSignLabel')),
+      findsOneWidget,
+    );
     expect(find.text('ชื่อป้ายที่ต้องเขียน:'), findsOneWidget);
     expect(find.text('KIM FAMILY'), findsOneWidget);
   });
@@ -754,7 +770,10 @@ void main() {
         );
       await pumpDetail(tester, reader);
 
-      expect(find.byKey(const Key('bkkMeetingGateNameSignText')), findsOneWidget);
+      expect(
+        find.byKey(const Key('bkkMeetingGateNameSignText')),
+        findsOneWidget,
+      );
       expect(find.text('김가족'), findsOneWidget);
       expect(find.textContaining('KIM'), findsNothing);
     },
@@ -770,7 +789,10 @@ void main() {
       expect(find.byKey(const Key('bkkMeetingGateBanner')), findsOneWidget);
       expect(find.text('미팅 장소: 7번 게이트'), findsOneWidget);
       expect(find.textContaining('3번 게이트'), findsNothing);
-      expect(find.byKey(const Key('bkkMeetingGateNameSignLabel')), findsNothing);
+      expect(
+        find.byKey(const Key('bkkMeetingGateNameSignLabel')),
+        findsNothing,
+      );
       expect(find.text('ชื่อป้ายที่ต้องเขียน:'), findsNothing);
     },
   );
@@ -1072,10 +1094,7 @@ void main() {
       });
       await tester.pumpAndSettle();
 
-      expect(
-        find.text('이 예약의 배정이 종료되어 목록으로 돌아갑니다.'),
-        findsOneWidget,
-      );
+      expect(find.text('이 예약의 배정이 종료되어 목록으로 돌아갑니다.'), findsOneWidget);
       expect(find.textContaining('관리자에 의해 배정이 취소되어'), findsNothing);
     },
   );
@@ -1507,24 +1526,28 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('shows release choice before accept when assignment is ASSIGNED', (
-    tester,
-  ) async {
-    final reader = FakeBookingReader()
-      ..detailResult = bookingDetail(
-        assignmentStatus: 'ASSIGNED',
-        allowedActions: const [
-          'VIEW_DETAILS',
-          'RELEASE_ASSIGNMENT',
-          'ACCEPT_BOOKING',
-        ],
-      );
-    await pumpDetail(tester, reader);
+  testWidgets(
+    'shows release choice before accept when assignment is ASSIGNED',
+    (tester) async {
+      final reader = FakeBookingReader()
+        ..detailResult = bookingDetail(
+          assignmentStatus: 'ASSIGNED',
+          allowedActions: const [
+            'VIEW_DETAILS',
+            'RELEASE_ASSIGNMENT',
+            'ACCEPT_BOOKING',
+          ],
+        );
+      await pumpDetail(tester, reader);
 
-    expect(find.byKey(const Key('preAcceptReleaseActionCard')), findsOneWidget);
-    expect(find.byKey(const Key('releaseAssignmentButton')), findsOneWidget);
-    expect(find.byKey(const Key('acceptBookingButton')), findsOneWidget);
-  });
+      expect(
+        find.byKey(const Key('preAcceptReleaseActionCard')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('releaseAssignmentButton')), findsOneWidget);
+      expect(find.byKey(const Key('acceptBookingButton')), findsOneWidget);
+    },
+  );
 
   testWidgets('shows prominent release card while waiting for standby', (
     tester,
@@ -1538,7 +1561,10 @@ void main() {
       );
     await pumpDetail(tester, reader);
 
-    expect(find.byKey(const Key('releaseAssignmentProminentCard')), findsOneWidget);
+    expect(
+      find.byKey(const Key('releaseAssignmentProminentCard')),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('releaseAssignmentButton')), findsOneWidget);
     expect(find.byKey(const Key('acceptBookingButton')), findsNothing);
   });

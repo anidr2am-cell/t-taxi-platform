@@ -7,7 +7,7 @@ category: airport
 bookingService: AIRPORT_DROPOFF
 translationKey: pattaya-to-airport-transfer
 date: 2026-10-28
-updated: 2026-10-30
+updated: 2026-11-01
 related:
   - suvarnabhumi-to-pattaya-ru
   - don-mueang-to-pattaya-ru
@@ -68,4 +68,4 @@ related:
 - Итоговая сумма и дополнительные остановки согласованы.
 - Номер бронирования и контакт для связи сохранены.
 
-[Забронировать трансфер из Паттайи в аэропорт](/booking?service=AIRPORT_DROPOFF&lang=en) можно круглосуточно на английском языке. Для поездки по прилёте прочитайте [Донмыанг — Паттайя](/blog/don-mueang-to-pattaya-ru) или [Суварнабхуми — Паттайя](/blog/suvarnabhumi-to-pattaya-ru).
+[Забронировать трансфер из Паттайи в аэропорт](/booking?service=AIRPORT_DROPOFF&lang=ru) можно круглосуточно на русском языке. Для поездки по прилёте прочитайте [Донмыанг — Паттайя](/blog/don-mueang-to-pattaya-ru) или [Суварнабхуми — Паттайя](/blog/suvarnabhumi-to-pattaya-ru).

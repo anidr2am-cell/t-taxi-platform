@@ -74,6 +74,24 @@ void main() {
     expect(bytes, [1, 2, 3]);
   });
 
+  test('password change submits only passwords with the driver token', () async {
+    late http.Request request;
+    await api(
+      MockClient((incoming) async {
+        request = incoming;
+        return http.Response('{"success":true,"data":null}', 200);
+      }),
+    ).changePassword('current-test-password', 'new-test-password');
+
+    expect(request.method, 'POST');
+    expect(request.url.path, '/api/v1/driver/profile/password');
+    expect(request.headers['authorization'], 'Bearer account-token');
+    expect(jsonDecode(request.body), {
+      'currentPassword': 'current-test-password',
+      'newPassword': 'new-test-password',
+    });
+  });
+
   test('profile PATCH sends only supplied changes', () async {
     late http.Request request;
     await api(

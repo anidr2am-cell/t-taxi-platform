@@ -261,11 +261,11 @@ void main() {
 
       expect(find.textContaining('지금 할 일'), findsNothing);
       expect(
-        find.textContaining('고객 픽업 요청 시간 (เวลารับที่ลูกค้าขอ) 7월 1일 9시 30분'),
+        find.textContaining('เวลารับที่ลูกค้าขอ / 고객 픽업 요청 시간 01/07/2026 09:30 (เวลาไทย / 태국 시간)'),
         findsWidgets,
       );
-      expect(find.textContaining('출발지 -'), findsWidgets);
-      expect(find.textContaining('도착지 -'), findsWidgets);
+      expect(find.textContaining('จุดรับ / 출발지 -'), findsWidgets);
+      expect(find.textContaining('จุดส่ง / 도착지 -'), findsWidgets);
       expect(find.textContaining('고객에게 전화'), findsNothing);
       expect(find.text('운행 계속하기 / ดำเนินงานต่อ'), findsOneWidget);
       expect(
@@ -656,7 +656,7 @@ void main() {
         'TX202607010001',
       );
       await tester.enterText(
-        find.byKey(const ValueKey('guest_lookup_phone')),
+        find.byKey(const ValueKey('guest_lookup_booking_name')),
         '+66123456789',
       );
       await tester.tap(find.text('Find booking'));
@@ -694,6 +694,7 @@ class _StubGuestLookupService extends GuestBookingLookupService {
   Future<GuestBookingLookupResult> lookup({
     required String bookingNumber,
     required String phone,
+    String? name,
   }) async {
     return GuestBookingLookupResult(
       bookingNumber: bookingNumber,

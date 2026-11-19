@@ -1,4 +1,4 @@
-/// 12-hour display and parsing for pickup time UI.
+/// Localized 12/24-hour display and parsing for pickup time UI.
 /// Internal storage remains 24-hour `HH:mm` via [BookingWizardController.formatTime].
 class PickupTimeFormat {
   PickupTimeFormat._();
@@ -39,7 +39,9 @@ class PickupTimeFormat {
     required int minute,
     required String amLabel,
     required String pmLabel,
+    bool use24Hour = false,
   }) {
+    if (use24Hour) return format24h(hour24, minute);
     final hour12 = hour12From24(hour24);
     final h = hour12.toString().padLeft(2, '0');
     final m = minute.toString().padLeft(2, '0');
@@ -64,14 +66,22 @@ class PickupTimeFormat {
 
     if (normalized.endsWith(' pm') || normalized.endsWith('pm')) {
       pm = true;
-      timePart = input.replaceAll(RegExp(r'\s*pm\s*$', caseSensitive: false), '');
+      timePart = input.replaceAll(
+        RegExp(r'\s*pm\s*$', caseSensitive: false),
+        '',
+      );
     } else if (normalized.endsWith(' am') || normalized.endsWith('am')) {
       pm = false;
-      timePart = input.replaceAll(RegExp(r'\s*am\s*$', caseSensitive: false), '');
-    } else if (normalized.endsWith(' $pmLower') || normalized.endsWith(pmLower)) {
+      timePart = input.replaceAll(
+        RegExp(r'\s*am\s*$', caseSensitive: false),
+        '',
+      );
+    } else if (normalized.endsWith(' $pmLower') ||
+        normalized.endsWith(pmLower)) {
       pm = true;
       timePart = input.substring(0, input.length - pmLabel.length).trim();
-    } else if (normalized.endsWith(' $amLower') || normalized.endsWith(amLower)) {
+    } else if (normalized.endsWith(' $amLower') ||
+        normalized.endsWith(amLower)) {
       pm = false;
       timePart = input.substring(0, input.length - amLabel.length).trim();
     }

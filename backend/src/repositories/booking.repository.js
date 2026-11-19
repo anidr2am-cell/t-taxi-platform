@@ -1,3 +1,4 @@
+const { pointForBooking, explicitAirport, airportFromRegions } = require('../utils/bookingAirport.util');
 const database = require('../config/database');
 const { PICKUP_CONFLICT_MIN_GAP_SECONDS } = require('../policies/driverBookingConflictPolicy');
 const {
@@ -13,6 +14,20 @@ const SETTLEMENT_ELIGIBLE_BOOKING_STATUSES_SQL = "'SETTLEMENT_PENDING', 'COMPLET
 class BookingRepository {
   constructor(pool = database.pool) {
     this.pool = pool;
+  }
+
+  async findActiveAirportRegions(conn = this.pool) {
+    const [rows] = await conn.query(`SELECT airport_iata, geometry, is_active FROM pricing_regions
+      WHERE is_active = 1 AND airport_iata IS NOT NULL`);
+    return rows;
+  }
+
+  async withResolvedAirport(rows, conn = this.pool) {
+    const needsRegions = rows.some(row => explicitAirport(row) === undefined && pointForBooking(row));
+    const regions = needsRegions ? await this.findActiveAirportRegions(conn) : [];
+    return rows.map(row => ({ ...row,
+      origin_airport_iata: row.service_type_code === 'AIRPORT_PICKUP' ? airportFromRegions(row, regions) : null,
+    }));
   }
 
   activeAssignmentExistsSql() {
@@ -62,7 +77,7 @@ class BookingRepository {
       const [users] = await conn.query('SELECT locale FROM users WHERE id = ?', [userId]);
       locale = requestedLocale || users[0]?.locale;
     }
-    locale = LOCALES.includes(locale) ? locale : 'ko';
+    locale = [...LOCALES, 'ru'].includes(locale) ? locale : 'ko';
     if (userId) await conn.query('UPDATE users SET locale = ? WHERE id = ?', [locale, userId]);
     return locale;
   }
@@ -771,14 +786,13 @@ class BookingRepository {
       `,
       [bookingNumber],
     );
-    return rows[0] || null;
+    return (await this.withResolvedAirport(rows, conn))[0] || null;
   }
 
   async findGuestLookupBookingsByPhoneDigits(conn, normalizedPhoneDigits, { limit = 20 } = {}) {
     const [rows] = await conn.query(
       `
         ${this.guestLookupSelectSql()}
-        , b.customer_name
         ${this.guestLookupJoinSql()}
         WHERE b.customer_phone_digits = ?
           AND b.deleted_at IS NULL
@@ -788,7 +802,7 @@ class BookingRepository {
       `,
       [normalizedPhoneDigits, limit],
     );
-    return rows;
+    return this.withResolvedAirport(rows, conn);
   }
 
   guestLookupSelectSql() {
@@ -796,10 +810,11 @@ class BookingRepository {
         SELECT
           b.id,
           b.booking_number,
+          b.customer_name,
           b.status,
           COALESCE(b.driver_id, bda.driver_id) AS driver_id,
           DATE_FORMAT(b.scheduled_pickup_at, '%Y-%m-%d %H:%i:%s') AS scheduled_pickup_at_text,
-          b.origin_address,
+          b.origin_address, b.origin_lat, b.origin_lng, b.destination_lat, b.destination_lng,
           b.destination_address,
           b.metadata,
           b.customer_phone,
@@ -825,7 +840,7 @@ class BookingRepository {
           bl.carriers_24_inch_plus,
           bl.golf_bags,
           bl.special_items,
-          btd.flight_number,
+          btd.flight_number, btd.airport_code_custom, a.iata_code AS airport_iata,
           lo.code AS origin_location_code,
           ld.code AS destination_location_code,
           EXISTS (
@@ -883,6 +898,7 @@ class BookingRepository {
         LEFT JOIN booking_passengers bp ON bp.booking_id = b.id AND bp.deleted_at IS NULL
         LEFT JOIN booking_luggage bl ON bl.booking_id = b.id AND bl.deleted_at IS NULL
         LEFT JOIN booking_transfer_details btd ON btd.booking_id = b.id AND btd.deleted_at IS NULL
+        LEFT JOIN airports a ON a.id=btd.airport_id AND a.deleted_at IS NULL
         LEFT JOIN booking_driver_assignments bda ON bda.id = (
           SELECT bda2.id
           FROM booking_driver_assignments bda2
@@ -914,7 +930,7 @@ class BookingRepository {
       `,
       [userId, limit, offset],
     );
-    return rows;
+    return this.withResolvedAirport(rows);
   }
 
   async countByCustomerUserId(userId) {
@@ -972,6 +988,7 @@ class BookingRepository {
         SELECT
           b.id, b.booking_number, b.status, b.total_amount, b.currency, b.vehicle_type_id,
           b.scheduled_pickup_at,
+          b.origin_lat, b.origin_lng, b.destination_lat, b.destination_lng,
           b.payment_status, b.payment_method, b.commission_exempt, b.booking_source,
           b.commission_amount, b.metadata,
           b.customer_user_id,
@@ -1061,6 +1078,24 @@ class BookingRepository {
         AND (? IS NULL OR EXISTS (SELECT 1 FROM guest_access_tokens gat WHERE gat.booking_id=b.id AND gat.token_hash=? AND gat.revoked_at IS NULL AND gat.expires_at>CURRENT_TIMESTAMP))
       ORDER BY f.id DESC LIMIT 1`, [bookingId,tokenHash,tokenHash]);
     return rows[0] || null;
+  }
+
+  async findAssignedDriverVehiclePhotoFiles(bookingId, tokenHash = null) {
+    const [rows]=await this.pool.query(`SELECT f.id,f.file_path,f.mime_type,f.original_filename
+      FROM bookings b
+      JOIN booking_driver_assignments bda ON bda.id=(
+        SELECT history.id FROM booking_driver_assignments history WHERE history.booking_id=b.id
+          AND history.deleted_at IS NULL AND (history.is_active=1 OR b.status IN ('SETTLEMENT_PENDING','COMPLETED'))
+        ORDER BY history.is_active DESC,history.updated_at DESC,history.id DESC LIMIT 1)
+      JOIN drivers d ON d.id=bda.driver_id AND d.deleted_at IS NULL
+      JOIN driver_applications da ON da.approved_driver_id=d.id AND da.status='APPROVED' AND da.deleted_at IS NULL
+      JOIN driver_application_files daf ON daf.driver_application_id=da.id AND daf.category='DRIVER_VEHICLE_PHOTO'
+      JOIN files f ON f.id=daf.file_id AND f.deleted_at IS NULL
+      WHERE b.id=? AND b.deleted_at IS NULL AND b.is_archived=0
+        AND (? IS NULL OR EXISTS(SELECT 1 FROM guest_access_tokens gat WHERE gat.booking_id=b.id
+          AND gat.token_hash=? AND gat.revoked_at IS NULL AND gat.expires_at>CURRENT_TIMESTAMP))
+      ORDER BY daf.sort_order ASC,f.id DESC LIMIT 50`,[bookingId,tokenHash,tokenHash]);
+    return rows;
   }
 
   async findGuestAssignedDriverVehiclePhotoFile(bookingId, tokenHash) {
@@ -2134,7 +2169,7 @@ class BookingRepository {
   }
 
   adminQueueOrderSql(view) {
-    if (view === 'needs_action') {
+    if (view === 'needs_action' || view === 'in_progress') {
       return `
         ORDER BY
           b.scheduled_pickup_at ASC,
@@ -2370,6 +2405,7 @@ class BookingRepository {
           d.status AS driver_status,
           dv.plate_number AS vehicle_plate,
           dv.model_name AS vehicle_model,
+          dv.color AS vehicle_color,
           vt.code AS vehicle_type_code,
           vt.name AS vehicle_type_name
         FROM booking_driver_assignments bda

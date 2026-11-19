@@ -8,8 +8,10 @@ import '../../../widgets/app_ui.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../admin_dispatch/services/admin_dispatch_api_service.dart';
 import '../../admin_dispatch/pages/admin_booking_detail_page.dart';
+import '../../admin_dispatch/widgets/admin_driver_detail_dialog.dart';
 import '../../driver/utils/driver_backend_datetime.dart';
 import '../models/driver_location.dart';
+import '../utils/driver_search.dart';
 import '../services/driver_location_api_service.dart';
 import '../services/driver_location_socket_service.dart';
 import '../widgets/driver_location_map.dart';
@@ -32,6 +34,7 @@ class AdminDriverMonitorPage extends StatefulWidget {
 
 class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
   bool _loading = true;
+  final _search = TextEditingController();
   bool _onlineOnly = false;
   bool _activeAccountOnly = true;
   bool _activeJobOnly = false;
@@ -59,6 +62,7 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
 
   @override
   void dispose() {
+    _search.dispose();
     _socket.disconnect();
     super.dispose();
   }
@@ -130,6 +134,7 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
 
   List<Map<String, dynamic>> get _filteredDrivers {
     return _drivers.where((driver) {
+      if (!matchesDriverSearch(driver, _search.text)) return false;
       if (_activeAccountOnly && driver['activeState'] != 'ACTIVE') return false;
       final archive = driver['archive'];
       final archived = archive is Map && archive['isArchived'] == true;
@@ -488,6 +493,30 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
               ],
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppTokens.spaceSm),
+            child: TextField(
+              key: const Key('adminDriverSearch'),
+              controller: _search,
+              onChanged: (_) => setState(() {
+                _selectedForArchive.clear();
+                _selected = null;
+              }),
+              decoration: InputDecoration(
+                labelText: l10n.t('admin_driver_search'),
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _search.text.isEmpty ? null : IconButton(
+                  tooltip: l10n.t('admin_driver_search_clear'),
+                  icon: const Icon(Icons.clear),
+                  onPressed: () => setState(() {
+                    _search.clear();
+                    _selectedForArchive.clear();
+                    _selected = null;
+                  }),
+                ),
+              ),
+            ),
+          ),
           AppUi.adminFilterBar(
             children: [
               FilterChip(
@@ -607,7 +636,14 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                             final suspension = driver['suspension'];
 
                             return AppUi.adminQueueCard(
-                              onTap: () => setState(() => _selected = location),
+                              onTap: () async {
+                                setState(() => _selected = location);
+                                final deleted = await showDialog<bool>(context: context, builder: (_) => AdminDriverDetailDialog(driverId: driverId, api: _dispatchApi, onChanged: _load));
+                                if (deleted == true && mounted) {
+                                  setState(() { _selected = null; _selectedForArchive.remove(driverId); });
+                                  await _load();
+                                }
+                              },
                               backgroundColor: selected
                                   ? AppTokens.primaryLight
                                   : AppTokens.surface,
@@ -661,6 +697,18 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                                           spacing: AppTokens.spaceSm,
                                           runSpacing: 4,
                                           children: [
+                                            if (driver['insurance'] is Map) ...[
+                                              AppUi.statusBadge(
+                                                '${l10n.t('admin_vehicle_insurance_${(driver['insurance'] as Map)['status'] ?? 'MISSING'}')}${(driver['insurance'] as Map)['expiresOn'] == null ? '' : ' · ${(driver['insurance'] as Map)['expiresOn']}'}',
+                                                tone: (driver['insurance'] as Map)['status'] == 'EXPIRED'
+                                                  ? AppStatusTone.error
+                                                  : (driver['insurance'] as Map)['status'] == 'EXPIRING'
+                                                    ? AppStatusTone.warning : AppStatusTone.neutral,
+                                              ),
+                                              if (((driver['insurance'] as Map)['missingDates'] as num? ?? 0) > 0
+                                                && (driver['insurance'] as Map)['status'] != 'MISSING')
+                                                AppUi.statusBadge(l10n.t('admin_vehicle_insurance_MISSING'), tone: AppStatusTone.warning),
+                                            ],
                                             AppUi.statusBadge(
                                               online
                                                   ? l10n.t(

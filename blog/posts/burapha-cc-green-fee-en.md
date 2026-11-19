@@ -9,13 +9,13 @@ category: golf
 bookingService: GOLF_TRANSFER
 translationKey: burapha-cc-green-fee
 date: 2026-10-07
-updated: 2026-10-30
+updated: 2026-11-10
 related:
   - pattaya-golf-price-match-guarantee-en
   - trounding-golf-join-bar-benefits-en
 ---
 
-For a Burapha CC golf trip, ask us about golf dates, joining a round and vehicle transfers together. Green fees depend on the date, tee time and package inclusions. A rate published for a previous season is not a confirmed quote for a new booking.
+Planning a round at Burapha CC? International visitors can ask Buddy Golf about private golf for their own group of at least two golfers and discuss vehicle transfers at the same time. Green fees depend on the date, tee time and package inclusions. A rate published for a previous season is not a confirmed quote for a new booking.
 
 ## Confirm your date and tee time
 
@@ -41,9 +41,9 @@ Enter your actual pickup address and schedule to confirm the final vehicle quote
 
 If four people share the THB 2,300 van transfer for an 18-hole round, the transport share is THB 575 each. This arithmetic does not guarantee that every luggage combination fits. Provide the number and size of golf bags and suitcases before selecting a vehicle.
 
-## Discuss golf dates, joining a round and transfers together
+## Discuss your private round and transfers together
 
-Buddy Golf, formerly TRounding, focuses on Korean golf travellers in Pattaya. Send your preferred date, course, player count and accommodation through [WhatsApp](https://wa.me/66815693445). Ask us about golf dates, joining a round and vehicle transfers together; after checking tee-time and playing-partner availability, we can help coordinate your round and pickup schedule.
+Send Buddy Golf your preferred date, number of golfers and hotel through [WhatsApp](https://wa.me/66815693445). We can check available tee times for your group and help coordinate the pickup schedule. If you have already booked your round, you can arrange just the TRider transfer.
 
 ## Final checks before booking
 

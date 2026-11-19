@@ -44,7 +44,7 @@ class EmailNotificationAdapter {
   }
 
   approvedEmail(notification) {
-    if(notification.payload?.adminReceipt!==true)return null;
+    if(notification.payload?.adminReceipt!==true && notification.payload?.adminBookingConfirmation!==true)return null;
     if(typeof notification.payload.approvedEmail!=='string')throw new Error('Approved email is missing');
     return JSON.parse(decrypt(notification.payload.approvedEmail));
   }

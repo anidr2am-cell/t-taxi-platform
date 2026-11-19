@@ -60,6 +60,7 @@ function createHarness({ placesService = null } = {}) {
     release() {},
   };
   const bookingRepository = {
+    async findActiveAirportRegions() { return require('./helpers/airportRegionFixture')(); },
     async resolveBookingLocale(_conn, _userId, locale) { return locale || "ko"; },
     async insertBooking(_conn, row) {
       calls.booking = row;

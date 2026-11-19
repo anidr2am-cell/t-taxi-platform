@@ -630,6 +630,35 @@ void main() {
     expect(find.textContaining('위치 공유'), findsNothing);
   });
 
+  testWidgets('driver search filters the list and clear restores it', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.binding.setSurfaceSize(const Size(1100, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: AdminDriverMonitorPage(
+      api: _FakeAdminLocationApi(items: const []),
+      dispatchApi: _FakeDispatchDriversApi(drivers: [
+        {'driverId': 2, 'displayName': 'QA Alpha', 'phone': '+66812345678',
+          'activeState': 'ACTIVE', 'onlineState': 'OFFLINE',
+          'vehiclePlateNumbers': ['AB-5678']},
+        {'driverId': 6, 'displayName': 'QA Beta', 'phone': '+66900000000',
+          'activeState': 'ACTIVE', 'onlineState': 'OFFLINE'},
+      ]),
+    ))));
+    await tester.pumpAndSettle();
+    final field = find.byKey(const Key('adminDriverSearch'));
+    await tester.enterText(field, 'ab5678');
+    await tester.pumpAndSettle();
+    expect(find.text('QA Alpha'), findsOneWidget);
+    expect(find.text('QA Beta'), findsNothing);
+    await tester.tap(find.descendant(of: field, matching: find.byIcon(Icons.clear)));
+    await tester.pumpAndSettle();
+    expect(find.text('QA Alpha'), findsOneWidget);
+    expect(find.text('QA Beta'), findsOneWidget);
+    await tester.enterText(field, '0812345678');
+    await tester.pumpAndSettle();
+    expect(find.text('QA Alpha'), findsOneWidget);
+    expect(find.text('QA Beta'), findsNothing);
+  });
   testWidgets('admin monitor shows loading, empty, and error states', (
     tester,
   ) async {

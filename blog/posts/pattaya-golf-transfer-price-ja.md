@@ -7,7 +7,7 @@ category: golf
 bookingService: GOLF_TRANSFER
 translationKey: pattaya-golf-transfer-price
 date: 2026-10-28
-updated: 2026-10-30
+updated: 2026-11-10
 related:
   - burapha-cc-green-fee-ja
   - pattaya-solo-golf-join-ja
@@ -60,7 +60,7 @@ A・Bグループの18ホール用バンは基本料金2,300バーツです。6�
 
 希望するゴルフ場、日付、ティーオフ時刻とホール数を伝え、実際のプレー枠と送迎の行程を確認しましょう。
 
-TRiderとBuddy Golf（버디골프）では、ゴルフ日程・組み合わせ・車両送迎をまとめて相談できます。[LINE](https://lin.ee/55A9phq)で希望日、人数、ホテル住所、荷物と希望する案内言語をお知らせください。[WhatsApp](https://wa.me/66815693445)でも同じ内容をまとめて相談できます。
+Buddy Golf（버디골프）の海外からのお客様向けゴルフ予約は、プレーヤー2名以上でご自身のグループだけで回るラウンドです。ゴルフと送迎をまとめて相談する場合は、[LINE](https://lin.ee/55A9phq)で希望日、プレー人数、ホテル住所、荷物と希望する案内言語をお知らせください。[WhatsApp](https://wa.me/66815693445)でも相談できます。
 
 ## 送迎予約前のチェックリスト
 
@@ -70,4 +70,4 @@ TRiderとBuddy Golf（버디골프）では、ゴルフ日程・組み合わせ�
 - 人数とゴルフバッグ、スーツケースを入力したか
 - 往復の行程と最終車両料金を確認したか
 
-パタヤのゴルフ場送迎は、[TRiderの日本語ゴルフ場送迎予約画面](/booking?service=GOLF_TRANSFER&lang=ja)で24時間予約できます。ゴルフの組み合わせも希望する場合はLINEでまとめて相談し、ティータイムと送迎を確認して行程を整えましょう。
+パタヤのゴルフ場送迎は、[TRiderの日本語ゴルフ場送迎予約画面](/booking?service=GOLF_TRANSFER&lang=ja)で24時間予約できます。送迎のみのご予約には、ゴルフの2名条件は適用されません。

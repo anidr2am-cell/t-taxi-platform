@@ -1,3 +1,4 @@
+const { ADMIN_BOOKING_EMAIL_RESEND } = require('../policies/notificationEmail.policy');
 const database = require('../config/database');
 class AdminReceiptEmailRepository {
   constructor(pool=database.pool) { this.pool=pool; }
@@ -9,8 +10,8 @@ class AdminReceiptEmailRepository {
       WHERE b.booking_number=? AND b.deleted_at IS NULL LIMIT 1 ${lock?'FOR UPDATE':''}`,[number]);
     return rows[0]||null;
   }
-  async history(conn,id) {
-    const [rows]=await (conn||this.pool).query(`SELECT d.id,d.notification_id,n.type,d.delivery_status,d.attempt_count,d.last_error,
+  async history(conn,id,{includeResends=false}={}) {
+    const [rows]=await (conn||this.pool).query(`SELECT d.id,d.notification_id,n.type,n.event_name,d.delivery_status,d.attempt_count,d.last_error,
       (SELECT COUNT(*) FROM notification_email_attempts a WHERE a.delivery_id=d.id) smtp_attempts,
       (SELECT a.outcome FROM notification_email_attempts a WHERE a.delivery_id=d.id ORDER BY a.id DESC LIMIT 1) outcome,
       (SELECT COUNT(*) FROM notification_email_reviews r WHERE r.delivery_id=d.id AND r.action='ACCEPTED_CONFIRMED') accepted_confirmed
@@ -18,13 +19,36 @@ class AdminReceiptEmailRepository {
       LEFT JOIN users u ON u.id=n.user_id
       WHERE n.booking_id=? AND d.channel='EMAIL'
         AND COALESCE(n.audience_role,IF(n.recipient_type='GUEST_BOOKING','CUSTOMER',u.role))='CUSTOMER'
-      ORDER BY d.id DESC`,[id]);
+        ${includeResends ? '' : 'AND COALESCE(n.event_name, \'\') <> ?'}
+      ORDER BY d.id DESC`,includeResends ? [id] : [id,ADMIN_BOOKING_EMAIL_RESEND]);
     return rows;
   }
   async confirmPayment(conn,row,record,actorId) {
     await conn.query(`UPDATE bookings SET payment_status='PAID',
       metadata=JSON_SET(COALESCE(metadata,JSON_OBJECT()),'$.customerPaymentConfirmation',JSON_EXTRACT(?,'$')),
       updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,[JSON.stringify(record),actorId,row.id]);
+  }
+  async decideDriverCollection(conn,row,record,actorId) {
+    await conn.query(`UPDATE bookings SET payment_status=?,
+      metadata=JSON_SET(COALESCE(metadata,JSON_OBJECT()),'$.driverCollectionDecision',JSON_EXTRACT(?,'$')),
+      updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+      [record.choice==='PAID'?'PAID':row.payment_status,JSON.stringify(record),actorId,row.id]);
+  }
+  async approveBookingEmailResend(conn,row,record) {
+    await conn.query(`UPDATE bookings SET metadata=JSON_SET(COALESCE(metadata,JSON_OBJECT()),
+      '$.adminBookingEmailResend',JSON_EXTRACT(?,'$')) WHERE id=?`,[JSON.stringify(record),row.id]);
+  }
+  async approveBookingEmail(conn,row,email,record) {
+    // Lock order is booking -> deliveries, the same as claimCustomerEmail.
+    await conn.query(`UPDATE notification_deliveries d JOIN notifications n ON n.id=d.notification_id LEFT JOIN users u ON u.id=n.user_id
+      SET d.delivery_status='SKIPPED',d.last_error='EMAIL_POLICY_SUPERSEDED_BY_ADMIN_BOOKING'
+      WHERE n.booking_id=? AND n.type='BOOKING_CREATED' AND d.channel='EMAIL' AND d.id<>?
+        AND COALESCE(n.audience_role,IF(n.recipient_type='GUEST_BOOKING','CUSTOMER',u.role))='CUSTOMER'
+        AND d.delivery_status<>'DELIVERED'
+        AND NOT EXISTS(SELECT 1 FROM notification_email_attempts a WHERE a.delivery_id=d.id)`,[row.id,record.deliveryId]);
+    await conn.query(`UPDATE bookings SET customer_email=?,metadata=JSON_SET(COALESCE(metadata,JSON_OBJECT()),
+      '$.adminBookingConfirmationEmail',JSON_EXTRACT(?,'$')),updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+      [email,JSON.stringify(record),record.actorUserId,row.id]);
   }
   async approve(conn,row,email,record) {
     await conn.query(`UPDATE bookings SET customer_email=?,metadata=JSON_SET(COALESCE(metadata,JSON_OBJECT()),

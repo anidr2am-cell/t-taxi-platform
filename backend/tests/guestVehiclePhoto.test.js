@@ -275,3 +275,16 @@ test('guest vehicle photo route returns not found when photo unavailable', async
   assert.equal(res.statusCode, 404);
   assert.equal(res.body.error_code, 'NOT_FOUND');
 });
+
+test('photo service uses an existing approved assigned-driver candidate when an older original is missing',async()=>{
+ const service=buildPhotoService();
+ service.bookingRepository.findAssignedDriverVehiclePhotoFiles=async(id,token)=>{
+   assert.equal(id,10);assert.equal(token,hashToken('guest-token'));
+   return [{file_path:'missing-original.jpg',mime_type:'image/jpeg'}, {file_path:photoRelativePath,mime_type:'image/jpeg',original_filename:'QA.jpg'}];
+ };
+ const file=await service.getAssignedDriverVehiclePhotoFile(10,'guest-token');assert.equal(file.filePath,photoRelativePath);
+});
+test('missing originals produce a controlled unavailable response, never a substitute vehicle image',async()=>{
+ const service=buildPhotoService();service.bookingRepository.findAssignedDriverVehiclePhotoFiles=async()=>[{file_path:'missing-original.jpg',mime_type:'image/jpeg'}];
+ await assert.rejects(service.getAssignedDriverVehiclePhotoFile(10,'guest-token'),e=>e.errorCode==='VEHICLE_PHOTO_UNAVAILABLE'&&e.statusCode===404);
+});

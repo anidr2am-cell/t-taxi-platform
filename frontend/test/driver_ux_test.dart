@@ -426,7 +426,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('운행 계속하기 / ดำเนินงานต่อ'),
       120,
-      scrollable: find.byType(Scrollable),
+      scrollable: find.byType(Scrollable).last,
     );
     await tester.tap(find.text('운행 계속하기 / ดำเนินงานต่อ'));
     await tester.pumpAndSettle();

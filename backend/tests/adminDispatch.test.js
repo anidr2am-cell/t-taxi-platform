@@ -31,6 +31,25 @@ const settlementStub = {
 };
 const scoringService = new DriverCandidateScoringService();
 
+test('legacy manual BKK detail exposes arrival-link airport without rewriting booking or assignment', async () => {
+  const row = queueRow({booking_source:'ADMIN_MANUAL',status:'DRIVER_ASSIGNED',origin_lat:13.689999,origin_lng:100.747924,airport_iata:null,airport_code_custom:null});
+  const assignments = [{id:10,driver_id:2,is_active:1,status:'ASSIGNED'}];
+  const before = JSON.stringify({row,assignments});
+  const repository = {
+    findAdminBookingDetail:async()=>row,
+    findActiveAirportRegions:async()=>require('./helpers/airportRegionFixture')(),
+    findChargeItemsByBookingId:async()=>[],
+    findStatusLogsByBookingId:async()=>[],
+    findAssignmentsByBookingId:async()=>assignments,
+  };
+  const service = new AdminDispatchService({},repository,{}, {},settlementStub,null,null,scoringService);
+  const detail = await service.getBookingDetail(row.booking_number);
+  assert.equal(detail.flight.airportIata,'BKK');
+  assert.equal(detail.serviceType.code,'AIRPORT_PICKUP');
+  assert.equal(detail.options.nameSign,false);
+  assert.equal(JSON.stringify({row,assignments}),before);
+});
+
 function sign(role = "ADMIN", id = 1) {
   return jwt.sign(
     {
@@ -2179,3 +2198,12 @@ for (const pickup of ['2020-01-01 12:00:00','2099-01-01 12:00:00']) {
     assert.equal(committed,true);
   });
 }
+
+
+test('customer itinerary request is visible in admin detail without applying it', async () => {
+ const change={message:'QA: change route please',requestedAt:'2026-11-06T01:00:00Z',requestId:'QA_REQUEST'};
+ const row=queueRow({metadata:JSON.stringify({customerChangeRequest:change}),airport_iata:'BKK',status:'DRIVER_ASSIGNED'});
+ const repository={findAdminBookingDetail:async()=>row,findChargeItemsByBookingId:async()=>[],findStatusLogsByBookingId:async()=>[],findAssignmentsByBookingId:async()=>[]};
+ const service=new AdminDispatchService({},repository,{}, {},settlementStub,null,null,scoringService);
+ const detail=await service.getBookingDetail(row.booking_number);assert.deepEqual(detail.customerChangeRequest,change);assert.equal(detail.route.destination.address,row.destination_address);assert.equal(detail.pricing.totalAmount,row.total_amount);
+});

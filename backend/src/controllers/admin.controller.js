@@ -37,6 +37,21 @@ const getBookingDetail = asyncHandler(async (req, res) => {
   return success(res, data);
 });
 
+const getDriverDetail = asyncHandler(async (req, res) =>
+  success(res, await getAdminDispatchService().getDriverDetail(Number(req.params.id))),
+);
+const getCustomerBriefPhotos = asyncHandler(async (req, res) =>
+  success(res, await getAdminDispatchService().getCustomerBriefPhotos(req.params.bookingNumber)),
+);
+const getCustomerBriefPhoto = asyncHandler(async (req, res) => {
+  const file = await getAdminDispatchService().getCustomerBriefPhotos(req.params.bookingNumber, Number(req.params.fileId));
+  const { resolveUploadAbsolutePath } = require('../utils/uploadPath.util');
+  return res.sendFile(resolveUploadAbsolutePath(file.file_path), { headers: {
+    'Content-Type': file.mime_type, 'Cache-Control': 'private, no-store',
+    'X-Content-Type-Options': 'nosniff',
+  }});
+});
+
 const listDrivers = asyncHandler(async (req, res) => {
   const data = await getAdminDispatchService().listDrivers(req.query);
   return success(res, data);
@@ -222,6 +237,7 @@ const cancelManualBooking = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  getDriverDetail, getCustomerBriefPhotos, getCustomerBriefPhoto,
   listBookings,
   getBookingsSummary,
   getBookingDetail,

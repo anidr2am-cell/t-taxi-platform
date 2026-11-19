@@ -13,7 +13,7 @@ class DriverRepository {
     this.pool = pool;
   }
 
-  async listForAdminAssignment({ archived = false } = {}) {
+  async listForAdminAssignment({ archived = false, driverId = null } = {}) {
     const [rows] = await this.pool.query(
       `
         SELECT
@@ -32,6 +32,20 @@ class DriverRepository {
           dv.id AS primary_vehicle_id,
           dv.plate_number AS primary_vehicle_plate,
           dv.model_name AS primary_vehicle_model,
+          (
+            SELECT DATE_FORMAT(MIN(vi.insurance_expires_on), '%Y-%m-%d') FROM driver_vehicles vi
+            WHERE vi.driver_id=d.id AND vi.deleted_at IS NULL AND vi.is_active=1
+          ) AS earliest_insurance_expiry,
+          (
+            SELECT COUNT(*) FROM driver_vehicles vi
+            WHERE vi.driver_id=d.id AND vi.deleted_at IS NULL AND vi.is_active=1
+              AND vi.insurance_expires_on IS NULL
+          ) AS missing_insurance_dates,
+          (
+            SELECT GROUP_CONCAT(vs.plate_number SEPARATOR '|')
+            FROM driver_vehicles vs
+            WHERE vs.driver_id=d.id AND vs.deleted_at IS NULL
+          ) AS search_vehicle_plates,
           (
             SELECT GROUP_CONCAT(DISTINCT vt2.code ORDER BY vt2.code SEPARATOR ',')
             FROM driver_vehicles dv2
@@ -91,9 +105,10 @@ class DriverRepository {
           AND dv.deleted_at IS NULL
         WHERE d.deleted_at IS NULL
           AND d.is_archived = ?
+          AND (? IS NULL OR d.id = ?)
         ORDER BY d.name ASC
       `,
-      [archived ? 1 : 0],
+      [archived ? 1 : 0, driverId, driverId],
     );
     return rows;
   }
@@ -1031,6 +1046,7 @@ class DriverRepository {
           dv.plate_number,
           dv.model_name,
           dv.color,
+          DATE_FORMAT(dv.insurance_expires_on, '%Y-%m-%d') AS insurance_expires_on,
           dv.is_primary,
           dv.is_active,
           COALESCE(dv.approval_status, 'APPROVED') AS approval_status,

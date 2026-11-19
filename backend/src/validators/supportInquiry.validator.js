@@ -2,7 +2,7 @@ const Joi = require('joi');
 const SupportInquiryService = require('../services/supportInquiry.service');
 const { unicodeText } = require('./common.validator');
 
-const localeValues = ['ko', 'en', 'th', 'ja', 'zh'];
+const localeValues = ['ko', 'en', 'th', 'ja', 'zh', 'ru'];
 const statusValues = SupportInquiryService.STATUS_VALUES;
 
 const createSupportInquirySchema = Joi.object({

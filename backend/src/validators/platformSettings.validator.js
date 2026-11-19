@@ -17,7 +17,7 @@ const adminSettingsUpdateSchema = Joi.object({
 }).unknown(false);
 
 const adminContactChannelsUpdateSchema = Joi.object({
-  contactDefaultChannel: Joi.string().valid('LINE','KAKAO','WHATSAPP','').allow(null).default(''),
+  contactDefaultChannel: Joi.string().valid('LINE','KAKAO','WHATSAPP','WECHAT','TELEGRAM','').allow(null).default(''),
   guestLookupInquiryBannerEnabled: booleanSetting.default(false),
   guestLookupInquiryBannerMessage: unicodeText({ max: 500, allowEmpty: true }).default(''),
   contactLineEnabled: booleanSetting.default(false),
@@ -34,6 +34,9 @@ const adminContactChannelsUpdateSchema = Joi.object({
   contactWechatEnabled: booleanSetting.default(false),
   contactWechatDisplayName: unicodeText({ max: 100, allowEmpty: true }).default(''),
   contactWechatAccountId: Joi.string().trim().max(100).allow('', null).default(''),
+  contactTelegramEnabled: booleanSetting.optional(),
+  contactTelegramDisplayName: unicodeText({ max: 100, allowEmpty: true }).optional(),
+  contactTelegramAddUrl: Joi.string().trim().max(500).uri({scheme:['https']}).allow('',null).optional(),
 }).unknown(false);
 
 const adminSettingsImageKindParamsSchema = Joi.object({

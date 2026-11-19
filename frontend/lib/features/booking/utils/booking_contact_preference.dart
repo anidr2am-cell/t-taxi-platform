@@ -4,8 +4,10 @@ class BookingContactPreference {
   static const kakao = 'KAKAO';
   static const line = 'LINE';
   static const whatsapp = 'WHATSAPP';
-  static const sms = 'SMS';
-  static const values = [kakao, line, whatsapp, sms];
+  static const sms = 'SMS'; // Historical reservations only.
+  static const wechat = 'WECHAT';
+  static const telegram = 'TELEGRAM';
+  static const values = [kakao, line, whatsapp, wechat, telegram];
 
   static String normalize(String? value) {
     final normalized = (value ?? '').trim().toUpperCase().replaceAll(
@@ -16,6 +18,8 @@ class BookingContactPreference {
       'KAKAO' || 'KAKAO TALK' || 'KAKAOTALK' => kakao,
       'LINE' => line,
       'WHATSAPP' => whatsapp,
+      'WECHAT' || 'WE CHAT' => wechat,
+      'TELEGRAM' => telegram,
       'SMS' || 'PHONE' || 'PHONE/SMS' => sms,
       _ => '',
     };
@@ -40,12 +44,13 @@ class BookingContactPreference {
     'th' => '+66',
     'ja' => '+81',
     'zh' => '+86',
+    'ru' => '+7',
     _ => '+66',
   };
 
   static bool usesPhone(String type) => type == whatsapp || type == sms;
   static bool requiresPhone(String type) =>
-      type == kakao || type == line || usesPhone(type);
+      values.contains(type) || type == sms;
   static bool allowsEmergencyPhone(String type) => false;
 
   static String contactPhone(String type, String dialCode, String localNumber) {
@@ -73,7 +78,9 @@ class BookingContactPreference {
     final primary = requiresPhone(normalizedType)
         ? formatInternationalPhone(phone)
         : messengerId.trim();
-    final id = [kakao, line].contains(normalizedType) ? messengerId.trim() : '';
+    final id = [kakao, line, wechat, telegram].contains(normalizedType)
+        ? messengerId.trim()
+        : '';
     return [
       channelLabel,
       if (primary.isNotEmpty) primary,
@@ -85,6 +92,8 @@ class BookingContactPreference {
     kakao => 'booking_contact_kakao',
     line => 'booking_contact_line',
     whatsapp => 'booking_contact_whatsapp',
+    wechat => 'booking_contact_wechat',
+    telegram => 'booking_contact_telegram',
     _ => 'booking_contact_phone_sms',
   };
 
@@ -119,6 +128,9 @@ class BookingContactPreference {
         countryDialCodes[dialCode.trim().toUpperCase()] ?? dialCode;
     var dial = resolvedDial.replaceAll(RegExp(r'\D'), '');
     var local = localNumber.replaceAll(RegExp(r'\D'), '');
+    if (dial == '7' && local.length == 11 && local.startsWith('8')) {
+      local = local.substring(1);
+    }
     if (local.startsWith('0')) local = local.substring(1);
     if (dial.isEmpty || local.isEmpty) return '';
     final normalized = '+$dial$local';

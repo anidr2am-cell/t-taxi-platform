@@ -46,9 +46,9 @@
     const th=document.createElement('th');th.scope='row';th.textContent=data.places[row.destination]||row.label||row.destination;tr.append(th);
     for(const vehicle of ['SEDAN','SUV','VAN']){const td=document.createElement('td');td.dataset.price=vehicle;td.textContent=row.prices[vehicle].toLocaleString('en-US');tr.append(td);}tbody.append(tr);}
    document.querySelector('tbody').replaceChildren(tbody);document.querySelector('.airport-tabs').replaceChildren(tabs);document.querySelector('#hero-price-amount').textContent=hero.prices.SEDAN.toLocaleString('en-US');
-   const channels=[...body.data.channels].sort((a,b)=>data.contactOrder.indexOf(a.code)-data.contactOrder.indexOf(b.code));
+   const byCode=new Map(body.data.channels.map(c=>[c.code,c]));
+   const channels=data.contactOrder.map(code=>byCode.get(code)).filter(Boolean);
    const links=channels.flatMap(c=>{if(!data.channels[c.code])return[];const digits=(c.phoneNumber||'').replace(/\D/g,'');const raw=c.code==='WHATSAPP'?(digits?`https://wa.me/${digits}`:null):(c.addUrl||`/support?lang=${data.lang}`);if(!raw)return[];const url=allowedContact(raw);if(!url)return[];const a=document.createElement('a');a.dataset.channel=c.code;a.href=url;a.rel='noopener noreferrer';a.target='_blank';a.textContent=data.channels[c.code]+data.contactSuffix;return[a];});
-   const heroSupport=document.querySelector('#hero-support');if(heroSupport&&links.length){const first=links[0].cloneNode(true);first.className='service';first.textContent=data.heroContact.replace('{channel}',data.channels[channels[0].code]);heroSupport.replaceChildren(first);}
    const parent=document.querySelector('#support-actions');parent.querySelectorAll('[data-channel]').forEach(a=>a.remove());links.forEach(a=>parent.insertBefore(a,parent.lastElementChild));
    document.querySelector('#fare-status').textContent=data.fareMessages[0];
   }catch{document.querySelector('#fare-status').textContent=data.fareMessages[1]+' ('+data.snapshotDate+')';}

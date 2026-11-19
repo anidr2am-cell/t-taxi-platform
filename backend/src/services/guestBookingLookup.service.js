@@ -211,6 +211,7 @@ class GuestBookingLookupService {
     return {
       bookingId: row.id,
       bookingNumber: row.booking_number,
+      customerName: row.customer_name ?? null,
       status: row.status,
       reassignmentInProgress,
       canReview,
@@ -225,6 +226,8 @@ class GuestBookingLookupService {
       route: {
         origin: {
           code: row.origin_location_code ?? null,
+          airportIata: row.service_type_code === 'AIRPORT_PICKUP'
+            ? row.origin_airport_iata ?? row.airport_iata ?? row.airport_code_custom ?? null : null,
           address: row.origin_address,
           name: pickupLocation.name,
         },
@@ -286,7 +289,7 @@ class GuestBookingLookupService {
   async lookup(input) {
     const bookingNumber = String(input.bookingNumber).trim().toUpperCase();
     const phone = this.normalizePhone(input.phone);
-    if (!phone) {
+    if (!phone && !this.normalizeName(input.name)) {
       throw this.notFound();
     }
 
@@ -304,7 +307,10 @@ class GuestBookingLookupService {
         bookingNumber,
       );
       const storedPhone = this.normalizePhone(booking?.customer_phone);
-      if (!booking || storedPhone !== phone) {
+      const matches = input.name !== undefined
+        ? Boolean(this.normalizeName(input.name)) && this.namesMatch(input.name, booking?.customer_name)
+        : Boolean(storedPhone) && storedPhone === phone;
+      if (!booking || !matches) {
         throw this.notFound();
       }
 
@@ -372,6 +378,8 @@ class GuestBookingLookupService {
       route: {
         origin: {
           code: row.origin_location_code ?? null,
+          airportIata: row.service_type_code === 'AIRPORT_PICKUP'
+            ? row.origin_airport_iata ?? row.airport_iata ?? row.airport_code_custom ?? null : null,
           address: null,
           name: pickupLocation.name,
         },

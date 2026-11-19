@@ -18,7 +18,74 @@ class _FakeSupportContactApi implements SupportContactDataSource {
       Uri.parse('https://lin.ee/55A9phq');
 }
 
+class _PasswordAccountApi extends FakeAccountApi {
+  int changeAttempts = 0;
+
+  @override
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    changeAttempts++;
+    if (currentPassword != 'current-test-password') {
+      throw const ApiException(
+        ApiFailureKind.validation,
+        errorCode: 'CURRENT_PASSWORD_INCORRECT',
+      );
+    }
+    expect(newPassword, 'new-test-password');
+  }
+}
+
 void main() {
+  testWidgets('account changes password and logs out only after success', (
+    tester,
+  ) async {
+    _useTallView(tester);
+    final account = _PasswordAccountApi();
+    final localeController = await createTestLocaleController(localeCode: 'ko');
+    var logoutCount = 0;
+    await tester.pumpWidget(
+      materialAppWithLocaleController(
+        localeController: localeController,
+        home: AccountPage(
+          accountApi: account,
+          dispatchRepository: FakeDispatchReader(),
+          localeController: localeController,
+          onUnauthorized: () async {},
+          onLogout: () async {
+            logoutCount++;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final open = find.byKey(const Key('openDriverPasswordChange'));
+    await tester.ensureVisible(open);
+    await tester.tap(open);
+    await tester.pumpAndSettle();
+    final fields = find.byType(TextFormField);
+    final submit = find.widgetWithText(FilledButton, '변경');
+    await tester.enterText(fields.at(0), 'incorrect-test-password');
+    await tester.enterText(fields.at(1), 'new-test-password');
+    await tester.enterText(fields.at(2), 'mistyped-test-password');
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+    expect(find.text('새 비밀번호가 일치하지 않습니다.'), findsOneWidget);
+    expect(account.changeAttempts, 0);
+
+    await tester.enterText(fields.at(2), 'new-test-password');
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+    expect(find.text('현재 비밀번호를 확인해 주세요.'), findsOneWidget);
+    expect(logoutCount, 0);
+
+    await tester.enterText(fields.at(0), 'current-test-password');
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(account.changeAttempts, 2);
+    expect(logoutCount, 1);
+  });
+
   testWidgets(
     'account shows no-review state and reuses dispatch online toggle',
     (tester) async {

@@ -54,7 +54,7 @@ void main() {
     });
   });
 
-  testWidgets('booking complete shows tracking without guest token when JWT loaded', (
+  testWidgets('booking complete keeps cancellation auth and never shows driver location', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -73,12 +73,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(GuestDriverTrackingSection), findsOneWidget);
-    final section = tester.widget<GuestDriverTrackingSection>(
-      find.byType(GuestDriverTrackingSection),
-    );
-    expect(section.guestAccessToken, isEmpty);
-    expect(section.useCustomerAuth, isTrue);
+    expect(find.byType(GuestDriverTrackingSection), findsNothing);
+    final section = tester.widget<GuestBookingCancelSection>(find.byType(GuestBookingCancelSection));
     expect(section.customerAccessToken, 'customer-jwt');
   });
 
@@ -109,7 +105,7 @@ void main() {
 
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.byType(GuestDriverTrackingSection), findsOneWidget);
+    expect(find.byType(GuestDriverTrackingSection), findsNothing);
     expect(find.byType(GuestBookingCancelSection), findsOneWidget);
   });
 
@@ -165,11 +161,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final section = tester.widget<GuestDriverTrackingSection>(
-      find.byType(GuestDriverTrackingSection),
-    );
-    expect(section.guestAccessToken, 'guest-token');
+    expect(find.byType(GuestDriverTrackingSection), findsNothing);
+    final section = tester.widget<GuestBookingCancelSection>(find.byType(GuestBookingCancelSection));
+    expect(section.booking.guestAccessToken, 'guest-token');
     expect(section.customerAccessToken, 'customer-jwt');
-    expect(section.useCustomerAuth, isTrue);
   });
 }

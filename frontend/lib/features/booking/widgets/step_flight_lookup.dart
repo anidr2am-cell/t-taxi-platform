@@ -33,6 +33,8 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
   final GlobalKey _resultsAnchorKey = GlobalKey();
   bool _loading = false;
   int? _confirmedIndex;
+  int _searchGeneration = 0;
+  int _selectedDelayMinutes = 50;
   List<FlightSearchResult> _results = const [];
   String? _errorKey;
 
@@ -82,6 +84,8 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
   }
 
   void _clearResult() {
+    _searchGeneration++;
+    _loading = false;
     _results = const [];
     _errorKey = null;
     _confirmedIndex = null;
@@ -92,12 +96,13 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
     final date = dateOverride ?? widget.state.flightDate;
     if (number.isEmpty || date.isEmpty || _loading) return;
     setState(() {
-      _loading = true;
       _clearResult();
+      _loading = true;
     });
+    final generation = _searchGeneration;
     try {
       final results = await _api.searchFlights(number, date);
-      if (!mounted) return;
+      if (!mounted || generation != _searchGeneration) return;
       setState(() {
         _loading = false;
         _results = results;
@@ -116,7 +121,7 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
         });
       }
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || generation != _searchGeneration) return;
       setState(() {
         _loading = false;
         _errorKey = 'flight_lookup_manual_fallback';
@@ -124,11 +129,16 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
     }
   }
 
-  Future<void> _confirm(FlightSearchResult result, int index) async {
+  Future<void> _confirm(
+    FlightSearchResult result,
+    int index, {
+    int delayMinutes = 50,
+  }) async {
     final applied = await widget.controller.applyConfirmedFlight(
       flightNumber: result.flightNumber.isEmpty
           ? _flightController.text
           : result.flightNumber,
+      pickupDelayMinutes: delayMinutes,
       flightDate: widget.state.flightDate,
       arrivalAirportCode: result.arrival.airportCode,
       arrivalTimestamp:
@@ -137,6 +147,7 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
     if (!mounted) return;
     setState(() {
       _confirmedIndex = applied ? index : null;
+      _selectedDelayMinutes = delayMinutes;
       _errorKey = applied ? null : 'flight_lookup_airport_unsupported';
     });
     if (applied) widget.onFlightConfirmed?.call();
@@ -286,18 +297,31 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
               key: Key('route_flight_confirm_button_$index'),
               onPressed: () => _confirm(result, index),
               icon: Icon(
-                _confirmedIndex == index
+                _confirmedIndex == index && _selectedDelayMinutes == 50
                     ? Icons.check_circle
                     : Icons.check_circle_outline,
-                color: _confirmedIndex == index
+                color: _confirmedIndex == index && _selectedDelayMinutes == 50
                     ? AppTokens.success
                     : AppTokens.primary,
               ),
-              label: Text(l10n.t('flight_lookup_confirm')),
+              label: Text(l10n.t('flight_first_use_buffer')),
+            ),
+            TextButton.icon(
+              key: Key('route_flight_use_arrival_$index'),
+              onPressed: () => _confirm(result, index, delayMinutes: 0),
+              icon: Icon(_confirmedIndex == index && _selectedDelayMinutes == 0
+                ? Icons.check_circle : Icons.schedule,
+                color: _confirmedIndex == index && _selectedDelayMinutes == 0
+                  ? AppTokens.success : AppTokens.primary),
+              label: Text(l10n.t('flight_first_use_arrival')),
             ),
             if (_confirmedIndex == index)
               Text(
-                l10n.t('flight_lookup_applied_50_minutes'),
+                l10n.t(
+                  _selectedDelayMinutes == 0
+                      ? 'flight_first_arrival_applied'
+                      : 'flight_lookup_applied_50_minutes',
+                ),
                 style: const TextStyle(color: AppTokens.success),
               ),
           ],
