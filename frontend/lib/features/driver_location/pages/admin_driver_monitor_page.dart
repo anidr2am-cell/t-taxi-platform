@@ -638,7 +638,7 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                             return AppUi.adminQueueCard(
                               onTap: () async {
                                 setState(() => _selected = location);
-                                final deleted = await showDialog<bool>(context: context, builder: (_) => AdminDriverDetailDialog(driverId: driverId, api: _dispatchApi));
+                                final deleted = await showDialog<bool>(context: context, builder: (_) => AdminDriverDetailDialog(driverId: driverId, api: _dispatchApi, onChanged: _load));
                                 if (deleted == true && mounted) {
                                   setState(() { _selected = null; _selectedForArchive.remove(driverId); });
                                   await _load();
@@ -697,6 +697,18 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                                           spacing: AppTokens.spaceSm,
                                           runSpacing: 4,
                                           children: [
+                                            if (driver['insurance'] is Map) ...[
+                                              AppUi.statusBadge(
+                                                '${l10n.t('admin_vehicle_insurance_${(driver['insurance'] as Map)['status'] ?? 'MISSING'}')}${(driver['insurance'] as Map)['expiresOn'] == null ? '' : ' · ${(driver['insurance'] as Map)['expiresOn']}'}',
+                                                tone: (driver['insurance'] as Map)['status'] == 'EXPIRED'
+                                                  ? AppStatusTone.error
+                                                  : (driver['insurance'] as Map)['status'] == 'EXPIRING'
+                                                    ? AppStatusTone.warning : AppStatusTone.neutral,
+                                              ),
+                                              if (((driver['insurance'] as Map)['missingDates'] as num? ?? 0) > 0
+                                                && (driver['insurance'] as Map)['status'] != 'MISSING')
+                                                AppUi.statusBadge(l10n.t('admin_vehicle_insurance_MISSING'), tone: AppStatusTone.warning),
+                                            ],
                                             AppUi.statusBadge(
                                               online
                                                   ? l10n.t(

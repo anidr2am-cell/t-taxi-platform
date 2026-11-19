@@ -33,6 +33,15 @@ class DriverRepository {
           dv.plate_number AS primary_vehicle_plate,
           dv.model_name AS primary_vehicle_model,
           (
+            SELECT DATE_FORMAT(MIN(vi.insurance_expires_on), '%Y-%m-%d') FROM driver_vehicles vi
+            WHERE vi.driver_id=d.id AND vi.deleted_at IS NULL AND vi.is_active=1
+          ) AS earliest_insurance_expiry,
+          (
+            SELECT COUNT(*) FROM driver_vehicles vi
+            WHERE vi.driver_id=d.id AND vi.deleted_at IS NULL AND vi.is_active=1
+              AND vi.insurance_expires_on IS NULL
+          ) AS missing_insurance_dates,
+          (
             SELECT GROUP_CONCAT(vs.plate_number SEPARATOR '|')
             FROM driver_vehicles vs
             WHERE vs.driver_id=d.id AND vs.deleted_at IS NULL
@@ -1037,6 +1046,7 @@ class DriverRepository {
           dv.plate_number,
           dv.model_name,
           dv.color,
+          DATE_FORMAT(dv.insurance_expires_on, '%Y-%m-%d') AS insurance_expires_on,
           dv.is_primary,
           dv.is_active,
           COALESCE(dv.approval_status, 'APPROVED') AS approval_status,
