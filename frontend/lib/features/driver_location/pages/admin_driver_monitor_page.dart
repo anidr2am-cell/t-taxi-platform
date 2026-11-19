@@ -608,9 +608,13 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                             final suspension = driver['suspension'];
 
                             return AppUi.adminQueueCard(
-                              onTap: () {
+                              onTap: () async {
                                 setState(() => _selected = location);
-                                showDialog<void>(context: context, builder: (_) => AdminDriverDetailDialog(driverId: driverId, api: _dispatchApi));
+                                final deleted = await showDialog<bool>(context: context, builder: (_) => AdminDriverDetailDialog(driverId: driverId, api: _dispatchApi));
+                                if (deleted == true && mounted) {
+                                  setState(() { _selected = null; _selectedForArchive.remove(driverId); });
+                                  await _load();
+                                }
                               },
                               backgroundColor: selected
                                   ? AppTokens.primaryLight

@@ -40,6 +40,17 @@ const { LOCALES, CHANNELS } = require('../utils/reviewRequest.util');
 const { success } = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
 const container = require('../helpers/container');
+router.post('/drivers/:id/delete', adminOnly,
+  validate({
+    params: driverIdParamsSchema,
+    body: Joi.object({ reason: Joi.string().trim().min(1).max(500).required() }).unknown(false),
+  }),
+  asyncHandler(async (req, res) => {
+    const { pool } = require('../config/database');
+    const { deleteDriver } = require('../services/adminDriverDeletion.service');
+    return success(res, await deleteDriver(pool, Number(req.params.id), req.body.reason, req.user));
+  }),
+);
 const receiptEmailInput=Joi.object({email:Joi.string().trim().email({tlds:{allow:false}}).max(254).required(),locale:Joi.string().valid(...LOCALES).required()}).unknown(false);
 router.get('/bookings/:bookingNumber/booking-email',adminOnly,validate({params:bookingNumberParamsSchema}),
   asyncHandler(async(req,res)=>success(res,await container.get('adminBookingEmailService').get(req.params.bookingNumber,req.user))));
