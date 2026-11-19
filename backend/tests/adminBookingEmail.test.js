@@ -89,3 +89,17 @@ test('claim permits only the recorded resend and reserves a fresh SMTP attempt',
  assert.equal((await repo.claimCustomerEmail(resend,{id:20})).attempt.id,30);
  assert.equal((await repo.claimCustomerEmail(resend,{id:20})).alreadyProcessed,true);
 });
+
+test('missing booking email uses the three-email limit after assignment integration', async () => {
+  const history = [
+    { id: 1, type: 'BOOKING_CONFIRMED', delivery_status: 'DELIVERED', smtp_attempts: 1 },
+    { id: 2, type: 'DRIVER_ASSIGNED', delivery_status: 'DELIVERED', smtp_attempts: 1 },
+  ];
+  const h = harness({ history });
+  const preview = await h.service.preview(h.row.booking_number, input, actor);
+  assert.ok(preview.previewHash);
+  assert.equal(h.smtp, 0);
+  h.history.push({ id: 3, type: 'DRIVER_ARRIVED', delivery_status: 'DELIVERED', smtp_attempts: 1 });
+  await assert.rejects(h.service.preview(h.row.booking_number, input, actor), /RECEIPT_EMAIL_LIMIT/);
+  assert.equal(h.smtp, 0);
+});
