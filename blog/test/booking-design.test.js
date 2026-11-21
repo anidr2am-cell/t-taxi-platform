@@ -1,0 +1,20 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const read=p=>fs.readFileSync(new URL('../../'+p,import.meta.url),'utf8');
+test('booking design keeps a shared service panel, semantic form and safe secondary support',()=>{
+ const template=read('landing/index.template.html'),build=read('landing/build.cjs');
+ assert.match(template,/booking-panel[\s\S]*service-grid[\s\S]*BOOKING_FORM/);
+ assert.match(template,/form="quick-booking"/);
+ assert.match(template,/desktop-nav[\s\S]*LOOKUP[\s\S]*language-select/);
+ assert.match(build,/vehicle-reference|REFERENCE/);
+ const locales=JSON.parse(read('landing/booking-ux.locales.json'));
+ for(const [lang,copy] of Object.entries(locales))for(const key of ['heading','intro','book','fares','help','reference','route','region','bookingHelp','airportHelp','lookupStep','lookupHelp'])assert.ok(copy.design[key],lang+'/'+key);
+ const js=read('landing/assets/landing.js');
+ assert.match(js,/endpoints\.from\|\|!endpoints\.to/);
+ assert.match(js,/field\.setAttribute\('aria-invalid'/);
+ assert.match(js,/visualViewport/);
+ assert.match(js,/cookie-height/);
+ assert.match(js,/Representative route|representative route/);
+ assert.doesNotMatch(js,/gtag\('event',\s*'design_/);
+});

@@ -599,173 +599,212 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
               _controller.goBack();
             }
           },
-          child: Scaffold(
-            resizeToAvoidBottomInset: true,
-            appBar: AppBar(
-              title: Text(l10n.t(BookingWizardSteps.titleKey(state.step))),
-              leading: state.step > BookingWizardSteps.route
-                  ? Semantics(
-                      label: l10n.t('back'),
-                      button: true,
-                      child: BackButton(onPressed: _controller.goBack),
-                    )
-                  : null,
-              actions: const [LanguageSelector()],
+          child: Theme(
+            data: Theme.of(context).copyWith(
+              elevatedButtonTheme: ElevatedButtonThemeData(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTokens.primary,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(44, 52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppTokens.borderRadiusMd,
+                  ),
+                ),
+              ),
+              filledButtonTheme: FilledButtonThemeData(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppTokens.primary,
+                  foregroundColor: Colors.white,
+                ),
+              ),
             ),
-            body: Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: maxWidth),
-                child: Column(
-                  children: [
-                    BookingProgressHeader(currentStep: state.step),
-                    if (state.step >= BookingWizardSteps.schedule)
-                      BookingSummaryBar(state: state, controller: _controller),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        controller: _scrollController,
-                        padding: EdgeInsets.fromLTRB(
-                          AppTokens.spaceMd,
-                          AppTokens.spaceMd,
-                          AppTokens.spaceMd,
-                          scrollBottomPadding,
+            child: Scaffold(
+              resizeToAvoidBottomInset: true,
+              appBar: AppBar(
+                title: Text(l10n.t(BookingWizardSteps.titleKey(state.step))),
+                leading: state.step > BookingWizardSteps.route
+                    ? Semantics(
+                        label: l10n.t('back'),
+                        button: true,
+                        child: BackButton(onPressed: _controller.goBack),
+                      )
+                    : null,
+                actions: [
+                  IconButton(
+                    tooltip: l10n.t('landing_booking_lookup_action'),
+                    icon: const Icon(Icons.receipt_long_outlined),
+                    onPressed: () =>
+                        Navigator.of(context).pushNamed('/booking/lookup'),
+                  ),
+                  const LanguageSelector(),
+                ],
+              ),
+              body: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxWidth),
+                  child: Column(
+                    children: [
+                      BookingProgressHeader(currentStep: state.step),
+                      if (state.step >= BookingWizardSteps.schedule)
+                        BookingSummaryBar(
+                          state: state,
+                          controller: _controller,
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            if (validationKey != null &&
-                                !isReviewStep &&
-                                !_controller.canProceedFromCurrentStep())
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: AppUi.surfaceCard(
-                                  backgroundColor: AppTokens.warningLight,
-                                  child: Text(
-                                    l10n.t(validationKey),
-                                    style: const TextStyle(height: 1.45),
-                                  ),
-                                ),
-                              ),
-                            _buildStepContent(state.step, state, locale, l10n),
-                            PreferredSupportButton(
-                              chooseChannel:
-                                  state.step == BookingWizardSteps.customer,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (!keyboardVisible)
-                      Container(
-                        key: const Key('booking_wizard_cta_bar'),
-                        decoration: const BoxDecoration(
-                          color: AppTokens.surface,
-                          border: Border(
-                            top: BorderSide(color: AppTokens.border),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          controller: _scrollController,
+                          padding: EdgeInsets.fromLTRB(
+                            AppTokens.spaceMd,
+                            AppTokens.spaceMd,
+                            AppTokens.spaceMd,
+                            scrollBottomPadding,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Color(0x0F000000),
-                              blurRadius: 12,
-                              offset: Offset(0, -2),
-                            ),
-                          ],
-                        ),
-                        child: SafeArea(
-                          top: false,
-                          child: Padding(
-                            padding: const EdgeInsets.all(AppTokens.spaceMd),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                if (isReviewStep && isUrgentWindow) ...[
-                                  AppUi.surfaceCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (validationKey != null &&
+                                  !isReviewStep &&
+                                  !_controller.canProceedFromCurrentStep())
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: AppUi.surfaceCard(
                                     backgroundColor: AppTokens.warningLight,
                                     child: Text(
-                                      l10n.t('customer_urgent_pickup_hint'),
+                                      l10n.t(validationKey),
                                       style: const TextStyle(height: 1.45),
                                     ),
                                   ),
-                                  const SizedBox(height: 12),
-                                ],
-                                if (showAdvanceCta)
-                                  Semantics(
-                                    button: true,
-                                    label: _ctaLabel(l10n, state),
-                                    child: SizedBox(
-                                      width: double.infinity,
-                                      height: 48,
-                                      child: ElevatedButton(
-                                        onPressed: canAdvance
-                                            ? _handleAdvance
-                                            : null,
-                                        child: Text(
-                                          _ctaLabel(l10n, state),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                if (canSubmitUrgent)
-                                  SizedBox(
-                                    width: double.infinity,
-                                    height: 48,
-                                    child: FilledButton(
-                                      onPressed: _handleUrgentSubmit,
-                                      child: _controller.isSubmitting
-                                          ? const SizedBox(
-                                              width: 20,
-                                              height: 20,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                              ),
-                                            )
-                                          : Text(
-                                              l10n.t('customer_urgent_request'),
-                                            ),
-                                    ),
-                                  ),
-                                if (canSubmitStandard)
-                                  SizedBox(
-                                    width: double.infinity,
-                                    height: 48,
-                                    child: ElevatedButton(
-                                      onPressed: _handleSubmit,
-                                      child: _controller.isSubmitting
-                                          ? Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                const SizedBox(
-                                                  width: 20,
-                                                  height: 20,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                        strokeWidth: 2,
-                                                      ),
-                                                ),
-                                                const SizedBox(width: 10),
-                                                Flexible(
-                                                  child: Text(
-                                                    l10n.t(
-                                                      'customer_booking_processing',
-                                                    ),
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                              ],
-                                            )
-                                          : Text(_ctaLabel(l10n, state)),
-                                    ),
-                                  ),
-                              ],
-                            ),
+                                ),
+                              _buildStepContent(
+                                state.step,
+                                state,
+                                locale,
+                                l10n,
+                              ),
+                              PreferredSupportButton(
+                                chooseChannel:
+                                    state.step == BookingWizardSteps.customer,
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                  ],
+                      if (!keyboardVisible)
+                        Container(
+                          key: const Key('booking_wizard_cta_bar'),
+                          decoration: const BoxDecoration(
+                            color: AppTokens.surface,
+                            border: Border(
+                              top: BorderSide(color: AppTokens.border),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Color(0x0F000000),
+                                blurRadius: 12,
+                                offset: Offset(0, -2),
+                              ),
+                            ],
+                          ),
+                          child: SafeArea(
+                            top: false,
+                            child: Padding(
+                              padding: const EdgeInsets.all(AppTokens.spaceMd),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  if (isReviewStep && isUrgentWindow) ...[
+                                    AppUi.surfaceCard(
+                                      backgroundColor: AppTokens.warningLight,
+                                      child: Text(
+                                        l10n.t('customer_urgent_pickup_hint'),
+                                        style: const TextStyle(height: 1.45),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                  ],
+                                  if (showAdvanceCta)
+                                    Semantics(
+                                      button: true,
+                                      label: _ctaLabel(l10n, state),
+                                      child: SizedBox(
+                                        width: double.infinity,
+                                        height: 52,
+                                        child: ElevatedButton(
+                                          onPressed: canAdvance
+                                              ? _handleAdvance
+                                              : null,
+                                          child: Text(
+                                            _ctaLabel(l10n, state),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  if (canSubmitUrgent)
+                                    SizedBox(
+                                      width: double.infinity,
+                                      height: 48,
+                                      child: FilledButton(
+                                        onPressed: _handleUrgentSubmit,
+                                        child: _controller.isSubmitting
+                                            ? const SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                    ),
+                                              )
+                                            : Text(
+                                                l10n.t(
+                                                  'customer_urgent_request',
+                                                ),
+                                              ),
+                                      ),
+                                    ),
+                                  if (canSubmitStandard)
+                                    SizedBox(
+                                      width: double.infinity,
+                                      height: 48,
+                                      child: ElevatedButton(
+                                        onPressed: _handleSubmit,
+                                        child: _controller.isSubmitting
+                                            ? Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  const SizedBox(
+                                                    width: 20,
+                                                    height: 20,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                        ),
+                                                  ),
+                                                  const SizedBox(width: 10),
+                                                  Flexible(
+                                                    child: Text(
+                                                      l10n.t(
+                                                        'customer_booking_processing',
+                                                      ),
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                ],
+                                              )
+                                            : Text(_ctaLabel(l10n, state)),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
