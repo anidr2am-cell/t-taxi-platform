@@ -633,8 +633,9 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
                   IconButton(
                     tooltip: l10n.t('landing_booking_lookup_action'),
                     icon: const Icon(Icons.receipt_long_outlined),
-                    onPressed: () =>
-                        Navigator.of(context).pushNamed('/booking/lookup'),
+                    onPressed: () => Navigator.of(
+                      context,
+                    ).pushNamed('/booking/lookup?lang=$locale'),
                   ),
                   const LanguageSelector(),
                 ],
