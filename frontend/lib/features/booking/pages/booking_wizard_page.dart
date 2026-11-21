@@ -141,7 +141,10 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
       });
     } else {
       final args = widget.routeArgs;
-      if (args != null && args.hasCompleteRoute) {
+      if (args != null &&
+          args.hasCompleteRoute &&
+          (!Uri.base.queryParameters.containsKey('entry') ||
+              consumeFreshBookingEntry(Uri.base))) {
         _controller
             .applyRoutePrefill(
               serviceType: args.serviceType,

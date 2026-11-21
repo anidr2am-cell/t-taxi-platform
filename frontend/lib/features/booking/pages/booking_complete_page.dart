@@ -196,8 +196,6 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
       widget.result.bookingId != null &&
       _hasBookingCustomerAuth;
 
-
-
   bool get _canShowReviewForm =>
       widget.enableCustomerTools &&
       const ['SETTLEMENT_PENDING', 'COMPLETED'].contains(_status) &&
@@ -300,50 +298,24 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                 statusTone: AppUi.toneForBookingStatus(_status),
               ),
               const SizedBox(height: AppTokens.spaceMd),
+              const SizedBox(height: AppTokens.spaceMd),
+              AppUi.primaryButton(
+                label: l10n.t('booking_complete_track_cta'),
+                icon: Icons.search,
+                onPressed: _openBookingLookup,
+              ),
+
               CustomerPaymentInstructionsCard(
                 paymentMethod: result.paymentMethod,
                 paymentCurrency:
                     result.paymentCurrency ?? widget.review?.paymentCurrency,
                 instructions: result.paymentInstructions,
               ),
-              if (result.contactStatus != 'CONFIRM_REQUESTED')
-                BookingMessengerHandoffSection(
-                  bookingNumber: result.bookingNumber,
-                  contactChannel: result.contactChannel,
-                ),
-              BookingSocialLoginSection(
-                authController: widget.authController,
-                claimContext: kakaoReturnContext,
-                kakaoReturnContext: kakaoReturnContext,
-                lineReturnContext: lineReturnContext,
+              BookingMessengerHandoffSection(
+                bookingNumber: result.bookingNumber,
+                contactChannel: result.contactChannel,
               ),
-              if (BookingStatusDisplay.customerGuidance(l10n, _status) !=
-                  null) ...[
-                const SizedBox(height: AppTokens.spaceMd),
-                AppUi.surfaceCard(
-                  backgroundColor: AppTokens.infoLight,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.info_outline,
-                        color: AppTokens.info,
-                        size: 22,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          BookingStatusDisplay.customerGuidance(l10n, _status)!,
-                          style: const TextStyle(
-                            color: AppTokens.textSecondary,
-                            height: 1.45,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+
               if (_canShowCancel) ...[
                 const SizedBox(height: AppTokens.spaceMd),
                 GuestBookingCancelSection(
@@ -362,12 +334,6 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                   },
                 ),
               ],
-              const SizedBox(height: AppTokens.spaceMd),
-              AppUi.primaryButton(
-                label: l10n.t('booking_complete_track_cta'),
-                icon: Icons.search,
-                onPressed: _openBookingLookup,
-              ),
               const SizedBox(height: AppTokens.spaceMd),
               AppUi.sectionHeader(context, title: l10n.t('booking_summary')),
               AppUi.surfaceCard(
@@ -480,6 +446,12 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                     ),
                 ],
               ],
+              BookingSocialLoginSection(
+                authController: widget.authController,
+                claimContext: kakaoReturnContext,
+                kakaoReturnContext: kakaoReturnContext,
+                lineReturnContext: lineReturnContext,
+              ),
               const SizedBox(height: AppTokens.spaceLg),
               SizedBox(
                 width: double.infinity,
