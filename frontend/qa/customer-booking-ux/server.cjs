@@ -49,7 +49,7 @@ const mime = {
 };
 http
   .createServer(async (q, r) => {
-    r.setHeader("X-Preview-Backend", "customer-booking-ux-20261121-fixture");
+    r.setHeader("X-Preview-Backend", process.env.PREVIEW_MARKER || "customer-booking-ux-20261121-fixture");
     r.setHeader("Cache-Control", "no-store");
     const u = new URL(q.url, "http://localhost");
     const json = (data, code = 200) => {
@@ -278,6 +278,6 @@ http
     );
     fs.createReadStream(f).pipe(r);
   })
-  .listen(3188, "127.0.0.1", () =>
+  .listen(Number(process.env.PORT || 3188), "127.0.0.1", () =>
     console.log("Isolated QA fixture preview 3188"),
   );

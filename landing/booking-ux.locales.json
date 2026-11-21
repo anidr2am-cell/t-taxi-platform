@@ -14,7 +14,31 @@
     "fleet": "차량 안내",
     "capacity": "인원과 짐을 입력하면 맞는 차량을 추천합니다.",
     "meeting": "공항에서 만나는 방법",
-    "meetingHelp": "예약 조회에서 공항별 만남 안내와 배정된 기사·차량 정보를 확인하세요."
+    "meetingHelp": "예약 조회에서 공항별 만남 안내와 배정된 기사·차량 정보를 확인하세요.",
+    "design": {
+      "heading": "태국 이동, 편안하게 예약하세요",
+      "intro": "방콕·파타야·공항·골프장 이동",
+      "book": "차량 예약",
+      "fares": "요금·차량 안내",
+      "help": "이용 안내·고객센터",
+      "more": "포함 비용·결제 안내 자세히",
+      "reference": "차종 안내용 참고 이미지입니다. 실제 배정 차량은 예약 조회에서 확인하세요.",
+      "route": "이 노선 선택",
+      "region": "공항을 선택했습니다. 도착 호텔·주소를 검색해 주세요.",
+      "bookingHelp": "다음 화면에서 날짜·인원·차량과 최종 요금을 확인합니다.",
+      "lookupStep": "예약 조회에서 다음 안내 확인",
+      "lookupHelp": "예약번호와 고객명으로 처리 상태, 기사·차량과 공항 만남 안내를 확인하세요.",
+      "bkk": "수완나품 BKK",
+      "dmk": "돈므앙 DMK",
+      "utp": "우타파오 UTP",
+      "airportHelp": "공항과 예약 조건에 맞는 만남 장소를 예약 조회에서 확인하세요.",
+      "golf": [
+        "골프 라운드도 함께 상담하세요",
+        "버디골프는 365일 조인·1인 참여 및 일행 라운드를 상담합니다. 차량 이동만 예약할 때 인원 2명 조건은 없습니다. 차량 예약은 골프 라운드·티타임 확정이 아닙니다.",
+        "버디골프 상담"
+      ],
+      "preferred": "추천 상담"
+    }
   },
   "en": {
     "check": "Check vehicles and fares",
@@ -31,7 +55,31 @@
     "fleet": "Vehicle guide",
     "capacity": "Enter your passengers and luggage to see suitable vehicles.",
     "meeting": "Meeting at the airport",
-    "meetingHelp": "Find airport meeting instructions and assigned driver and vehicle details in your booking."
+    "meetingHelp": "Find airport meeting instructions and assigned driver and vehicle details in your booking.",
+    "design": {
+      "heading": "Your Thailand transfer, made simple",
+      "intro": "Bangkok, Pattaya, airports and golf courses",
+      "book": "Book a transfer",
+      "fares": "Fares & vehicles",
+      "help": "Travel help & support",
+      "more": "Included costs & payment details",
+      "reference": "Reference vehicles only. See your booking for the vehicle actually assigned.",
+      "route": "Choose route",
+      "region": "Airport selected. Search for your destination hotel or address.",
+      "bookingHelp": "Next: date, passengers, vehicle and final fare.",
+      "lookupStep": "Check your booking for next steps",
+      "lookupHelp": "Use your booking number and name to view status, assigned driver, vehicle and airport meeting instructions.",
+      "bkk": "Suvarnabhumi BKK",
+      "dmk": "Don Mueang DMK",
+      "utp": "U-Tapao UTP",
+      "airportHelp": "Check your booking for meeting instructions specific to your airport and booking.",
+      "golf": [
+        "Plan a golf round with Buddy Golf",
+        "Private rounds for overseas groups of at least two actual players. Combine golf and transport advice; vehicle-only bookings have no two-player minimum. Booking transport does not confirm a tee time.",
+        "Discuss golf and transport"
+      ],
+      "preferred": "Suggested channel"
+    }
   },
   "ja": {
     "check": "車種と料金を確認",
@@ -53,7 +101,31 @@
       "ゴルフと送迎をまとめて相談",
       "空港送迎・ゴルフ日程・ホテルとゴルフ場の往復をまとめてご相談いただけます。海外からのお客様はプレーヤー2名以上でご自身のグループだけのラウンドをご案内します。車両のみの予約には2名条件はありません。送迎予約はティータイムの確定ではなく、コース・時間・料金は確認後にご案内します。",
       "公式LINEで相談"
-    ]
+    ],
+    "design": {
+      "heading": "タイの移動を、安心して予約",
+      "intro": "バンコク・パタヤ・空港・ゴルフ場への送迎",
+      "book": "送迎を予約",
+      "fares": "料金・車種",
+      "help": "ご利用案内・お問い合わせ",
+      "more": "含まれる費用・お支払いについて",
+      "reference": "車種の参考画像です。実際の手配車両は予約照会でご確認ください。",
+      "route": "この経路を選ぶ",
+      "region": "空港を選択しました。目的地のホテル・住所を検索してください。",
+      "bookingHelp": "次の画面で日時・人数・車種・最終料金を確認します。",
+      "lookupStep": "予約照会で次のご案内を確認",
+      "lookupHelp": "予約番号とお名前で、受付状況・担当ドライバー・車両・空港での待ち合わせ案内を確認できます。",
+      "bkk": "スワンナプーム BKK",
+      "dmk": "ドンムアン DMK",
+      "utp": "ウタパオ UTP",
+      "airportHelp": "空港と予約内容に応じた待ち合わせ案内を予約照会でご確認ください。",
+      "golf": [
+        "ゴルフのご相談も Buddy Golf へ",
+        "実際にプレーする方2名以上のグループ向け貸切ラウンドをご案内します。送迎のみの予約に2名条件はありません。送迎予約はラウンド・ティータイムの確定ではありません。",
+        "公式LINEでゴルフ・送迎を相談"
+      ],
+      "preferred": "おすすめ窓口"
+    }
   },
   "zh": {
     "check": "查看车型和费用",
@@ -70,7 +142,31 @@
     "fleet": "车型指南",
     "capacity": "输入人数和行李，查看合适的车型。",
     "meeting": "机场会合指南",
-    "meetingHelp": "在预约查询中查看机场会合说明及已指派的司机和车辆信息。"
+    "meetingHelp": "在预约查询中查看机场会合说明及已指派的司机和车辆信息。",
+    "design": {
+      "heading": "轻松预订泰国接送",
+      "intro": "曼谷、芭提雅、机场及高尔夫球场接送",
+      "book": "预订接送",
+      "fares": "价格与车型",
+      "help": "乘车指南与客服",
+      "more": "查看费用包含项目及付款说明",
+      "reference": "图片仅供车型参考，实际安排车辆请在预订查询中确认。",
+      "route": "选择此路线",
+      "region": "已选择机场，请搜索目的地酒店或地址。",
+      "bookingHelp": "下一步确认日期、人数、车型与最终费用。",
+      "lookupStep": "在预订查询中查看后续安排",
+      "lookupHelp": "使用预订编号和姓名查看处理状态、司机、车辆及机场会合指引。",
+      "bkk": "素万那普 BKK",
+      "dmk": "廊曼 DMK",
+      "utp": "乌塔堡 UTP",
+      "airportHelp": "请在预订查询中查看适用于该机场和预订的会合指引。",
+      "golf": [
+        "向 Buddy Golf 咨询高尔夫行程",
+        "海外客户可咨询至少2位实际球员同行的私人轮次。仅预订车辆不受2人限制。提交接送预订不代表球场或开球时间已确认。",
+        "咨询高尔夫与接送"
+      ],
+      "preferred": "推荐咨询"
+    }
   },
   "th": {
     "check": "ดูรถและราคา",
@@ -87,7 +183,31 @@
     "fleet": "ประเภทรถ",
     "capacity": "ระบุจำนวนผู้โดยสารและสัมภาระเพื่อดูรถที่เหมาะสม",
     "meeting": "จุดนัดพบที่สนามบิน",
-    "meetingHelp": "ดูจุดนัดพบของแต่ละสนามบินและข้อมูลคนขับกับรถที่ได้รับมอบหมายในหน้าตรวจสอบการจอง"
+    "meetingHelp": "ดูจุดนัดพบของแต่ละสนามบินและข้อมูลคนขับกับรถที่ได้รับมอบหมายในหน้าตรวจสอบการจอง",
+    "design": {
+      "heading": "จองรถรับส่งในไทยอย่างสบายใจ",
+      "intro": "กรุงเทพฯ พัทยา สนามบิน และสนามกอล์ฟ",
+      "book": "จองรถรับส่ง",
+      "fares": "ราคาและประเภทรถ",
+      "help": "วิธีใช้บริการและติดต่อเรา",
+      "more": "ดูค่าใช้จ่ายที่รวมและวิธีชำระเงิน",
+      "reference": "ภาพแสดงประเภทรถเพื่อประกอบการเลือกเท่านั้น ตรวจสอบรถที่ได้รับมอบหมายได้ในหน้าค้นหาการจอง",
+      "route": "เลือกเส้นทางนี้",
+      "region": "เลือกสนามบินแล้ว กรุณาค้นหาโรงแรมหรือที่อยู่ปลายทาง",
+      "bookingHelp": "ขั้นตอนถัดไป: วันเวลา จำนวนผู้โดยสาร รถ และราคาสุทธิ",
+      "lookupStep": "ตรวจสอบข้อมูลหลังจอง",
+      "lookupHelp": "ใช้เลขที่การจองและชื่อเพื่อตรวจสอบสถานะ คนขับ รถ และจุดนัดพบที่สนามบิน",
+      "bkk": "สุวรรณภูมิ BKK",
+      "dmk": "ดอนเมือง DMK",
+      "utp": "อู่ตะเภา UTP",
+      "airportHelp": "ตรวจสอบจุดนัดพบที่ตรงกับสนามบินและการจองของคุณในหน้าค้นหาการจอง",
+      "golf": [
+        "ปรึกษาเรื่องกอล์ฟกับ Buddy Golf",
+        "รอบส่วนตัวสำหรับกลุ่มต่างชาติที่มีผู้เล่นจริงตั้งแต่ 2 คนขึ้นไป การจองรถอย่างเดียวไม่มีเงื่อนไขขั้นต่ำ 2 คน การจองรถไม่ได้ยืนยันรอบกอล์ฟหรือเวลาออกรอบ",
+        "ปรึกษาเรื่องกอล์ฟและรถรับส่ง"
+      ],
+      "preferred": "ช่องทางแนะนำ"
+    }
   },
   "zh-TW": {
     "check": "檢視車型和費用",
@@ -109,6 +229,30 @@
       "高爾夫與接送一起諮詢",
       "可一起諮詢機場接送、高爾夫行程及飯店往返球場。海外高爾夫為至少2名實際球員同行的私人球組；僅預約車輛不受2人條件限制。車輛預約不代表開球時間已確認，球場、時間與費用需另行確認。",
       "透過官方 LINE 諮詢"
-    ]
+    ],
+    "design": {
+      "heading": "輕鬆預約泰國接送",
+      "intro": "曼谷、芭達雅、機場與高爾夫球場接送",
+      "book": "預約接送",
+      "fares": "費用與車型",
+      "help": "搭乘指南與客服",
+      "more": "查看費用包含項目及付款說明",
+      "reference": "圖片僅供車型參考，實際安排車輛請至預約查詢確認。",
+      "route": "選擇此路線",
+      "region": "已選擇機場，請搜尋目的地飯店或地址。",
+      "bookingHelp": "下一步確認日期、人數、車型與最終費用。",
+      "lookupStep": "至預約查詢查看後續安排",
+      "lookupHelp": "使用預約編號與姓名查看處理狀態、司機、車輛及機場會合指引。",
+      "bkk": "蘇凡納布 BKK",
+      "dmk": "廊曼 DMK",
+      "utp": "烏塔堡 UTP",
+      "airportHelp": "請至預約查詢查看適用於該機場與預約的會合指引。",
+      "golf": [
+        "向 Buddy Golf 諮詢高爾夫行程",
+        "海外旅客可諮詢至少2位實際球員同行的私人球敘。僅預約車輛不受2人限制。提交接送預約不代表球場或開球時間已確認。",
+        "透過官方 LINE 諮詢"
+      ],
+      "preferred": "建議洽詢"
+    }
   }
 }

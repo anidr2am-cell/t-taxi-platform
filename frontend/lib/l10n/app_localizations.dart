@@ -10631,6 +10631,7 @@ class AppLocalizations {
     },
   };
   static const Map<String, String> _customerRussianTranslations = {
+    'landing_booking_lookup_action': 'Найти бронирование',
     'admin_phone_country_cancel': 'Отмена',
     'admin_phone_country_title': 'Страна и телефонный код',
     'admin_phone_country_search': 'Поиск по названию страны или коду',
