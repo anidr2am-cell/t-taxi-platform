@@ -160,8 +160,8 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
             .initialize(
               initialServiceType: args?.serviceType,
               freshEntry:
-                  args != null &&
-                  (args.freshEntry || consumeFreshBookingEntry(Uri.base)),
+                  args?.freshEntry == true ||
+                  consumeFreshBookingEntry(Uri.base),
             )
             .then((_) {
               if (mounted) _controller.syncDerivedData();

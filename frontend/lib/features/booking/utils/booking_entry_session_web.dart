@@ -4,7 +4,9 @@ import 'dart:html' as web;
 
 // sessionStorage survives refresh and back navigation, but not a new session.
 bool consumeFreshBookingEntry(Uri uri) {
-  if (!uri.queryParameters.containsKey('service')) return false;
+  if (!uri.queryParameters.containsKey('service') &&
+      !uri.queryParameters.containsKey('entry'))
+    return false;
   final token = uri.queryParameters['entry'] ?? uri.toString();
   final key = 'trider_booking_entry_$token';
   try {

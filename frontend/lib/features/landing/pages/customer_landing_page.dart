@@ -8,7 +8,6 @@ import '../models/landing_booking_draft.dart';
 import '../widgets/landing_booking_lookup_card.dart';
 import '../widgets/landing_bottom_cta.dart';
 import '../widgets/landing_footer.dart';
-import '../widgets/landing_social_login_section.dart';
 import '../widgets/landing_header.dart';
 import '../services/home_banner_api_service.dart';
 import '../widgets/landing_hero_carousel.dart';
@@ -158,7 +157,6 @@ class _CustomerLandingPageState extends State<CustomerLandingPage> {
                         onLookup: () => _openBookingLookup(context),
                       ),
                       LandingBottomCta(onSupport: () => _openSupport(context)),
-                      const LandingSocialLoginSection(),
                       LandingFooter(
                         onAdmin: () => Navigator.pushNamedAndRemoveUntil(
                           context,

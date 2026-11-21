@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
+import '../utils/customer_booking_format.dart';
 
 class AirportMeetingVehicleInfo {
   const AirportMeetingVehicleInfo({
@@ -488,7 +489,7 @@ class _VehicleBlock extends StatelessWidget {
       if (_hasText(vehicle.vehicleType))
         MapEntry(
           l10n.t('airport_meeting_vehicle_type'),
-          vehicle.vehicleType!.trim(),
+          CustomerBookingFormat.vehicle(l10n, vehicle.vehicleType),
         ),
       if (_hasText(vehicle.vehicleColor))
         MapEntry(

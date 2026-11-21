@@ -26,7 +26,9 @@ void main() {
   test(
     'Traditional Chinese stays distinct and defaults to Taiwan / official LINE',
     () {
-      final locale = AppLocalizations.flutterLocale('zh-TW');
+      expect(AppLocalizations('zh-TW').t('airport_pickup'), '機場接機');
+    expect(AppLocalizations('zh-TW').t('airport_shortcuts_origin'), contains('機場'));
+    final locale = AppLocalizations.flutterLocale('zh-TW');
       expect(locale.languageCode, 'zh');
       expect(locale.scriptCode, 'Hant');
       expect(locale.countryCode, 'TW');

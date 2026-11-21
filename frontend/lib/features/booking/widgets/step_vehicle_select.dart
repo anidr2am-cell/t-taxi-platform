@@ -220,7 +220,9 @@ class StepVehicleSelect extends StatelessWidget {
                               ? Icons.check_circle
                               : Icons.radio_button_unchecked,
                         ),
-                        label: Text('${l10n.t('select_vehicle')} · ${l10n.t('cx_vehicle_$vehicle')}'),
+                        label: Text(
+                          '${l10n.t('select_vehicle')} · ${l10n.t('cx_vehicle_$vehicle')}',
+                        ),
                       ),
                       if (!enabled)
                         Text(

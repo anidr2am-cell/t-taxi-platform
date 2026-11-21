@@ -13,7 +13,6 @@ import '../models/service_type_option.dart';
 import '../services/flight_lookup_api_service.dart';
 import 'wizard_compact.dart';
 import 'golf_trip_fields.dart';
-import 'golf_consultation_card.dart';
 import 'booking_service_selection_summary.dart';
 
 class StepRouteSelect extends StatefulWidget {
@@ -75,8 +74,6 @@ class _StepRouteSelectState extends State<StepRouteSelect> {
             },
           ),
         const SizedBox(height: WizardCompact.sectionGap),
-        if (state.serviceType == BookingServiceType.golfTransfer)
-          const GolfConsultationCard(),
         if (state.serviceType == BookingServiceType.golfTransfer)
           GolfTripFields(
             value: state.golf,

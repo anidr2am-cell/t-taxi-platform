@@ -282,6 +282,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                 origin: widget.origin,
                 destination: widget.destination,
                 vehicle: widget.selectedVehicle,
+                serviceLabel: widget.serviceLabel,
                 total: CustomerBookingFormat.money(
                   result.totalAmount,
                   result.currency,
@@ -316,8 +317,23 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                 onPressed: _openBookingLookup,
               ),
 
-
-
+              if (AirportMeetingGuideCard.shouldShow(
+                serviceTypeCode: widget.serviceTypeCode,
+                originAirportCode: widget.originAirportCode,
+              )) ...[
+                const SizedBox(height: AppTokens.spaceMd),
+                AirportMeetingGuideCard(
+                  serviceTypeCode: widget.serviceTypeCode,
+                  originAirportCode: widget.originAirportCode,
+                  nameSignRequested: widget.nameSignRequested,
+                  arrivalAction: GateArrivalAction(
+                    bookingNumber: widget.result.bookingNumber,
+                    guestToken: widget.result.guestAccessToken,
+                    customerToken: _customerAccessToken,
+                  ),
+                  vehicleInfo: widget.meetingVehicleInfo,
+                ),
+              ],
               if (_canShowCancel) ...[
                 const SizedBox(height: AppTokens.spaceMd),
                 GuestBookingCancelSection(
@@ -337,54 +353,6 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                 ),
               ],
               const SizedBox(height: AppTokens.spaceMd),
-              AppUi.sectionHeader(context, title: l10n.t('booking_summary')),
-              AppUi.surfaceCard(
-                child: Column(
-                  children: [
-                    AppUi.summaryRow(
-                      label: l10n.t('service_type'),
-                      value: widget.serviceLabel,
-                    ),
-                    bookingLocationOptionSummaryRow(
-                      label: l10n.t('origin'),
-                      location: widget.origin,
-                    ),
-                    bookingLocationOptionSummaryRow(
-                      label: l10n.t('destination'),
-                      location: widget.destination,
-                    ),
-                    AppUi.summaryRow(
-                      label: l10n.t('pickup_datetime'),
-                      value: CustomerBookingFormat.pickupDateTime(
-                        l10n,
-                        widget.scheduledPickupAt,
-                      ),
-                    ),
-                    if (widget.selectedVehicle?.trim().isNotEmpty == true)
-                      AppUi.summaryRow(
-                        label: l10n.t('vehicle'),
-                        value: widget.selectedVehicle!.trim(),
-                      ),
-                  ],
-                ),
-              ),
-              if (AirportMeetingGuideCard.shouldShow(
-                serviceTypeCode: widget.serviceTypeCode,
-                originAirportCode: widget.originAirportCode,
-              )) ...[
-                const SizedBox(height: AppTokens.spaceMd),
-                AirportMeetingGuideCard(
-                  serviceTypeCode: widget.serviceTypeCode,
-                  originAirportCode: widget.originAirportCode,
-                  nameSignRequested: widget.nameSignRequested,
-                  arrivalAction: GateArrivalAction(
-                    bookingNumber: widget.result.bookingNumber,
-                    guestToken: widget.result.guestAccessToken,
-                    customerToken: _customerAccessToken,
-                  ),
-                  vehicleInfo: widget.meetingVehicleInfo,
-                ),
-              ],
               if (widget.review != null) ...[
                 const SizedBox(height: AppTokens.spaceMd),
                 BookingCompleteReviewSection(review: widget.review!),
@@ -536,6 +504,7 @@ class _BookingNumberCard extends StatelessWidget {
   const _BookingNumberCard({
     required this.bookingNumber,
     required this.statusLabel,
+    required this.serviceLabel,
     required this.pickupDateTime,
     required this.origin,
     required this.destination,
@@ -550,6 +519,7 @@ class _BookingNumberCard extends StatelessWidget {
 
   final String bookingNumber;
   final String statusLabel;
+  final String serviceLabel;
   final String pickupDateTime;
   final LocationOption? origin;
   final LocationOption? destination;
@@ -623,6 +593,7 @@ class _BookingNumberCard extends StatelessWidget {
             label: l10n.t('pickup_datetime'),
             value: pickupDateTime,
           ),
+          AppUi.summaryRow(label: l10n.t('service_type'), value: serviceLabel),
           bookingLocationOptionSummaryRow(
             label: l10n.t('origin'),
             location: origin,
@@ -632,7 +603,10 @@ class _BookingNumberCard extends StatelessWidget {
             location: destination,
           ),
           if (vehicle?.trim().isNotEmpty == true)
-            AppUi.summaryRow(label: l10n.t('vehicle'), value: vehicle!.trim()),
+            AppUi.summaryRow(
+              label: l10n.t('vehicle'),
+              value: CustomerBookingFormat.vehicle(l10n, vehicle),
+            ),
           AppUi.summaryRow(
             label: l10n.t('total'),
             value: total,
