@@ -62,7 +62,7 @@ class _GolfTripFieldsState extends State<GolfTripFields> {
   @override
   Widget build(BuildContext context) {
     final t = context.l10n.t;
-    final language = Localizations.localeOf(context).languageCode;
+    final language = context.l10n.languageCode;
     String name(Map c) =>
         ((c['names'] as Map?)?[language] ??
                 (c['names'] as Map?)?['en'] ??

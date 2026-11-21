@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/booking_provider.dart';
 import '../theme/app_fonts.dart';
+import '../utils/customer_language_url.dart';
 import 'language_name_label.dart';
 import 'package:provider/provider.dart';
 
 class LanguageSelector extends StatelessWidget {
-  const LanguageSelector({super.key, this.supportedLanguages = AppLocalizations.customerSupportedLanguages});
+  const LanguageSelector({
+    super.key,
+    this.supportedLanguages = AppLocalizations.customerSupportedLanguages,
+  });
 
   final List<String> supportedLanguages;
 
@@ -16,19 +20,24 @@ class LanguageSelector extends StatelessWidget {
 
     return PopupMenuButton<String>(
       icon: const Icon(Icons.language, color: Colors.white),
-      onSelected: (code) => context.read<LocaleState>().setLanguage(code),
+      onSelected: (code) {
+        updateCustomerLanguageUrl(code);
+        context.read<LocaleState>().setLanguage(code);
+      },
       itemBuilder: (context) => supportedLanguages
-          .map((code) => PopupMenuItem(
-                value: code,
-                child: Row(
-                  children: [
-                    if (locale.languageCode == code)
-                      const Icon(Icons.check, size: 18, color: Colors.green),
-                    if (locale.languageCode == code) const SizedBox(width: 8),
-                    LanguageNameLabel(languageCode: code),
-                  ],
-                ),
-              ))
+          .map(
+            (code) => PopupMenuItem(
+              value: code,
+              child: Row(
+                children: [
+                  if (locale.languageCode == code)
+                    const Icon(Icons.check, size: 18, color: Colors.green),
+                  if (locale.languageCode == code) const SizedBox(width: 8),
+                  LanguageNameLabel(languageCode: code),
+                ],
+              ),
+            ),
+          )
           .toList(),
     );
   }

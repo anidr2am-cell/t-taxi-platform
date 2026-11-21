@@ -12,10 +12,10 @@ const LANGUAGES = ['ko', 'en', 'ja', 'zh', 'zh-TW', 'ru', 'th'];
 const HREFLANG = { ko: 'ko', en: 'en', ja: 'ja', zh: 'zh-Hans', 'zh-TW': 'zh-TW', ru: 'ru', th: 'th' };
 const LANGUAGE_NAMES = { ko: '한국어', en: 'English', ja: '日本語', zh: '簡體中文', 'zh-TW': '繁體中文', ru: 'Русский', th: 'ไทย' };
 // Traditional Chinese blog content uses the existing Chinese booking form.
-const bookingLanguage = (lang) => lang === 'zh-TW' ? 'zh' : lang;
+const bookingLanguage = (lang) => lang;
 const DEFAULT_OG_IMAGE = `${BLOG_ORIGIN}/blog/assets/og-default.png`;
 const UI = {
-  'zh-TW': { blog: '部落格', title: 'TRider 部落格｜繁體中文', intro: '泰國機場接送與芭達雅旅行資訊。', updated: '最後更新', related: '相關文章', categories: '分類', all: '所有文章', cta: '泰國機場接送', book: '預約車輛（簡體中文）', support: '官方聯絡方式', supportUrl: '/zh/#support' },
+  'zh-TW': { blog: '部落格', title: 'TRider 部落格｜繁體中文', intro: '泰國機場接送與芭達雅旅行資訊。', updated: '最後更新', related: '相關文章', categories: '分類', all: '所有文章', cta: '泰國機場接送', book: '預約車輛', support: '官方聯絡方式', supportUrl: '/zh-TW/#support' },
   ko: { blog: '블로그', title: 'TRider 블로그', intro: '태국 공항 이동과 여행에 필요한 정보를 확인하세요.', updated: '최종 업데이트', related: '관련 글', categories: '카테고리', all: '전체', cta: '✈️ 공항 이동 차량 · 24시간 예약', book: '지금 예약하기', support: '카카오톡 상담', supportUrl: 'https://open.kakao.com/o/suG4krMi' },
   en: { blog: 'Blog', title: 'TRider Blog', intro: 'Practical guides for airport transfers and travel in Thailand.', updated: 'Last updated', related: 'Related articles', categories: 'Categories', all: 'All posts', cta: '✈️ Fixed-price airport transfers · Book 24/7', book: 'Book now', support: 'WhatsApp', supportUrl: 'https://wa.me/66815693445' },
   ja: { blog: 'ブログ', title: 'TRiderブログ', intro: 'タイの空港送迎と旅行に役立つ情報をご案内します。', updated: '最終更新', related: '関連記事', categories: 'カテゴリー', all: 'すべての記事', cta: '✈️ 定額の空港送迎・24時間予約', book: '今すぐ予約', support: 'LINEで相談', supportUrl: 'https://lin.ee/55A9phq' },

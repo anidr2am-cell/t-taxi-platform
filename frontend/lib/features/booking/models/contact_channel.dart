@@ -128,6 +128,8 @@ List<String> contactChannelOrderForLocale(String languageCode) {
   switch (languageCode) {
     case 'ko':
       return const ['KAKAO', 'LINE', 'WHATSAPP', 'WECHAT', 'TELEGRAM'];
+    case 'ja':
+    case 'zh-TW':
     case 'th':
       return const ['LINE', 'WHATSAPP', 'WECHAT', 'KAKAO', 'TELEGRAM'];
     case 'zh':

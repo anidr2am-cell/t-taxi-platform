@@ -9,7 +9,7 @@
   const remove = key => { try { localStorage.removeItem(key); } catch {} };
   const valid = value => typeof value === 'string' && /^[a-zA-Z0-9._-]{1,150}$/.test(value)
     && !/^\+?[0-9\s()-]{7,20}$/.test(value) ? value : null;
-  const customerPath = path => /^\/(?:$|(?:en|th|ja|zh)\/?$|booking\/?$|blog(?:\/|$))/.test(path);
+  const customerPath = path => /^\/(?:$|(?:en|th|ja|zh|zh-TW|ru)\/?$|booking\/?$|blog(?:\/|$))/.test(path);
   function stored(key) {
     try {
       const touch = JSON.parse(read(key));
@@ -70,6 +70,15 @@
   // Refresh after consent changes and support dynamically inserted customer links.
   document.addEventListener('click', event => {
     const a = event.target.closest('a[href]');
-    if (a) { try { a.href = decorateUrl(a.href); } catch {} }
+    if (a) { try {
+      const url = new URL(decorateUrl(a.href));
+      // Every deliberate new-booking click gets its own draft scope. Reload and
+      // back navigation keep that scope, so they retain the current input.
+      if (url.origin === location.origin && url.pathname === '/booking') {
+        const entry = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        url.searchParams.set('entry', entry);
+      }
+      a.href = url.href;
+    } catch {} }
   }, true);
 })();

@@ -642,7 +642,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
                     key: const Key('pickup_time_picker'),
                     compact: widget.embedded,
                     icon: Icons.schedule_outlined,
-                    title: l10n.t('pickup_time'),
+                    title: '${l10n.t('pickup_time')} · ${l10n.t('ux_thailand_time')}',
                     value: _timeDisplayValue(l10n, selected),
                     onTap: () => _pickTime(context, selected),
                   ),

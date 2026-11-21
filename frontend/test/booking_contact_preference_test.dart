@@ -46,7 +46,7 @@ class _ContactHarnessState extends State<_ContactHarness> {
 }
 
 Widget _app(Widget child, {String languageCode = 'ko'}) => MaterialApp(
-  locale: Locale(languageCode),
+  locale: AppLocalizations.flutterLocale(languageCode),
   localizationsDelegates: [
     AppLocalizationsDelegate(languageCode),
     GlobalMaterialLocalizations.delegate,
@@ -54,7 +54,7 @@ Widget _app(Widget child, {String languageCode = 'ko'}) => MaterialApp(
     GlobalCupertinoLocalizations.delegate,
   ],
   supportedLocales: AppLocalizations.supportedLanguages
-      .map(Locale.new)
+      .map(AppLocalizations.flutterLocale)
       .toList(),
   home: Scaffold(body: child),
 );

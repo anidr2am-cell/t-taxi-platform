@@ -68,7 +68,10 @@ class _StepRouteSelectState extends State<StepRouteSelect> {
           StepServiceSelect(
             embedded: true,
             selected: state.serviceType,
-            onSelected: (service) { controller.selectService(service); setState(() => _serviceExpanded = false); },
+            onSelected: (service) {
+              controller.selectService(service);
+              setState(() => _serviceExpanded = false);
+            },
           ),
         const SizedBox(height: WizardCompact.sectionGap),
         if (state.serviceType == BookingServiceType.golfTransfer)

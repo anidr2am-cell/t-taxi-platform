@@ -26,6 +26,22 @@ void main() {
     }
   });
 
+  testWidgets('completion localizes the vehicle and shows the route once', (tester) async {
+    await tester.pumpWidget(wrapBookingCompleteTestApp(
+      authController: authController,
+      home: BookingCompletePage(
+        result: _result(), serviceLabel: 'Airport pickup',
+        selectedVehicle: 'SEDAN',
+        origin: testBookingLocation(name: 'QA Airport'),
+        destination: testBookingLocation(name: 'QA Hotel'),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('SEDAN'), findsNothing);
+    expect(find.text(AppLocalizations('en').t('cx_vehicle_SEDAN')), findsOneWidget);
+    expect(find.text('QA Hotel'), findsOneWidget);
+  });
+
   testWidgets('booking complete hides removed contact entry by default', (
     tester,
   ) async {

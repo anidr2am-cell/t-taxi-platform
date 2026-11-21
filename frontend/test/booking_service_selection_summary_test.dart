@@ -21,7 +21,7 @@ void main() {
             await tester.pumpWidget(
               MaterialApp(
                 theme: AppTheme.lightTheme,
-                locale: Locale(lang),
+                locale: AppLocalizations.flutterLocale(lang),
                 supportedLocales: [Locale(lang)],
                 localizationsDelegates: [
                   AppLocalizationsDelegate(lang),

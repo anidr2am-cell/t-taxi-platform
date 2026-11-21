@@ -15,6 +15,8 @@ class StepPassengersLuggage extends StatelessWidget {
   final BookingWizardController controller;
   final VoidCallback? onRetryRecommendation;
   final bool embedded;
+  final bool showPassengerInputs;
+  final bool showOptions;
 
   const StepPassengersLuggage({
     super.key,
@@ -22,6 +24,8 @@ class StepPassengersLuggage extends StatelessWidget {
     required this.controller,
     this.onRetryRecommendation,
     this.embedded = false,
+    this.showPassengerInputs = true,
+    this.showOptions = true,
   });
 
   Widget _counter({
@@ -61,139 +65,156 @@ class StepPassengersLuggage extends StatelessWidget {
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (!embedded)
-          AppUi.sectionHeader(context, title: l10n.t('passengers')),
-        AppUi.surfaceCard(
-          padding: cardPadding,
-          child: Column(
-            children: [
-              _counter(
-                compact: embedded,
-                label: l10n.t('adults'),
-                value: state.adults,
-                min: 1,
-                onChanged: (v) =>
-                    controller.updatePassengersAndLuggage(adults: v),
-              ),
-              _counter(
-                compact: embedded,
-                label: l10n.t('children'),
-                value: state.children,
-                onChanged: (v) =>
-                    controller.updatePassengersAndLuggage(children: v),
-              ),
-              _counter(
-                compact: embedded,
-                label: l10n.t('infants'),
-                value: state.infants,
-                onChanged: (v) =>
-                    controller.updatePassengersAndLuggage(infants: v),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: gap),
-        if (!embedded) AppUi.sectionHeader(context, title: l10n.t('luggage')),
-        if (embedded)
-          Text(l10n.t('luggage'), style: WizardCompact.hintTextStyle),
-        if (embedded) const SizedBox(height: 4),
-        AppUi.surfaceCard(
-          padding: cardPadding,
-          child: Column(
-            children: [
-              _counter(
-                compact: embedded,
-                label: l10n.t('small_carriers'),
-                value: state.luggage20,
-                onChanged: (v) =>
-                    controller.updatePassengersAndLuggage(luggage20: v),
-              ),
-              _counter(
-                compact: embedded,
-                label: l10n.t('large_carriers'),
-                value: state.luggage24,
-                onChanged: (v) =>
-                    controller.updatePassengersAndLuggage(luggage24: v),
-              ),
-              _counter(
-                compact: embedded,
-                label: l10n.t('golf_bags'),
-                value: state.golfBags,
-                onChanged: (v) =>
-                    controller.updatePassengersAndLuggage(golfBags: v),
-              ),
-              _counter(
-                compact: embedded,
-                label: l10n.t('special_luggage'),
-                value: state.specialLuggageCount,
-                onChanged: (v) => controller.updatePassengersAndLuggage(
-                  specialLuggageCount: v,
+        if (showPassengerInputs) ...[
+          if (!embedded)
+            AppUi.sectionHeader(context, title: l10n.t('passengers')),
+          AppUi.surfaceCard(
+            padding: cardPadding,
+            child: Column(
+              children: [
+                _counter(
+                  compact: embedded,
+                  label: l10n.t('adults'),
+                  value: state.adults,
+                  min: 1,
+                  onChanged: (v) =>
+                      controller.updatePassengersAndLuggage(adults: v),
                 ),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: embedded ? WizardCompact.fieldGap : AppTokens.spaceSm),
-        AppUi.surfaceCard(
-          backgroundColor: AppTokens.infoLight,
-          padding: cardPadding,
-          child: Text(
-            l10n.t('customer_luggage_guidance'),
-            style: const TextStyle(
-              color: AppTokens.textSecondary,
-              height: 1.45,
+                _counter(
+                  compact: embedded,
+                  label: l10n.t('children'),
+                  value: state.children,
+                  onChanged: (v) =>
+                      controller.updatePassengersAndLuggage(children: v),
+                ),
+                _counter(
+                  compact: embedded,
+                  label: l10n.t('infants'),
+                  value: state.infants,
+                  onChanged: (v) =>
+                      controller.updatePassengersAndLuggage(infants: v),
+                ),
+              ],
             ),
           ),
-        ),
-        SizedBox(height: embedded ? WizardCompact.fieldGap : AppTokens.spaceSm),
-        AppUi.surfaceCard(
-          padding: cardPadding,
-          child: SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            dense: embedded,
-            title: Text(
-              l10n.t('name_sign'),
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: embedded ? 14 : 16,
-              ),
+          SizedBox(height: gap),
+          if (!embedded) AppUi.sectionHeader(context, title: l10n.t('luggage')),
+          if (embedded)
+            Text(l10n.t('luggage'), style: WizardCompact.hintTextStyle),
+          if (embedded) const SizedBox(height: 4),
+          AppUi.surfaceCard(
+            padding: cardPadding,
+            child: Column(
+              children: [
+                _counter(
+                  compact: embedded,
+                  label: l10n.t('small_carriers'),
+                  value: state.luggage20,
+                  onChanged: (v) =>
+                      controller.updatePassengersAndLuggage(luggage20: v),
+                ),
+                _counter(
+                  compact: embedded,
+                  label: l10n.t('large_carriers'),
+                  value: state.luggage24,
+                  onChanged: (v) =>
+                      controller.updatePassengersAndLuggage(luggage24: v),
+                ),
+                _counter(
+                  compact: embedded,
+                  label: l10n.t('golf_bags'),
+                  value: state.golfBags,
+                  onChanged: (v) =>
+                      controller.updatePassengersAndLuggage(golfBags: v),
+                ),
+                _counter(
+                  compact: embedded,
+                  label: l10n.t('special_luggage'),
+                  value: state.specialLuggageCount,
+                  onChanged: (v) => controller.updatePassengersAndLuggage(
+                    specialLuggageCount: v,
+                  ),
+                ),
+              ],
             ),
-            value: state.nameSign,
-            onChanged: (v) =>
-                controller.updatePassengersAndLuggage(nameSign: v),
           ),
-        ),
-        if (state.nameSign) ...[
           SizedBox(
             height: embedded ? WizardCompact.fieldGap : AppTokens.spaceSm,
           ),
-          _NameSignTextField(
-            initialValue: state.nameSignText ?? '',
-            embedded: embedded,
-            onChanged: (value) =>
-                controller.updatePassengersAndLuggage(nameSignText: value),
+          AppUi.surfaceCard(
+            backgroundColor: AppTokens.infoLight,
+            padding: cardPadding,
+            child: Text(
+              l10n.t('customer_luggage_guidance'),
+              style: const TextStyle(
+                color: AppTokens.textSecondary,
+                height: 1.45,
+              ),
+            ),
+          ),
+          SizedBox(
+            height: embedded ? WizardCompact.fieldGap : AppTokens.spaceSm,
           ),
         ],
-        NameSignInfoCard(visible: state.nameSign),
-        SizedBox(height: embedded ? WizardCompact.fieldGap : AppTokens.spaceSm),
-        AppUi.surfaceCard(
-          padding: cardPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+        if (showOptions)
+          ExpansionTile(
+            initiallyExpanded: state.nameSign || state.preferFemaleDriver,
+            tilePadding: EdgeInsets.zero,
+            title: Text(l10n.t('ux_options')),
             children: [
-              _BookingPreferenceToggle(
-                embedded: embedded,
-                title: l10n.t('booking_prefer_female_driver'),
-                disclaimer: l10n.t('booking_preference_disclaimer'),
-                value: state.preferFemaleDriver,
-                onChanged: (v) => controller.updatePassengersAndLuggage(
-                  preferFemaleDriver: v,
+              AppUi.surfaceCard(
+                padding: cardPadding,
+                child: SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  dense: embedded,
+                  title: Text(
+                    l10n.t('name_sign'),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: embedded ? 14 : 16,
+                    ),
+                  ),
+                  value: state.nameSign,
+                  onChanged: (v) =>
+                      controller.updatePassengersAndLuggage(nameSign: v),
+                ),
+              ),
+              if (state.nameSign) ...[
+                SizedBox(
+                  height: embedded ? WizardCompact.fieldGap : AppTokens.spaceSm,
+                ),
+                _NameSignTextField(
+                  initialValue: state.nameSignText ?? '',
+                  embedded: embedded,
+                  onChanged: (value) => controller.updatePassengersAndLuggage(
+                    nameSignText: value,
+                  ),
+                ),
+              ],
+              NameSignInfoCard(visible: state.nameSign),
+              SizedBox(
+                height: embedded ? WizardCompact.fieldGap : AppTokens.spaceSm,
+              ),
+              AppUi.surfaceCard(
+                padding: cardPadding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _BookingPreferenceToggle(
+                      embedded: embedded,
+                      title: l10n.t('booking_prefer_female_driver'),
+                      disclaimer: l10n.t('booking_preference_disclaimer'),
+                      value: state.preferFemaleDriver,
+                      onChanged: (v) => controller.updatePassengersAndLuggage(
+                        preferFemaleDriver: v,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-        ),
-        if (!embedded) ...[
+        if (!embedded && showPassengerInputs) ...[
           SizedBox(height: gap),
           if (controller.isLoading)
             WizardLoadingView(message: l10n.t('loading_recommendation'))
@@ -418,7 +439,11 @@ class _RecommendationCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  recommendation.recommendedVehicle == null ? '-' : l10n.t('cx_vehicle_${recommendation.recommendedVehicle}'),
+                  recommendation.recommendedVehicle == null
+                      ? '-'
+                      : l10n.t(
+                          'cx_vehicle_${recommendation.recommendedVehicle}',
+                        ),
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 17,

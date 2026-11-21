@@ -34,7 +34,7 @@ class BookingContactPreference {
     if (provider == 'LINE') return line;
     return switch (languageCode) {
       'ko' => kakao,
-      'th' || 'ja' => line,
+      'th' || 'ja' || 'zh-TW' => line,
       _ => whatsapp,
     };
   }
@@ -44,6 +44,7 @@ class BookingContactPreference {
     'th' => '+66',
     'ja' => '+81',
     'zh' => '+86',
+    'zh-TW' => '+886',
     'ru' => '+7',
     _ => '+66',
   };

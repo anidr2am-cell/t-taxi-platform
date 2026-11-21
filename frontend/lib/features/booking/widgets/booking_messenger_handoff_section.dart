@@ -6,6 +6,7 @@ import '../../../theme/app_tokens.dart';
 import '../../../utils/clipboard_writer.dart';
 import '../../../widgets/app_ui.dart';
 import '../models/contact_channel.dart';
+import '../services/booking_analytics.dart';
 import '../services/booking_contact_connection_service.dart';
 import '../utils/contact_channel_url.dart';
 
@@ -82,6 +83,9 @@ class _BookingMessengerHandoffSectionState
   Future<void> _openChannel(ContactChannel channel) async {
     if (_opening) return;
     setState(() => _opening = true);
+    BookingAnalytics.instance.track('booking_messenger_opened', {
+      'locale': context.l10n.languageCode, 'channel': channel.code,
+    });
 
     final message = bookingMessengerHandoffMessage(widget.bookingNumber);
     if (channel.code == 'WECHAT') {

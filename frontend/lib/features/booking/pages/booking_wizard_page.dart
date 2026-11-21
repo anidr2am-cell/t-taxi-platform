@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../auth/widgets/booking_social_login_section.dart' show AuthScope;
 import '../utils/booking_entry_session.dart';
 import 'package:provider/provider.dart';
 
@@ -33,9 +34,6 @@ import '../widgets/fare_inquiry_card.dart';
 import '../widgets/preferred_support_button.dart';
 import '../widgets/wizard_compact.dart';
 import '../widgets/wizard_status_views.dart';
-import '../../auth/widgets/booking_social_login_section.dart';
-import '../../auth/models/social_login_return_context.dart';
-import '../utils/booking_contact_preference.dart';
 
 class BookingWizardPage extends StatefulWidget {
   const BookingWizardPage({
@@ -85,33 +83,6 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
         profilePhone: user?.phone,
       );
     });
-  }
-
-  Widget? _contactLoginPrompt(BookingWizardState state) {
-    final auth = AuthScope.maybeOf(context);
-    if (auth == null) return null;
-    if (auth.isLoggedIn) return null;
-    final type = BookingContactPreference.normalize(state.messengerType);
-    if (type != BookingContactPreference.kakao &&
-        type != BookingContactPreference.line) {
-      return null;
-    }
-    final kakao = SocialLoginReturnContext.fromBookingWizard(
-      baseUri: Uri.base,
-      forLine: false,
-    );
-    final line = SocialLoginReturnContext.fromBookingWizard(
-      baseUri: Uri.base,
-      forLine: true,
-    );
-    return BookingSocialLoginSection(
-      showGoogleButton: false,
-      showKakaoButton: type == BookingContactPreference.kakao,
-      showLineButton: type == BookingContactPreference.line,
-      claimContext: type == BookingContactPreference.kakao ? kakao : line,
-      kakaoReturnContext: kakao,
-      lineReturnContext: line,
-    );
   }
 
   void _syncAnalytics(BuildContext context) {
@@ -170,7 +141,10 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
       });
     } else {
       final args = widget.routeArgs;
-      if (args != null && args.hasCompleteRoute) {
+      if (args != null &&
+          args.hasCompleteRoute &&
+          (!Uri.base.queryParameters.containsKey('entry') ||
+              consumeFreshBookingEntry(Uri.base))) {
         _controller
             .applyRoutePrefill(
               serviceType: args.serviceType,
@@ -186,8 +160,8 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
             .initialize(
               initialServiceType: args?.serviceType,
               freshEntry:
-                  args != null &&
-                  (args.freshEntry || consumeFreshBookingEntry(Uri.base)),
+                  args?.freshEntry == true ||
+                  consumeFreshBookingEntry(Uri.base),
             )
             .then((_) {
               if (mounted) _controller.syncDerivedData();
@@ -511,6 +485,7 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
               const SizedBox(height: AppTokens.spaceMd),
             ],
             StepPassengersLuggage(
+              showOptions: false,
               embedded: true,
               state: state,
               controller: _controller,
@@ -521,6 +496,12 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
               embedded: true,
               state: state,
               controller: _controller,
+              options: StepPassengersLuggage(
+                showPassengerInputs: false,
+                embedded: true,
+                state: state,
+                controller: _controller,
+              ),
             ),
             const SizedBox(height: WizardCompact.sectionGap),
             _buildTrustNotes(
@@ -544,7 +525,6 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
               _controller.updateCustomerInfo(messengerId: v),
           onAdditionalRequestsChanged: (v) =>
               _controller.updateCustomerInfo(additionalRequests: v),
-          loginPrompt: _contactLoginPrompt(state),
         );
       case BookingWizardSteps.review:
         return StepConfirmation(

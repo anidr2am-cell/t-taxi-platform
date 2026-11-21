@@ -123,7 +123,7 @@ void main() {
       MaterialApp(
         locale: const Locale('ru'),
         supportedLocales: AppLocalizations.customerSupportedLanguages
-            .map(Locale.new)
+            .map(AppLocalizations.flutterLocale)
             .toList(),
         localizationsDelegates: [
           AppLocalizationsDelegate('ru'),

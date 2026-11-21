@@ -142,9 +142,9 @@ class TTaxiApp extends StatelessWidget {
           ],
         );
       },
-      locale: Locale(locale.languageCode),
+      locale: AppLocalizations.flutterLocale(locale.languageCode),
       supportedLocales: AppLocalizations.customerSupportedLanguages
-          .map((code) => Locale(code))
+          .map(AppLocalizations.flutterLocale)
           .toList(),
       localizationsDelegates: [
         AppLocalizationsDelegate(locale.languageCode),

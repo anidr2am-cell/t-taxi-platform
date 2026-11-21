@@ -8,12 +8,14 @@ const source = fs.readFileSync(new URL('../assets/marketing-attribution.js', imp
 function page(href, { storage = new Map(), referrer = '', blocked = false } = {}) {
   const location = new URL(href), links = ['/booking?lang=en', '/blog/test', '/admin', 'https://band.us/@trounding']
     .map(href => ({ href: new URL(href, location).href }));
-  const document = { referrer, querySelectorAll: () => links, addEventListener() {} };
-  const window = {};
+  const listeners = {};
+  const document = { referrer, querySelectorAll: () => links, addEventListener(name,fn) { listeners[name]=fn; } };
+  let entry = 0;
+  const window = {crypto:{randomUUID:()=>`qa-entry-${++entry}`}};
   vm.runInNewContext(source, {window, document, location, URL, URLSearchParams, Date,
     localStorage: {getItem: k => {if (blocked) throw Error('blocked'); return storage.get(k) ?? null;},
       setItem: (k,v) => storage.set(k,v), removeItem: k => storage.delete(k)}});
-  return {api:window.trideMarketing, links, storage};
+  return {api:window.trideMarketing, links, storage, listeners};
 }
 const first = 'tride_marketing_first_touch', last = 'tride_marketing_last_touch';
 const campaign = '?utm_source=facebook&utm_medium=organic_social&utm_campaign=202611_golf_planning&utm_content=story_20261101&phone=private';
@@ -21,6 +23,7 @@ const campaign = '?utm_source=facebook&utm_medium=organic_social&utm_campaign=20
 test('unknown consent carries safe post labels through language/blog/booking without storage', () => {
   const a = page('https://trider.taxi/' + campaign);
   assert.equal(a.storage.size, 0);
+  assert.equal(new URL(a.api.decorateUrl('/zh-TW/')).searchParams.get('utm_content'), 'story_20261101');
   const en = a.api.decorateUrl('/en/');
   assert.equal(new URL(en).searchParams.get('utm_content'), 'story_20261101');
   assert.equal(new URL(en).searchParams.has('phone'), false);
@@ -73,4 +76,17 @@ test('invalid labels are dropped and both generated surfaces load the same conte
   const root = new URL('../../', import.meta.url);
   assert.match(fs.readFileSync(new URL('landing/index.template.html',root),'utf8'), /\{\{ATTRIBUTION\}\}/);
   assert.match(fs.readFileSync(new URL('blog/build.js',root),'utf8'), /attributionAsset/);
+});
+
+
+test('each deliberate booking click starts a fresh draft without changing language or attribution', () => {
+  const a=page('https://trider.taxi/'+campaign),link=a.links[0];
+  a.listeners.click({target:{closest:()=>link}});
+  const first=new URL(link.href);
+  assert.equal(first.searchParams.get('lang'),'en');
+  assert.equal(first.searchParams.get('entry'),'qa-entry-1');
+  assert.equal(first.searchParams.get('utm_content'),'story_20261101');
+  a.listeners.click({target:{closest:()=>link}});
+  assert.equal(new URL(link.href).searchParams.get('entry'),'qa-entry-2');
+  assert.equal(new URL(link.href).searchParams.has('phone'),false);
 });
