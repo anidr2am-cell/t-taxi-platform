@@ -223,6 +223,9 @@ void main() {
         state: const BookingWizardState(nameSign: true),
       );
 
+      await tester.ensureVisible(find.byType(ExpansionTile));
+      await tester.tap(find.byType(ExpansionTile));
+      await tester.pumpAndSettle();
       expect(find.text('Name to display on the name sign'), findsOneWidget);
     });
 

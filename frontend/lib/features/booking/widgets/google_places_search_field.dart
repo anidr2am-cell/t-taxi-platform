@@ -79,6 +79,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
   bool _loading = false;
   bool _loadingDetails = false;
   bool _loadingRecents = false;
+  bool _showAllRecents = false;
   String? _error;
   bool _editing = false;
   Set<String> _registeredAirportCodes = {};
@@ -444,7 +445,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
           ),
         ),
         const SizedBox(height: 8),
-        ...recents.map((location) {
+        ...(_showAllRecents ? recents : recents.take(2)).map((location) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: AppUi.surfaceCard(
@@ -481,6 +482,14 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
             ),
           );
         }),
+        if (recents.length > 2)
+          TextButton.icon(
+            onPressed: () => setState(() => _showAllRecents = !_showAllRecents),
+            icon: Icon(_showAllRecents ? Icons.expand_less : Icons.expand_more),
+            label: Text(
+              l10n.t(_showAllRecents ? 'ux_show_less' : 'ux_more_places'),
+            ),
+          ),
         const SizedBox(height: 12),
       ],
     );
@@ -553,7 +562,6 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
           const SizedBox(height: 6),
         ],
         if (widget.showAirportShortcuts) _airportShortcuts(l10n),
-        _recentSection(l10n),
         Focus(
           onKeyEvent: _handleKeyEvent,
           child: Semantics(
@@ -589,6 +597,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
             ),
           ),
         ),
+        if (_controller.text.trim().isEmpty) _recentSection(l10n),
         if (_loading && _controller.text.trim().length >= 2)
           Padding(
             padding: const EdgeInsets.only(top: 8),

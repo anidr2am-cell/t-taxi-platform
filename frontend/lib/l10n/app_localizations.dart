@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'booking_ux_text.dart';
 
 class AppLocalizations {
   final String languageCode;
@@ -11613,6 +11614,8 @@ class AppLocalizations {
 };
 
   String t(String key) {
+    final ux = bookingUxText[languageCode]?[key];
+    if (ux != null) return ux;
     final voucherText = _voucherEditText[languageCode]?[key];
     if (voucherText != null) return voucherText;
     final flightFirst = _flightFirstText[languageCode]?[key];

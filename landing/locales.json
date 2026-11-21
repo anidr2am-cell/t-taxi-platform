@@ -171,7 +171,7 @@
       "WECHAT": "WeChat",
       "TELEGRAM": "Telegram"
     },
-    "heroContact": "고객센터를 통한 원클릭 예약"
+    "heroContact": "상담하고 예약하기"
   },
   "en": {
     "name": "English",
@@ -345,7 +345,7 @@
       "WECHAT": "WeChat",
       "TELEGRAM": "Telegram"
     },
-    "heroContact": "One-click booking via Customer Center"
+    "heroContact": "Discuss and book"
   },
   "ja": {
     "name": "日本語",
@@ -519,7 +519,7 @@
       "WECHAT": "WeChat",
       "TELEGRAM": "Telegram"
     },
-    "heroContact": "カスタマーセンターでワンクリック予約"
+    "heroContact": "相談して予約する"
   },
   "zh": {
     "name": "简体中文",
@@ -693,7 +693,7 @@
       "WECHAT": "WeChat",
       "TELEGRAM": "Telegram"
     },
-    "heroContact": "通过客服中心一键预约"
+    "heroContact": "咨询并预约"
   },
   "th": {
     "name": "ไทย",
@@ -867,6 +867,6 @@
       "WECHAT": "WeChat",
       "TELEGRAM": "Telegram"
     },
-    "heroContact": "จองง่ายผ่านศูนย์บริการลูกค้า"
+    "heroContact": "ปรึกษาและจอง"
   }
 }
