@@ -667,3 +667,9 @@ input:focus-visible,summary:focus-visible {
     flex-shrink:1
   }
 }
+
+.support-actions > a[data-preferred="true"] {
+  border: 2px solid var(--primary);
+  background: var(--light);
+  color: var(--dark);
+}
