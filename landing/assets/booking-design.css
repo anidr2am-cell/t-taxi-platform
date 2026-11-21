@@ -673,3 +673,43 @@ input:focus-visible,summary:focus-visible {
   background: var(--light);
   color: var(--dark);
 }
+/* Keep form actions aligned as one row on wide screens; mobile remains a stack. */
+.quick-booking #hero-support a {
+  border: 1px solid var(--primary) !important;
+}
+@media (min-width: 761px) {
+  .quick-booking {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto;
+    gap: 10px 24px;
+  }
+  .route-fields {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  #quick-status {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .quick-booking .primary-action {
+    grid-column: 1;
+    grid-row: 3;
+    margin: 0;
+  }
+  .quick-booking .support-actions {
+    grid-column: 2;
+    grid-row: 3;
+    margin: 0;
+  }
+  .quick-booking .next-help {
+    grid-column: 1;
+    grid-row: 4;
+    margin: 0;
+  }
+  .quick-booking > a {
+    grid-column: 2;
+    grid-row: 4;
+    padding: 0;
+    align-self: start;
+  }
+}
