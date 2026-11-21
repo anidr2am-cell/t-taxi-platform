@@ -22,9 +22,9 @@ class _WeChatChannels extends BookingContactConnectionService {
 
 Widget wrap(String language, Widget child) => MaterialApp(
   theme: AppTheme.lightTheme,
-  locale: Locale(language),
+  locale: AppLocalizations.flutterLocale(language),
   supportedLocales: AppLocalizations.customerSupportedLanguages
-      .map(Locale.new)
+      .map(AppLocalizations.flutterLocale)
       .toList(),
   localizationsDelegates: [
     AppLocalizationsDelegate(language),

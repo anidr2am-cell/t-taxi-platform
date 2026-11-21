@@ -139,7 +139,7 @@ void main() {
         ChangeNotifierProvider(
           create: (_) => LocaleState()..setLanguage(languageCode),
           child: MaterialApp(
-            locale: Locale(languageCode),
+            locale: AppLocalizations.flutterLocale(languageCode),
             home: Scaffold(
               body: SingleChildScrollView(
                 child: StepPassengersLuggage(
@@ -157,6 +157,9 @@ void main() {
     testWidgets('shows disclaimer under preference toggle', (tester) async {
       await pumpPassengerStep(tester, languageCode: 'en');
 
+      await tester.ensureVisible(find.byType(ExpansionTile));
+      await tester.tap(find.byType(ExpansionTile));
+      await tester.pumpAndSettle();
       final disclaimer =
           AppLocalizations('en').t('booking_preference_disclaimer');
       expect(find.text(disclaimer), findsOneWidget);

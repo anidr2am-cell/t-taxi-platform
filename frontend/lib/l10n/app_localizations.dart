@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'booking_ux_text.dart';
+import 'customer_traditional_chinese.dart';
 
 class AppLocalizations {
   final String languageCode;
@@ -7,12 +8,13 @@ class AppLocalizations {
   AppLocalizations(this.languageCode);
 
   static const supportedLanguages = ['en', 'ko', 'zh', 'ja', 'th'];
-  static const customerSupportedLanguages = [...supportedLanguages, 'ru'];
+  static const customerSupportedLanguages = [...supportedLanguages, 'ru', 'zh-TW'];
 
   static const Map<String, String> languageNames = {
     'en': 'English',
     'ko': '한국어',
-    'zh': '中文',
+    'zh': '简体中文',
+    'zh-TW': '繁體中文',
     'ja': '日本語',
     'th': 'ไทย',
     'ru': 'Русский',
@@ -11613,7 +11615,14 @@ class AppLocalizations {
   }
 };
 
+  static Locale flutterLocale(String code) => code == 'zh-TW'
+      ? const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant', countryCode: 'TW')
+      : Locale(code);
+
   String t(String key) {
+    if (languageCode == 'zh-TW') {
+      return customerTraditionalChinese[key] ?? AppLocalizations('zh').t(key);
+    }
     final ux = bookingUxText[languageCode]?[key];
     if (ux != null) return ux;
     final voucherText = _voucherEditText[languageCode]?[key];
@@ -11679,6 +11688,8 @@ class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
 extension AppLocalizationsContext on BuildContext {
   AppLocalizations get l10n {
     final locale = Localizations.localeOf(this);
-    return AppLocalizations(locale.languageCode);
+    return Localizations.of<AppLocalizations>(this, AppLocalizations) ??
+        AppLocalizations(locale.scriptCode == 'Hant' || locale.countryCode == 'TW'
+            ? 'zh-TW' : locale.languageCode);
   }
 }

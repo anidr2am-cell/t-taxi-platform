@@ -43,9 +43,9 @@ GuestBookingLookupResult booking(
 
 Widget app(String language, GuestBookingLookupResult result) => MaterialApp(
   theme: AppTheme.lightTheme,
-  locale: Locale(language),
+  locale: AppLocalizations.flutterLocale(language),
   supportedLocales: AppLocalizations.customerSupportedLanguages
-      .map(Locale.new)
+      .map(AppLocalizations.flutterLocale)
       .toList(),
   localizationsDelegates: [
     AppLocalizationsDelegate(language),

@@ -42,9 +42,9 @@ const channels = [
   ),
 ];
 Widget app(Widget child, String locale) => MaterialApp(
-  locale: Locale(locale),
+  locale: AppLocalizations.flutterLocale(locale),
   supportedLocales: AppLocalizations.supportedLanguages
-      .map(Locale.new)
+      .map(AppLocalizations.flutterLocale)
       .toList(),
   localizationsDelegates: [
     AppLocalizationsDelegate(locale),

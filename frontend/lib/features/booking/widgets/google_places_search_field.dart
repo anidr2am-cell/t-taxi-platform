@@ -149,12 +149,13 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
     setState(() => _loadingRecents = true);
     try {
       final items = await _recentStorage.load();
+      if (!mounted) return;
       setState(() {
         _recentLocations = items;
         _loadingRecents = false;
       });
     } catch (_) {
-      setState(() => _loadingRecents = false);
+      if (mounted) setState(() => _loadingRecents = false);
     }
   }
 

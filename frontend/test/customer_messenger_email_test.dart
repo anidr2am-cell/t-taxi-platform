@@ -23,9 +23,9 @@ void main() {
       );
       await tester.pumpWidget(
         MaterialApp(
-          locale: Locale(locale),
+          locale: AppLocalizations.flutterLocale(locale),
           supportedLocales: AppLocalizations.supportedLanguages
-              .map(Locale.new)
+              .map(AppLocalizations.flutterLocale)
               .toList(),
           localizationsDelegates: [
             AppLocalizationsDelegate(locale),

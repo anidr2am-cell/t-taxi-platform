@@ -19,13 +19,13 @@ test('landing guide links retain the existing blog language and English SEO is s
   assert.ok(html.includes(`href="${expected}"`),lang);
  }
  const en=read(landing,'en');assert.match(en,/<title>[^<]*Tolls &amp; airport parking included/);assert.doesNotMatch(en,/<title>[^<]*No extra charges/);
- assert.match(en,/optional name.sign/);assert.match(en,/address-based distance charge/);
+ assert.match(en,/optional name.sign/);assert.match(en,/Confirm the final fare/);assert.doesNotMatch(en,/address-based distance charge/);
 });
 test('all blog headers, article CTAs and inline booking links preserve page language',()=>{
  for(const post of posts){
   const html=read(blog,post.slug),links=[...html.matchAll(/href="([^"#]+)"/g)].map(m=>new URL(m[1].replaceAll('&amp;','&'),'https://trider.taxi'));
   const booking=links.filter(u=>u.origin==='https://trider.taxi'&&['/','/booking'].includes(u.pathname));
-  assert(booking.length>=2,post.slug);for(const url of booking){assert.equal(url.pathname,'/booking',post.slug);assert.equal(url.searchParams.get('lang'),post.lang==='zh-TW'?'zh':post.lang,post.slug);}
+  assert(booking.length>=2,post.slug);for(const url of booking){assert.equal(url.pathname,'/booking',post.slug);assert.equal(url.searchParams.get('lang'),post.lang,post.slug);}
  }
  for(const lang of ['en','ja','zh','ru']) assert.ok(read(blog,`lang/${lang}`).includes(`/booking?lang=${lang}`));
 });
@@ -91,7 +91,7 @@ test('airport and localized golf guides preset the correct service without chang
  const golfLabels={ko:/골프장/,en:/Golf course/,ja:/ゴルフ場/,zh:/高尔夫球场/,"zh-TW":/高爾夫球場/,ru:/гольфа/};
  const dropoffLabels={ko:/공항 샌딩/,en:/to the airport/,ja:/空港への/,zh:/送机/,ru:/в аэропорт/};
  for(const post of topicPosts){
-  const service=post.category==='golf'?'GOLF_TRANSFER':'AIRPORT_DROPOFF',lang=post.lang, bookingLang=lang==='zh-TW'?'zh':lang;
+  const service=post.category==='golf'?'GOLF_TRANSFER':'AIRPORT_DROPOFF',lang=post.lang, bookingLang=lang;
   assert.equal(post.bookingService,service,post.slug);
   const page=read(blog,post.slug),expectedTopic='/booking?service='+service+'&amp;lang='+bookingLang;
   assert.ok(page.includes('class="book-button" href="'+expectedTopic+'"'),post.slug);

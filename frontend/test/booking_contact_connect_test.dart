@@ -214,7 +214,7 @@ void main() {
           child: MaterialApp(
             builder: (context, child) =>
                 AuthScope(controller: auth, child: child!),
-            locale: Locale(language),
+            locale: AppLocalizations.flutterLocale(language),
             localizationsDelegates: [
               AppLocalizationsDelegate(language),
               GlobalMaterialLocalizations.delegate,

@@ -168,6 +168,8 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
           title: l10n.t('flight_lookup_route_title'),
           subtitle: l10n.t('flight_departure_date_help'),
         ),
+        Text(l10n.t('ux_unknown_flight')),
+        const SizedBox(height: 8),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

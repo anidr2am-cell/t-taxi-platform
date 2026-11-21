@@ -496,12 +496,12 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
               embedded: true,
               state: state,
               controller: _controller,
-            ),
-            StepPassengersLuggage(
-              showPassengerInputs: false,
-              embedded: true,
-              state: state,
-              controller: _controller,
+              options: StepPassengersLuggage(
+                showPassengerInputs: false,
+                embedded: true,
+                state: state,
+                controller: _controller,
+              ),
             ),
             const SizedBox(height: WizardCompact.sectionGap),
             _buildTrustNotes(

@@ -15,7 +15,7 @@ void main() {
       expect(label!.trim(), isNotEmpty);
     }
 
-    expect(AppLocalizations.languageNames['zh'], '中文');
+    expect(AppLocalizations.languageNames['zh'], '简体中文');
     expect(AppLocalizations.languageNames['ja'], '日本語');
   });
 }

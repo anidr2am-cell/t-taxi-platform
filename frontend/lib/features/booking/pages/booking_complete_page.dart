@@ -17,6 +17,7 @@ import '../widgets/booking_notification_section.dart';
 import '../widgets/booking_messenger_handoff_section.dart';
 import '../widgets/customer_payment_instructions_card.dart';
 import '../widgets/airport_meeting_guide_card.dart';
+import '../widgets/golf_consultation_card.dart';
 import '../widgets/gate_arrival_action.dart';
 import '../widgets/guest_booking_cancel_section.dart';
 import '../../auth/controllers/auth_controller.dart';
@@ -298,13 +299,6 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                 statusTone: AppUi.toneForBookingStatus(_status),
               ),
               const SizedBox(height: AppTokens.spaceMd),
-              const SizedBox(height: AppTokens.spaceMd),
-              AppUi.primaryButton(
-                label: l10n.t('booking_complete_track_cta'),
-                icon: Icons.search,
-                onPressed: _openBookingLookup,
-              ),
-
               CustomerPaymentInstructionsCard(
                 paymentMethod: result.paymentMethod,
                 paymentCurrency:
@@ -315,6 +309,14 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                 bookingNumber: result.bookingNumber,
                 contactChannel: result.contactChannel,
               ),
+              const SizedBox(height: AppTokens.spaceMd),
+              AppUi.primaryButton(
+                label: l10n.t('booking_complete_track_cta'),
+                icon: Icons.search,
+                onPressed: _openBookingLookup,
+              ),
+
+
 
               if (_canShowCancel) ...[
                 const SizedBox(height: AppTokens.spaceMd),
@@ -446,6 +448,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                     ),
                 ],
               ],
+              const GolfConsultationCard(),
               BookingSocialLoginSection(
                 authController: widget.authController,
                 claimContext: kakaoReturnContext,

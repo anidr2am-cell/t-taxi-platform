@@ -10,8 +10,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 Widget wrap(Widget child, String lang) => MaterialApp(
-  locale: Locale(lang),
-  supportedLocales: AppLocalizations.customerSupportedLanguages.map(Locale.new),
+  locale: AppLocalizations.flutterLocale(lang),
+  supportedLocales: AppLocalizations.customerSupportedLanguages.map(AppLocalizations.flutterLocale),
   localizationsDelegates: [
     AppLocalizationsDelegate(lang),
     GlobalMaterialLocalizations.delegate,

@@ -16,12 +16,14 @@ class StepVehicleSelect extends StatelessWidget {
   final BookingWizardState state;
   final BookingWizardController controller;
   final bool embedded;
+  final Widget? options;
 
   const StepVehicleSelect({
     super.key,
     required this.state,
     required this.controller,
     this.embedded = false,
+    this.options,
   });
 
   @override
@@ -104,6 +106,7 @@ class StepVehicleSelect extends StatelessWidget {
                 ),
               ),
               child: InkWell(
+                excludeFromSemantics: true,
                 borderRadius: AppTokens.borderRadiusMd,
                 onTap: enabled ? () => controller.selectVehicle(vehicle) : null,
                 child: Padding(
@@ -200,6 +203,25 @@ class StepVehicleSelect extends StatelessWidget {
                                 ),
                           ),
                       ],
+                      if (enabled)
+                        Text(
+                          l10n.t(
+                            recommendation.recommendedVehicle == vehicle
+                                ? 'ux_recommendation_reason'
+                                : 'ux_vehicle_fits',
+                          ),
+                        ),
+                      OutlinedButton.icon(
+                        onPressed: enabled
+                            ? () => controller.selectVehicle(vehicle)
+                            : null,
+                        icon: Icon(
+                          selected
+                              ? Icons.check_circle
+                              : Icons.radio_button_unchecked,
+                        ),
+                        label: Text('${l10n.t('select_vehicle')} · ${l10n.t('cx_vehicle_$vehicle')}'),
+                      ),
                       if (!enabled)
                         Text(
                           l10n.t('customer_vehicle_not_suitable'),
@@ -218,6 +240,7 @@ class StepVehicleSelect extends StatelessWidget {
           l10n.t('cx_capacity_note'),
           style: const TextStyle(color: AppTokens.textSecondary),
         ),
+        if (options != null) options!,
         if (state.selectedVehicle == null)
           WizardUi.infoHint(l10n.t('wizard_pricing_after_vehicle'))
         else if (controller.isLoading && state.pricing == null)
