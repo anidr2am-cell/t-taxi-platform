@@ -11,7 +11,6 @@ import 'package:frontend/features/auth/widgets/booking_social_login_section.dart
 import 'package:frontend/features/account/pages/account_page.dart';
 import 'package:frontend/features/booking/pages/my_bookings_page.dart';
 import 'package:frontend/features/landing/pages/customer_landing_page.dart';
-import 'package:frontend/features/landing/widgets/landing_social_login_section.dart';
 import 'package:frontend/l10n/app_localizations.dart';
 import 'package:frontend/providers/booking_provider.dart';
 import 'package:http/http.dart' as http;
@@ -110,8 +109,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('landing_header_auth_button')), findsOneWidget);
-    expect(find.byKey(const Key('landing_social_login_section')), findsOneWidget);
-    expect(find.byKey(const Key('landing_login_prompt_banner')), findsOneWidget);
+    expect(find.byKey(const Key('landing_social_login_section')), findsNothing);
+    expect(find.byKey(const Key('landing_login_prompt_banner')), findsNothing);
     expect(find.text('Google로 계속하기'), findsNothing);
 
     await tester.tap(find.byKey(const Key('landing_header_auth_button')));
@@ -310,7 +309,9 @@ void main() {
     expect(find.byKey(const Key('landing_auth_bottom_sheet')), findsNothing);
     expect(find.byIcon(Icons.person), findsOneWidget);
     expect(find.byIcon(Icons.person_outline), findsNothing);
-    expect(find.byKey(const Key('landing_social_login_section')), findsOneWidget);
-    expect(find.text('Minji님, 로그인되었습니다'), findsOneWidget);
+    expect(find.byKey(const Key('landing_social_login_section')), findsNothing);
+    expect(authController.isLoggedIn, isTrue);
+    expect(authController.user?.name, 'Minji');
+    expect(find.text('Minji님, 로그인되었습니다'), findsNothing);
   });
 }

@@ -14,6 +14,7 @@ $env:QA_OUTPUT = 'C:/TTaxi-screens/customer-booking-ux/after'
 node frontend/qa/customer-booking-ux/browser.cjs
 node frontend/qa/customer-booking-ux/landing-browser.cjs
 node frontend/qa/customer-booking-ux/completion-browser.cjs
+node frontend/qa/customer-booking-ux/edge-browser.cjs
 ```
 
 Chrome is launched headlessly in a separate test profile; these are not real-phone tests. Override PLAYWRIGHT_MODULE / QA_BROWSER_CHANNEL where necessary. Set QA_LANGUAGES for a focused wizard-language rerun. The fixture response header is `X-Preview-Backend: customer-booking-ux-20261121-fixture`.
