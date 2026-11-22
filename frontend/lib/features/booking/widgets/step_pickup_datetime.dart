@@ -43,6 +43,7 @@ class StepPickupDateTime extends StatefulWidget {
 class _StepPickupDateTimeState extends State<StepPickupDateTime> {
   late final TextEditingController _flightController;
   late final TextEditingController _manualTimeController;
+  final FocusNode _manualTimeFocus = FocusNode();
   String? _manualTimeErrorKey;
   bool _isLookingUp = false;
   bool _flightMethod = true;
@@ -503,6 +504,10 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
   }
 
   void _syncManualTimeField() {
+    // Keep the user's unfinished minute (for example 22:0) and caret intact.
+    // The selected time still updates through onChanged; picker changes sync
+    // normally once this input no longer owns focus.
+    if (_manualTimeFocus.hasFocus) return;
     final selected = widget.controller.selectedPickupDateTime();
     if (selected == null) return;
     final l10n = context.l10n;
@@ -523,6 +528,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
     _flightController.removeListener(_onFlightControllerChanged);
     _flightController.dispose();
     _manualTimeController.dispose();
+    _manualTimeFocus.dispose();
     super.dispose();
   }
 
@@ -551,6 +557,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
   }
 
   Future<void> _pickTime(BuildContext context, DateTime selected) async {
+    _manualTimeFocus.unfocus();
     final result = await PickupTimePickerSheet.show(
       context,
       initialHour24: selected.hour,
@@ -656,6 +663,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
             final manualTimeField = TextField(
               key: const Key('pickup_manual_time_field'),
               controller: _manualTimeController,
+              focusNode: _manualTimeFocus,
               decoration:
                   WizardCompact.inputDecoration(
                     label: l10n.t('pickup_time_enter_manually'),
@@ -796,6 +804,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
     DateTime selected,
     DateTime min,
   ) async {
+    _manualTimeFocus.unfocus();
     final date = await showDatePicker(
       context: context,
       initialDate:
