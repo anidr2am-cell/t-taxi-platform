@@ -50,6 +50,7 @@ async function semantics(p) {
       const p = await c.newPage();
       const failures = [];
       p.on("pageerror", (e) => failures.push(e.message));
+      p.on("console", (m) => { if (/RenderFlex overflowed|EXCEPTION CAUGHT BY|unhandled exception/i.test(m.text())) failures.push(m.text()); });
       await c.route("**/*", (route) => {
         const req = route.request();
         if (
