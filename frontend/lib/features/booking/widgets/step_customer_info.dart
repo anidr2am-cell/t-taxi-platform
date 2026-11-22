@@ -128,37 +128,53 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
           ),
         ),
         SizedBox(height: gap),
-        Text(
-          l10n.t('booking_email_explanation'),
-          style: const TextStyle(color: AppTokens.textSecondary, height: 1.4),
-        ),
-        const SizedBox(height: AppTokens.spaceSm),
-        TextField(
-          key: const ValueKey('booking-customer-email'),
-          controller: _emailController,
-          keyboardType: TextInputType.emailAddress,
-          autofillHints: const [AutofillHints.email],
-          textInputAction: TextInputAction.next,
-          decoration: _fieldDecoration(l10n, l10n.t('booking_email_optional'))
-              .copyWith(
-                errorText:
-                    widget.state.customerEmail.trim().isNotEmpty &&
-                        (widget.state.customerEmail.trim().length > 254 ||
-                            !RegExp(
-                              r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
-                            ).hasMatch(widget.state.customerEmail.trim()))
-                    ? l10n.t('booking_email_invalid')
-                    : null,
+        Text(l10n.t('ux_contact_after'), style: const TextStyle(height: 1.5)),
+        ExpansionTile(
+          key: const Key('customer_optional_expander'),
+          title: Text(l10n.t('ux_optional_info')),
+          initiallyExpanded:
+              widget.state.customerEmail.isNotEmpty ||
+              widget.state.additionalRequests.isNotEmpty,
+          children: [
+            Text(
+              l10n.t('booking_email_explanation'),
+              style: const TextStyle(
+                color: AppTokens.textSecondary,
+                height: 1.4,
               ),
-          onChanged: widget.onEmailChanged,
-        ),
-        SizedBox(height: gap),
-        TextField(
-          controller: _requestsController,
-          scrollPadding: WizardCompact.fieldScrollPadding,
-          decoration: _fieldDecoration(l10n, l10n.t('additional_requests')),
-          maxLines: 3,
-          onChanged: widget.onAdditionalRequestsChanged,
+            ),
+            const SizedBox(height: AppTokens.spaceSm),
+            TextField(
+              key: const ValueKey('booking-customer-email'),
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              autofillHints: const [AutofillHints.email],
+              textInputAction: TextInputAction.next,
+              decoration:
+                  _fieldDecoration(
+                    l10n,
+                    l10n.t('booking_email_optional'),
+                  ).copyWith(
+                    errorText:
+                        widget.state.customerEmail.trim().isNotEmpty &&
+                            (widget.state.customerEmail.trim().length > 254 ||
+                                !RegExp(
+                                  r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
+                                ).hasMatch(widget.state.customerEmail.trim()))
+                        ? l10n.t('booking_email_invalid')
+                        : null,
+                  ),
+              onChanged: widget.onEmailChanged,
+            ),
+            SizedBox(height: gap),
+            TextField(
+              controller: _requestsController,
+              scrollPadding: WizardCompact.fieldScrollPadding,
+              decoration: _fieldDecoration(l10n, l10n.t('additional_requests')),
+              maxLines: 3,
+              onChanged: widget.onAdditionalRequestsChanged,
+            ),
+          ],
         ),
       ],
     );

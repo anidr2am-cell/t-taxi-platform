@@ -52,6 +52,11 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const Key('customer_optional_expander')),
+      );
+      await tester.tap(find.byKey(const Key('customer_optional_expander')));
+      await tester.pumpAndSettle();
       final field = find.byKey(const ValueKey('booking-customer-email'));
       await tester.ensureVisible(field);
       expect(

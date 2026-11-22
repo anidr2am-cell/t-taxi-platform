@@ -149,8 +149,12 @@ Future<void> _pump(
 }
 
 void main() {
-  setUp(() { airportCatalogLoader = () async => {'BKK','DMK','UTP'}; });
-  tearDown(() { airportCatalogLoader = null; });
+  setUp(() {
+    airportCatalogLoader = () async => {'BKK', 'DMK', 'UTP'};
+  });
+  tearDown(() {
+    airportCatalogLoader = null;
+  });
   testWidgets('flight confirmation applies Bangkok arrival plus 50 minutes', (
     tester,
   ) async {
@@ -161,8 +165,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('ICN 23:00 → BKK 02:30'), findsOneWidget);
 
-    await tester.ensureVisible(find.byKey(const Key('route_flight_confirm_button_0')));
-      await tester.tap(find.byKey(const Key('route_flight_confirm_button_0')));
+    await tester.ensureVisible(
+      find.byKey(const Key('route_flight_confirm_button_0')),
+    );
+    await tester.tap(find.byKey(const Key('route_flight_confirm_button_0')));
     await tester.pumpAndSettle();
 
     expect(controller.state.origin?.code, 'BKK');
@@ -212,7 +218,9 @@ void main() {
       await tester.tap(find.byKey(const Key('route_flight_lookup_button')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
-      await tester.ensureVisible(find.byKey(const Key('route_flight_confirm_button_0')));
+      await tester.ensureVisible(
+        find.byKey(const Key('route_flight_confirm_button_0')),
+      );
       await tester.tap(find.byKey(const Key('route_flight_confirm_button_0')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
@@ -264,19 +272,15 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
       expect(find.widgetWithText(OutlinedButton, 'BKK'), findsOneWidget);
 
-      final lookupButton = find.byKey(const Key('route_flight_lookup_button'));
-      await tester.ensureVisible(lookupButton);
-      await tester.tap(lookupButton);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
-      final confirmButton = find.byKey(
-        const Key('route_flight_confirm_button_0'),
+      expect(find.byType(StepFlightLookup), findsNothing);
+      await controller.applyConfirmedFlight(
+        flightNumber: 'TG401',
+        flightDate: '2026-10-15',
+        arrivalAirportCode: 'BKK',
+        arrivalTimestamp: '2026-10-15T19:30:00Z',
       );
-      await tester.ensureVisible(confirmButton);
-      await tester.tap(confirmButton);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
-
       expect(find.text('BKK — Suvarnabhumi Airport'), findsOneWidget);
       expect(find.widgetWithText(OutlinedButton, 'BKK'), findsNothing);
     },
@@ -413,49 +417,102 @@ void main() {
     expect(requests, 1);
     expect(find.byKey(const Key('route_flight_result_0')), findsOneWidget);
   });
-  testWidgets('arrival itself is selectable across Bangkok midnight and remains editable', (tester) async {
-    final controller = await _controller();
-    await _pump(tester, controller, _api(succeeds: true));
-    await tester.tap(find.byKey(const Key('route_flight_lookup_button')));
-    await tester.pumpAndSettle();
-    final useArrival = find.byKey(const Key('route_flight_use_arrival_0'));
-    await tester.ensureVisible(useArrival);
-    await tester.tap(useArrival);
-    await tester.pumpAndSettle();
-    expect(controller.state.pickupDate, '2026-10-16');
-    expect(controller.state.pickupTime, '02:30');
-    expect(find.descendant(of:useArrival,matching:find.byIcon(Icons.check_circle)),findsOneWidget);
-    expect(find.descendant(of:find.byKey(const Key('route_flight_confirm_button_0')),matching:find.byIcon(Icons.check_circle)),findsNothing);
-    await controller.setPickupDateTime(DateTime(2026,10,17,9,45));
-    expect(controller.state.pickupDate, '2026-10-17');
-    expect(controller.state.pickupTime, '09:45');
-  });
-
-  for (final locale in ['ko','en','th','ja','zh','ru']) {
-    testWidgets('flight first then manual pickup fits 375px in $locale', (tester) async {
-      tester.view.physicalSize = const Size(375,1800);
-      tester.view.devicePixelRatio=1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      final controller=await _controller();
-      await tester.pumpWidget(ChangeNotifierProvider(
-        create:(_)=>LocaleState()..setLanguage(locale),
-        child:MaterialApp(locale:Locale(locale), supportedLocales:AppLocalizations.customerSupportedLanguages.map((l)=>Locale(l)).toList(), localizationsDelegates:[AppLocalizationsDelegate(locale),GlobalMaterialLocalizations.delegate,GlobalWidgetsLocalizations.delegate,GlobalCupertinoLocalizations.delegate], home:Scaffold(body:SingleChildScrollView(child:
-          AnimatedBuilder(animation:controller,builder:(_,__)=>StepPickupDateTime(
-            state:controller.state,controller:controller,embedded:true,
-            onFlightNumberChanged:(v)=>controller.updateCustomerInfo(flightNumber:v),
-            flightLookupApi:_api(succeeds:true))))))));
-      await tester.pumpAndSettle();
-      expect(tester.getTopLeft(find.byKey(const Key('route_flight_lookup_button'))).dy,
-        lessThan(tester.getTopLeft(find.byKey(const Key('pickup_date_picker'))).dy));
+  testWidgets(
+    'arrival itself is selectable across Bangkok midnight and remains editable',
+    (tester) async {
+      final controller = await _controller();
+      await _pump(tester, controller, _api(succeeds: true));
       await tester.tap(find.byKey(const Key('route_flight_lookup_button')));
       await tester.pumpAndSettle();
-      final arrival=find.byKey(const Key('route_flight_use_arrival_0'));
-      await tester.ensureVisible(arrival);await tester.tap(arrival);
+      final useArrival = find.byKey(const Key('route_flight_use_arrival_0'));
+      await tester.ensureVisible(useArrival);
+      await tester.tap(useArrival);
       await tester.pumpAndSettle();
-      expect(controller.state.pickupTime,'02:30');
-      expect(tester.takeException(),isNull);
+      expect(controller.state.pickupDate, '2026-10-16');
+      expect(controller.state.pickupTime, '02:30');
+      expect(
+        find.descendant(
+          of: useArrival,
+          matching: find.byIcon(Icons.check_circle),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('route_flight_confirm_button_0')),
+          matching: find.byIcon(Icons.check_circle),
+        ),
+        findsNothing,
+      );
+      await controller.setPickupDateTime(DateTime(2026, 10, 17, 9, 45));
+      expect(controller.state.pickupDate, '2026-10-17');
+      expect(controller.state.pickupTime, '09:45');
+    },
+  );
+
+  for (final locale in ['ko', 'en', 'th', 'ja', 'zh', 'ru']) {
+    testWidgets('flight first then manual pickup fits 375px in $locale', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(375, 1800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final controller = await _controller();
+      await tester.pumpWidget(
+        ChangeNotifierProvider(
+          create: (_) => LocaleState()..setLanguage(locale),
+          child: MaterialApp(
+            locale: Locale(locale),
+            supportedLocales: AppLocalizations.customerSupportedLanguages
+                .map((l) => Locale(l))
+                .toList(),
+            localizationsDelegates: [
+              AppLocalizationsDelegate(locale),
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: AnimatedBuilder(
+                  animation: controller,
+                  builder: (_, __) => StepPickupDateTime(
+                    state: controller.state,
+                    controller: controller,
+                    embedded: true,
+                    onFlightNumberChanged: (v) =>
+                        controller.updateCustomerInfo(flightNumber: v),
+                    flightLookupApi: _api(succeeds: true),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('pickup_date_picker')), findsNothing);
+      expect(
+        find.byKey(const Key('route_flight_lookup_button')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('route_flight_lookup_button')));
+      await tester.pumpAndSettle();
+      final arrival = find.byKey(const Key('route_flight_use_arrival_0'));
+      await tester.ensureVisible(arrival);
+      await tester.tap(arrival);
+      await tester.pumpAndSettle();
+      expect(controller.state.pickupTime, '02:30');
+      await tester.ensureVisible(
+        find.byKey(const Key('schedule_method_manual')),
+      );
+      await tester.tap(find.byKey(const Key('schedule_method_manual')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('pickup_date_picker')), findsOneWidget);
+      expect(find.byKey(const Key('route_flight_lookup_button')), findsNothing);
+      expect(controller.state.pickupTime, '02:30');
+      expect(tester.takeException(), isNull);
     });
   }
-
 }

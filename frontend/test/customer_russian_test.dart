@@ -15,9 +15,21 @@ void main() {
     expect(AppLocalizations.customerSupportedLanguages, contains('ru'));
     expect(AppLocalizations.supportedLanguages, isNot(contains('ru')));
     expect(AppLocalizations.languageNames['ru'], 'Русский');
-    expect(CustomerBookingFormat.vehicle(AppLocalizations('ru'), 'SEDAN'), 'Седан');
-    expect(CustomerBookingFormat.vehicle(AppLocalizations('en'), 'SEDAN'), 'Sedan');
-    expect(CustomerBookingFormat.pickupDateTime(AppLocalizations('ru'), '2026-11-10T23:40:00+07:00'), '10.11.2026 23:40');
+    expect(
+      CustomerBookingFormat.vehicle(AppLocalizations('ru'), 'SEDAN'),
+      'Седан',
+    );
+    expect(
+      CustomerBookingFormat.vehicle(AppLocalizations('en'), 'SEDAN'),
+      'Sedan',
+    );
+    expect(
+      CustomerBookingFormat.pickupDateTime(
+        AppLocalizations('ru'),
+        '2026-11-10T23:40:00+07:00',
+      ),
+      '10.11.2026 23:40',
+    );
     expect(
       LocaleState(
         entryUri: Uri.parse('https://example.test/booking?lang=ru'),
@@ -30,7 +42,10 @@ void main() {
       '+79161234567',
     );
     expect(
-      BookingContactPreference.normalizeInternationalPhone('+7', '8 (916) 123-45-67'),
+      BookingContactPreference.normalizeInternationalPhone(
+        '+7',
+        '8 (916) 123-45-67',
+      ),
       '+79161234567',
     );
   });
@@ -150,6 +165,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('+7'), findsOneWidget);
+    await tester.ensureVisible(
+      find.byKey(const Key('customer_optional_expander')),
+    );
+    await tester.tap(find.byKey(const Key('customer_optional_expander')));
+    await tester.pumpAndSettle();
     final email = find.byKey(const ValueKey('booking-customer-email'));
     await tester.ensureVisible(email);
     await tester.enterText(email, 'invalid');

@@ -11,6 +11,7 @@ class StepDestinationSelect extends StatelessWidget {
   final LocationOption? excludedRecentLocation;
   final String languageCode;
   final ValueChanged<LocationOption> onSelected;
+  final VoidCallback? onSelectionInvalidated;
   final void Function(String errorCategory)? onSearchFailed;
   final bool embedded;
   final FocusNode? focusNode;
@@ -23,6 +24,7 @@ class StepDestinationSelect extends StatelessWidget {
     this.excludedRecentLocation,
     required this.languageCode,
     required this.onSelected,
+    this.onSelectionInvalidated,
     this.onSearchFailed,
     this.embedded = false,
     this.focusNode,
@@ -51,6 +53,7 @@ class StepDestinationSelect extends StatelessWidget {
       placeType: 'destination',
       onSearchFailed: onSearchFailed,
       onSelected: onSelected,
+      onSelectionInvalidated: onSelectionInvalidated,
     );
 
     if (embedded) return content;

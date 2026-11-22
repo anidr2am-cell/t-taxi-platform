@@ -17,12 +17,14 @@ class StepFlightLookup extends StatefulWidget {
     required this.controller,
     this.flightLookupApi,
     this.onFlightConfirmed,
+    this.onManualFallback,
   });
 
   final BookingWizardState state;
   final BookingWizardController controller;
   final FlightLookupApiService? flightLookupApi;
   final VoidCallback? onFlightConfirmed;
+  final VoidCallback? onManualFallback;
 
   @override
   State<StepFlightLookup> createState() => _StepFlightLookupState();
@@ -101,11 +103,14 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
     });
     final generation = _searchGeneration;
     try {
-      final results = await _api.searchFlights(number, date);
+      final results = await _api
+          .searchFlights(number, date)
+          .timeout(const Duration(seconds: 12));
       if (!mounted || generation != _searchGeneration) return;
       setState(() {
         _loading = false;
         _results = results;
+        if (results.isEmpty) _errorKey = 'flight_lookup_not_found';
       });
       if (results.isNotEmpty) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -219,6 +224,13 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
                 : Text(l10n.t('flight_lookup_search')),
           ),
         ),
+        if ((_loading || _errorKey != null) && widget.onManualFallback != null)
+          TextButton.icon(
+            key: const Key('flight_switch_to_manual'),
+            onPressed: widget.onManualFallback,
+            icon: const Icon(Icons.edit_calendar_outlined),
+            label: Text(l10n.t('ux_manual_mode')),
+          ),
         if (_errorKey != null) ...[
           const SizedBox(height: AppTokens.spaceSm),
           AppUi.surfaceCard(
@@ -311,10 +323,14 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
             TextButton.icon(
               key: Key('route_flight_use_arrival_$index'),
               onPressed: () => _confirm(result, index, delayMinutes: 0),
-              icon: Icon(_confirmedIndex == index && _selectedDelayMinutes == 0
-                ? Icons.check_circle : Icons.schedule,
+              icon: Icon(
+                _confirmedIndex == index && _selectedDelayMinutes == 0
+                    ? Icons.check_circle
+                    : Icons.schedule,
                 color: _confirmedIndex == index && _selectedDelayMinutes == 0
-                  ? AppTokens.success : AppTokens.primary),
+                    ? AppTokens.success
+                    : AppTokens.primary,
+              ),
               label: Text(l10n.t('flight_first_use_arrival')),
             ),
             if (_confirmedIndex == index)

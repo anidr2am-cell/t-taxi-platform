@@ -161,14 +161,34 @@ class _BookingContactPreferenceSectionState
                   key: const ValueKey('booking-contact-phone'),
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(labelText: l10n.t('phone')),
+                  decoration: InputDecoration(
+                    labelText: l10n.t('phone'),
+                    hintText: BookingContactPreference.phoneExample(dialCode),
+                    errorText:
+                        _phoneController.text.trim().isNotEmpty &&
+                            BookingContactPreference.contactPhone(
+                              type,
+                              dialCode,
+                              _phoneController.text,
+                            ).isEmpty
+                        ? l10n.t('ux_phone_invalid')
+                        : null,
+                  ),
                   onChanged: widget.onPhoneChanged,
                 ),
               ),
             ],
           ),
           const SizedBox(height: AppTokens.spaceXs),
-          Text(l10n.t('booking_contact_phone_hint')),
+          Text(l10n.t('ux_phone_help')),
+          Text(
+            l10n
+                .t('ux_phone_example')
+                .replaceAll(
+                  '{example}',
+                  BookingContactPreference.phoneExample(dialCode),
+                ),
+          ),
           if (isKakao || type == BookingContactPreference.line) ...[
             const SizedBox(height: AppTokens.spaceXs),
             Text(

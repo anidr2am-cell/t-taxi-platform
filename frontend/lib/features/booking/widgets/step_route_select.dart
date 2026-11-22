@@ -8,7 +8,6 @@ import '../models/booking_wizard_state.dart';
 import 'step_destination_select.dart';
 import 'step_origin_select.dart';
 import 'step_service_select.dart';
-import 'step_flight_lookup.dart';
 import '../models/service_type_option.dart';
 import '../services/flight_lookup_api_service.dart';
 import 'wizard_compact.dart';
@@ -79,15 +78,6 @@ class _StepRouteSelectState extends State<StepRouteSelect> {
             value: state.golf,
             onChanged: controller.selectGolfCourse,
           ),
-        if (state.serviceType == BookingServiceType.airportPickup)
-          StepFlightLookup(
-            state: state,
-            controller: controller,
-            flightLookupApi: widget.flightLookupApi,
-            onFlightConfirmed: () {
-              setState(() => _originEditingResetToken++);
-            },
-          ),
         if (state.serviceType != BookingServiceType.golfTransfer ||
             state.golf?['tripType'] != 'RETURN') ...[
           AppUi.sectionHeader(context, title: l10n.t('origin')),
@@ -104,6 +94,8 @@ class _StepRouteSelectState extends State<StepRouteSelect> {
               errorCategory: category,
             ),
             onSelected: controller.setOrigin,
+            onSelectionInvalidated: () =>
+                controller.invalidateRouteLocation(origin: true),
           ),
         ],
         const SizedBox(height: WizardCompact.fieldGap),
@@ -143,6 +135,8 @@ class _StepRouteSelectState extends State<StepRouteSelect> {
               errorCategory: category,
             ),
             onSelected: controller.setDestination,
+            onSelectionInvalidated: () =>
+                controller.invalidateRouteLocation(origin: false),
           ),
         ],
         if (samePlaceError != null) ...[

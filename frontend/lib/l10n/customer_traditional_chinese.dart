@@ -659,7 +659,7 @@ const Map<String, String> customerTraditionalChinese = {
       "可一起諮詢機場接送、高爾夫行程及飯店往返球場。海外高爾夫安排為至少2名實際球員同行的私人球組；僅預約車輛不受2人條件限制。車輛預約不代表開球時間已確認，球場、時間與費用需另行確認後告知。",
   "ux_official_line": "透過官方 LINE 諮詢",
   "ux_thailand_time": "泰國當地時間（UTC+7）",
-  "ux_unknown_flight": "航班尚未確定也可以直接選擇機場並繼續。",
+  "ux_unknown_flight": "航班尚未確定也可以直接輸入泰國抵達日期與時間。",
   "ux_vehicle_fits": "可容納您輸入的人數與行李",
   "ux_recommendation_reason": "依您輸入的人數與行李推薦的車款",
 };

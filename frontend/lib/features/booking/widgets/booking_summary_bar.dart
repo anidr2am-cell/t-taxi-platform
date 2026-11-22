@@ -29,11 +29,20 @@ class _BookingSummaryBarState extends State<BookingSummaryBar> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final state = widget.state;
+    final expanded = _expanded || MediaQuery.sizeOf(context).width >= 1000;
     final routeLine = _routeLine(l10n, state);
     final scheduleLine = _scheduleLine(l10n, state);
-    final vehicleLine = state.selectedVehicle == null ? null : l10n.t('cx_vehicle_${state.selectedVehicle}');
+    final vehicleLine = state.selectedVehicle == null
+        ? null
+        : l10n.t('cx_vehicle_${state.selectedVehicle}');
     final priceLine = state.pricing == null
-        ? (state.errorMessage == 'pricing_inquiry_required' ? l10n.t('fare_inquiry_title') : null)
+        ? (state.errorMessage == 'pricing_inquiry_required'
+              ? l10n.t('fare_inquiry_title')
+              : l10n.t(
+                  widget.controller.isLoading
+                      ? 'ux_calculating'
+                      : 'ux_fare_pending',
+                ))
         : CustomerBookingFormat.money(
             state.pricing!.totalAmount,
             state.pricing!.currency,
@@ -43,7 +52,7 @@ class _BookingSummaryBarState extends State<BookingSummaryBar> {
       if (routeLine != null) routeLine,
       if (scheduleLine != null) scheduleLine,
       if (vehicleLine != null) vehicleLine,
-      if (priceLine != null) priceLine,
+      priceLine,
     ];
     if (compactParts.isEmpty) return const SizedBox.shrink();
 
@@ -64,29 +73,39 @@ class _BookingSummaryBarState extends State<BookingSummaryBar> {
                     ? l10n.t('wizard_summary_collapse')
                     : l10n.t('wizard_summary_expand'),
                 child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        compactText,
-                        maxLines: _expanded ? null : 2,
-                        overflow: _expanded ? null : TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          height: 1.35,
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          compactText,
+                          maxLines: expanded ? null : 2,
+                          overflow: expanded ? null : TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(fontSize: 16, height: 1.4),
                         ),
                       ),
-                    ),
-                    Icon(
-                      _expanded ? Icons.expand_less : Icons.expand_more,
-                      color: AppTokens.textSecondary,
-                    ),
-                  ],
+                      IconButton(
+                        key: const Key('summary_edit_route'),
+                        tooltip: l10n.t('ux_route_edit'),
+                        icon: const Icon(Icons.edit_outlined),
+                        onPressed: () => widget.controller.goToStep(0),
+                      ),
+                      Icon(
+                        expanded ? Icons.expand_less : Icons.expand_more,
+                        color: AppTokens.textSecondary,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-            ),
-            if (_expanded) ...[
+            if (widget.controller.routeNeedsReview)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(l10n.t('ux_route_updated')),
+              ),
+            if (expanded) ...[
               const Divider(height: 16),
               if (routeLine != null)
                 AppUi.summaryRow(
@@ -98,17 +117,23 @@ class _BookingSummaryBarState extends State<BookingSummaryBar> {
                   label: l10n.t('pickup_datetime'),
                   value: scheduleLine,
                 ),
+              AppUi.summaryRow(
+                label: l10n.t('passengers'),
+                value:
+                    '${l10n.t('adults')} ${state.adults} · ${l10n.t('children')} ${state.children} · ${l10n.t('infants')} ${state.infants}',
+              ),
+              AppUi.summaryRow(
+                label: l10n.t('luggage'),
+                value:
+                    '20″ ${state.luggage20} · 24″+ ${state.luggage24} · ${l10n.t('golf_bags')} ${state.golfBags}',
+              ),
               if (vehicleLine != null)
-                AppUi.summaryRow(
-                  label: l10n.t('vehicle'),
-                  value: vehicleLine,
-                ),
-              if (priceLine != null)
-                AppUi.summaryRow(
-                  label: l10n.t('total'),
-                  value: priceLine,
-                  emphasize: true,
-                ),
+                AppUi.summaryRow(label: l10n.t('vehicle'), value: vehicleLine),
+              AppUi.summaryRow(
+                label: l10n.t('total'),
+                value: priceLine,
+                emphasize: true,
+              ),
             ],
           ],
         ),
@@ -120,9 +145,10 @@ class _BookingSummaryBarState extends State<BookingSummaryBar> {
     final origin = state.origin;
     final destination = state.destination;
     if (origin == null || destination == null) return null;
-    final from = resolveLocationOptionParts(origin).primaryName ??
-        origin.displayName;
-    final to = resolveLocationOptionParts(destination).primaryName ??
+    final from =
+        resolveLocationOptionParts(origin).primaryName ?? origin.displayName;
+    final to =
+        resolveLocationOptionParts(destination).primaryName ??
         destination.displayName;
     return '$from → $to';
   }

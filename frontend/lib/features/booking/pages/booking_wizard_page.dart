@@ -621,7 +621,20 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
             child: Scaffold(
               resizeToAvoidBottomInset: true,
               appBar: AppBar(
-                title: Text(l10n.t(BookingWizardSteps.titleKey(state.step))),
+                backgroundColor: AppTokens.surface,
+                foregroundColor: AppTokens.textPrimary,
+                surfaceTintColor: Colors.transparent,
+                elevation: 0,
+                shape: const Border(
+                  bottom: BorderSide(color: AppTokens.border),
+                ),
+                title: Image.asset(
+                  'assets/images/logo.png',
+                  width: 88,
+                  height: 32,
+                  fit: BoxFit.contain,
+                  semanticLabel: 'T-Rider',
+                ),
                 leading: state.step > BookingWizardSteps.route
                     ? Semantics(
                         label: l10n.t('back'),

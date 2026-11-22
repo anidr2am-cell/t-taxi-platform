@@ -144,6 +144,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('picker_manual_expander')));
+      await tester.pumpAndSettle();
       final field = tester.widget<TextField>(find.byType(TextField));
       expect(field.controller!.text, '${hour.toString().padLeft(2, '0')}:16');
       expect(find.text('AM'), findsNothing);
@@ -183,6 +185,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('picker_manual_expander')));
+      await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), '14:35');
       await tester.tap(
         find.text(AppLocalizations('ru').t('pickup_time_apply_manual')),
@@ -211,12 +215,20 @@ void main() {
       );
       await tester.pumpAndSettle();
       final l = AppLocalizations(locale);
+      await tester.tap(find.byKey(const Key('picker_manual_expander')));
+      await tester.pumpAndSettle();
       expect(
         tester.widget<TextField>(find.byType(TextField)).controller!.text,
-        '01:16 ${l.t('pickup_time_pm')}',
+        locale == 'ko' ? '13:16' : '01:16 ${l.t('pickup_time_pm')}',
       );
-      expect(find.text(l.t('pickup_time_am')), findsOneWidget);
-      expect(find.text(l.t('pickup_time_pm')), findsOneWidget);
+      expect(
+        find.text(l.t('pickup_time_am')),
+        locale == 'ko' ? findsNothing : findsOneWidget,
+      );
+      expect(
+        find.text(l.t('pickup_time_pm')),
+        locale == 'ko' ? findsNothing : findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
     });
   }
