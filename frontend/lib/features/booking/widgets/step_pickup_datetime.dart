@@ -45,6 +45,8 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
   late final TextEditingController _manualTimeController;
   String? _manualTimeErrorKey;
   bool _isLookingUp = false;
+  bool _flightMethod = true;
+  bool _manualTimeExpanded = false;
   FlightSearchResult? _lookupResult;
   String? _lookupErrorCode;
   bool _lookupConfirmed = false;
@@ -193,7 +195,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
       minute: value.minute,
       amLabel: amLabel,
       pmLabel: pmLabel,
-      use24Hour: l10n.languageCode == 'ru',
+      use24Hour: ['ko', 'ru'].contains(l10n.languageCode),
     );
     return '$date $time';
   }
@@ -396,13 +398,13 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
           const SizedBox(height: 8),
           Text(
             '${l10n.t('flight_lookup_departure')}: '
-            '${FlightTimeFormat.formatBangkokDisplay(result.departure.scheduledAt, amLabel: amLabel, pmLabel: pmLabel, use24Hour: l10n.languageCode == 'ru')}',
+            '${FlightTimeFormat.formatBangkokDisplay(result.departure.scheduledAt, amLabel: amLabel, pmLabel: pmLabel, use24Hour: ['ko', 'ru'].contains(l10n.languageCode))}',
             style: TextStyle(color: AppTokens.textSecondary, height: 1.4),
           ),
           const SizedBox(height: 4),
           Text(
             '${l10n.t('flight_lookup_arrival')}: '
-            '${FlightTimeFormat.formatBangkokDisplay(result.arrival.scheduledAt, amLabel: amLabel, pmLabel: pmLabel, use24Hour: l10n.languageCode == 'ru')}',
+            '${FlightTimeFormat.formatBangkokDisplay(result.arrival.scheduledAt, amLabel: amLabel, pmLabel: pmLabel, use24Hour: ['ko', 'ru'].contains(l10n.languageCode))}',
             style: TextStyle(color: AppTokens.textSecondary, height: 1.4),
           ),
           if (result.arrival.estimatedAt != null &&
@@ -410,7 +412,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
             const SizedBox(height: 4),
             Text(
               '${l10n.t('flight_lookup_estimated_arrival')}: '
-              '${FlightTimeFormat.formatBangkokDisplay(result.arrival.estimatedAt, amLabel: amLabel, pmLabel: pmLabel, use24Hour: l10n.languageCode == 'ru')}',
+              '${FlightTimeFormat.formatBangkokDisplay(result.arrival.estimatedAt, amLabel: amLabel, pmLabel: pmLabel, use24Hour: ['ko', 'ru'].contains(l10n.languageCode))}',
               style: TextStyle(color: AppTokens.textSecondary, height: 1.4),
             ),
           ],
@@ -509,7 +511,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
       minute: selected.minute,
       amLabel: l10n.t('pickup_time_am'),
       pmLabel: l10n.t('pickup_time_pm'),
-      use24Hour: l10n.languageCode == 'ru',
+      use24Hour: ['ko', 'ru'].contains(l10n.languageCode),
     );
     if (_manualTimeController.text != display) {
       _manualTimeController.text = display;
@@ -540,7 +542,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
             minute: minute,
             amLabel: l10n.t('pickup_time_am'),
             pmLabel: l10n.t('pickup_time_pm'),
-            use24Hour: l10n.languageCode == 'ru',
+            use24Hour: ['ko', 'ru'].contains(l10n.languageCode),
           );
         }
       }
@@ -642,7 +644,8 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
                     key: const Key('pickup_time_picker'),
                     compact: widget.embedded,
                     icon: Icons.schedule_outlined,
-                    title: '${l10n.t('pickup_time')} · ${l10n.t('ux_thailand_time')}',
+                    title:
+                        '${l10n.t('pickup_time')} · ${l10n.t('ux_thailand_time')}',
                     value: _timeDisplayValue(l10n, selected),
                     onTap: () => _pickTime(context, selected),
                   ),
@@ -661,7 +664,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
                       minute: 30,
                       amLabel: l10n.t('pickup_time_am'),
                       pmLabel: l10n.t('pickup_time_pm'),
-                      use24Hour: l10n.languageCode == 'ru',
+                      use24Hour: ['ko', 'ru'].contains(l10n.languageCode),
                     ),
                   ).copyWith(
                     errorText: _manualTimeErrorKey != null
@@ -671,7 +674,17 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
                         : null,
                   ),
               onSubmitted: (_) => _applyManualTime(),
-              onChanged: (_) {
+              textInputAction: TextInputAction.done,
+              onChanged: (value) {
+                final parsed = PickupTimeFormat.parseManualInput(
+                  value,
+                  amLabel: l10n.t('pickup_time_am'),
+                  pmLabel: l10n.t('pickup_time_pm'),
+                );
+                widget.controller.setPickupTimeInputValid(parsed != null);
+                if (parsed != null) {
+                  _applyManualTime();
+                }
                 if (_manualTimeErrorKey != null) {
                   setState(() => _manualTimeErrorKey = null);
                 }
@@ -686,7 +699,17 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
                   children: [
                     dateTimeCard,
                     const SizedBox(height: WizardCompact.fieldGap),
-                    manualTimeField,
+                    ExpansionTile(
+                      key: const Key('manual_time_expander'),
+                      title: Text(l10n.t('ux_manual_time_toggle')),
+                      initiallyExpanded: _manualTimeExpanded,
+                      onExpansionChanged: (value) {
+                        _manualTimeExpanded = value;
+                        if (!value)
+                          widget.controller.setPickupTimeInputValid(true);
+                      },
+                      children: [manualTimeField],
+                    ),
                   ],
                 ),
               );
@@ -695,22 +718,63 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                StepFlightLookup(
-                  state: widget.state,
-                  controller: widget.controller,
-                  flightLookupApi: widget.flightLookupApi,
+                AppUi.sectionHeader(
+                  context,
+                  title: l10n.t('ux_schedule_method'),
                 ),
-                Text(
-                  l10n.t('flight_first_manual'),
-                  key: const Key('pickup_manual_section'),
-                  style: const TextStyle(fontWeight: FontWeight.w700),
+                for (final flight in [true, false])
+                  RadioListTile<bool>(
+                    key: Key(
+                      flight
+                          ? 'schedule_method_flight'
+                          : 'schedule_method_manual',
+                    ),
+                    value: flight,
+                    groupValue: _flightMethod,
+                    title: Text(
+                      l10n.t(flight ? 'ux_flight_mode' : 'ux_manual_mode'),
+                    ),
+                    onChanged: (value) {
+                      widget.controller.setPickupTimeInputValid(true);
+                      setState(() => _flightMethod = value!);
+                    },
+                  ),
+                Visibility(
+                  visible: _flightMethod,
+                  maintainState: true,
+                  child: StepFlightLookup(
+                    state: widget.state,
+                    controller: widget.controller,
+                    flightLookupApi: widget.flightLookupApi,
+                    onManualFallback: () {
+                      widget.controller.setPickupTimeInputValid(true);
+                      setState(() => _flightMethod = false);
+                    },
+                  ),
                 ),
-                const SizedBox(height: AppTokens.spaceSm),
-                Text(l10n.t('flight_first_manual_help')),
-                const SizedBox(height: AppTokens.spaceSm),
-                dateTimeCard,
-                const SizedBox(height: WizardCompact.fieldGap),
-                manualTimeField,
+                if (_flightMethod && widget.state.pickupDate != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      '${widget.state.pickupDate} · ${_timeDisplayValue(l10n, selected)} · ${l10n.t('ux_thailand_time')}',
+                    ),
+                  ),
+                if (!_flightMethod) ...[
+                  Text(l10n.t('flight_first_manual_help')),
+                  const SizedBox(height: AppTokens.spaceSm),
+                  dateTimeCard,
+                  ExpansionTile(
+                    key: const Key('manual_time_expander'),
+                    title: Text(l10n.t('ux_manual_time_toggle')),
+                    initiallyExpanded: _manualTimeExpanded,
+                    onExpansionChanged: (value) {
+                      _manualTimeExpanded = value;
+                      if (!value)
+                        widget.controller.setPickupTimeInputValid(true);
+                    },
+                    children: [manualTimeField],
+                  ),
+                ],
               ],
             );
           },

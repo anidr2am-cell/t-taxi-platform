@@ -65,6 +65,19 @@ class CustomerBookingFormat {
   static DateTime? _parseThailandDateTime(String? value) {
     if (value == null || value.trim().isEmpty) return null;
     final normalized = value.trim().replaceFirst(' ', 'T');
+    if (RegExp(r'(Z|[+-]\d{2}:\d{2})$').hasMatch(normalized)) {
+      final instant = DateTime.tryParse(normalized);
+      if (instant == null) return null;
+      final thai = instant.toUtc().add(const Duration(hours: 7));
+      return DateTime(
+        thai.year,
+        thai.month,
+        thai.day,
+        thai.hour,
+        thai.minute,
+        thai.second,
+      );
+    }
     final match = RegExp(
       r'^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?(?:\+07:00|Z)?$',
     ).firstMatch(normalized);
@@ -90,9 +103,7 @@ class CustomerBookingFormat {
       return '${_two(value.day)}.${_two(value.month)}.${value.year} ${_two(value.hour)}:${_two(value.minute)}';
     }
     if (lang == 'ko') {
-      final period = value.hour < 12 ? '오전' : '오후';
-      final hour = value.hour % 12 == 0 ? 12 : value.hour % 12;
-      return '${value.year}년 ${value.month}월 ${value.day}일 $period $hour:${_two(value.minute)}';
+      return '${value.year}년 ${value.month}월 ${value.day}일 ${_two(value.hour)}:${_two(value.minute)} · 태국 시간';
     }
     if (lang == 'th') {
       const months = [

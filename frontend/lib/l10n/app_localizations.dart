@@ -11622,7 +11622,7 @@ class AppLocalizations {
 
   String t(String key) {
     if (languageCode == 'zh-TW') {
-      return customerTraditionalChinese[key] ?? AppLocalizations('zh').t(key);
+      return customerTraditionalChinese[key] ?? bookingUxText['zh-TW']?[key] ?? AppLocalizations('zh').t(key);
     }
     final ux = bookingUxText[languageCode]?[key];
     if (ux != null) return ux;

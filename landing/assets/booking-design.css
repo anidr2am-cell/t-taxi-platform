@@ -713,3 +713,6 @@ input:focus-visible,summary:focus-visible {
     align-self: start;
   }
 }
+
+.primary-action:disabled,.mobile-booking-bar button:disabled { opacity: .65; cursor: wait; }
+.place-retry { background: white; color: var(--primary); text-decoration: underline; font: inherit; min-height: 44px; }

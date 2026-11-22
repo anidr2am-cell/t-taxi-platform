@@ -11,7 +11,7 @@ test('booking design keeps a shared service panel, semantic form and safe second
  const locales=JSON.parse(read('landing/booking-ux.locales.json'));
  for(const [lang,copy] of Object.entries(locales))for(const key of ['heading','intro','book','fares','help','reference','route','region','bookingHelp','airportHelp','lookupStep','lookupHelp'])assert.ok(copy.design[key],lang+'/'+key);
  const js=read('landing/assets/landing.js');
- assert.match(js,/endpoints\.from\|\|!endpoints\.to/);
+ assert.match(js,/validEndpoint\(endpoints\.from\)/);
  assert.match(js,/field\.setAttribute\('aria-invalid'/);
  assert.match(js,/visualViewport/);
  assert.match(js,/cookie-height/);

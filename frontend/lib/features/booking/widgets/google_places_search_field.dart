@@ -29,6 +29,7 @@ class GooglePlacesSearchField extends StatefulWidget {
   final FocusNode? focusNode;
   final Object? editingResetToken;
   final ValueChanged<LocationOption> onSelected;
+  final VoidCallback? onSelectionInvalidated;
   final void Function(String errorCategory)? onSearchFailed;
   final String placeType;
   final PlacesApiService? placesApi;
@@ -45,6 +46,7 @@ class GooglePlacesSearchField extends StatefulWidget {
     required this.label,
     required this.languageCode,
     required this.onSelected,
+    this.onSelectionInvalidated,
     this.selected,
     this.excludedRecentLocation,
     this.showAirportShortcuts = false,
@@ -84,6 +86,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
   bool _editing = false;
   Set<String> _registeredAirportCodes = {};
   int _highlightedIndex = 0;
+  int _requestGeneration = 0;
 
   @override
   void initState() {
@@ -112,6 +115,10 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.editingResetToken != widget.editingResetToken &&
         widget.selected != null) {
+      _requestGeneration++;
+      _debounce?.cancel();
+      _loading = false;
+      _loadingDetails = false;
       _editing = false;
       _controller.text = widget.selected!.name ?? widget.selected!.displayName;
       _predictions = const [];
@@ -123,14 +130,18 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
 
     final selected = widget.selected;
     if (selected == null) {
+      if (!_editing) _controller.clear();
       _editing = true;
-      _controller.clear();
       return;
     }
 
     // A parent can select an airport after an asynchronous flight lookup.
     // Keep this widget's editing mode in sync so the selected card appears in
     // the same frame instead of only after the step is recreated.
+    _requestGeneration++;
+    _debounce?.cancel();
+    _loading = false;
+    _loadingDetails = false;
     _editing = false;
     _controller.text = selected.name ?? selected.displayName;
     _predictions = const [];
@@ -160,6 +171,9 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
   }
 
   void _startEditing() {
+    _requestGeneration++;
+    _debounce?.cancel();
+    widget.onSelectionInvalidated?.call();
     setState(() {
       _editing = true;
       _predictions = [];
@@ -171,6 +185,9 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
   }
 
   void _applyLocation(LocationOption location) {
+    if (!mounted) return;
+    _requestGeneration++;
+    _debounce?.cancel();
     widget.onSelected(location);
     setState(() {
       _loadingDetails = false;
@@ -183,6 +200,8 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
   }
 
   Future<void> _selectRecentLocation(LocationOption location) async {
+    final generation = ++_requestGeneration;
+    _debounce?.cancel();
     if (location.placeId != null &&
         location.placeId!.isNotEmpty &&
         !location.hasCoordinates) {
@@ -195,11 +214,11 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
           placeId: location.placeId!,
           language: widget.languageCode,
         );
-        if (!mounted) return;
+        if (!mounted || generation != _requestGeneration) return;
         _applyLocation(LocationOption.fromPlaceDetails(details));
         return;
       } catch (e) {
-        if (!mounted) return;
+        if (!mounted || generation != _requestGeneration) return;
         setState(() {
           _loadingDetails = false;
           _error = 'cx_places_error';
@@ -222,7 +241,14 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
   }
 
   void _onQueryChanged(String query) {
+    final generation = ++_requestGeneration;
     _debounce?.cancel();
+    setState(() {
+      _loadingDetails = false;
+      _loading = false;
+      _predictions = [];
+      _error = null;
+    });
     if (query.trim().length < 2) {
       setState(() {
         _predictions = [];
@@ -235,11 +261,12 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
 
     _debounce = Timer(
       const Duration(milliseconds: 300),
-      () => _fetchPredictions(query),
+      () => _fetchPredictions(query, generation),
     );
   }
 
-  Future<void> _fetchPredictions(String query) async {
+  Future<void> _fetchPredictions(String query, int generation) async {
+    if (!mounted || generation != _requestGeneration) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -250,6 +277,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
         input: query,
         language: widget.languageCode,
       );
+      if (!mounted || generation != _requestGeneration) return;
       setState(() {
         _predictions = results;
         _loading = false;
@@ -259,6 +287,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
         widget.onSearchFailed?.call('no_results');
       }
     } catch (e) {
+      if (!mounted || generation != _requestGeneration) return;
       setState(() {
         _loading = false;
         _error = 'cx_places_error';
@@ -271,6 +300,8 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
   }
 
   Future<void> _selectPrediction(PlacePrediction prediction) async {
+    final generation = ++_requestGeneration;
+    _debounce?.cancel();
     setState(() {
       _loadingDetails = true;
       _error = null;
@@ -282,8 +313,10 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
         placeId: prediction.placeId,
         language: widget.languageCode,
       );
+      if (!mounted || generation != _requestGeneration) return;
       _applyLocation(LocationOption.fromPlaceDetails(details));
     } catch (e) {
+      if (!mounted || generation != _requestGeneration) return;
       setState(() {
         _loadingDetails = false;
         _error = 'cx_places_error';
@@ -598,6 +631,14 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
             ),
           ),
         ),
+        if (_loadingDetails)
+          Semantics(
+            liveRegion: true,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(l10n.t('loading_place_details')),
+            ),
+          ),
         if (_controller.text.trim().isEmpty) _recentSection(l10n),
         if (_loading && _controller.text.trim().length >= 2)
           Padding(
@@ -637,7 +678,10 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
                 WizardErrorView(
                   message: _error!,
                   onRetry: _controller.text.length >= 2
-                      ? () => _fetchPredictions(_controller.text)
+                      ? () => _fetchPredictions(
+                          _controller.text,
+                          ++_requestGeneration,
+                        )
                       : null,
                 ),
                 const PreferredSupportButton(),

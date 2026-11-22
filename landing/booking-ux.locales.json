@@ -1,6 +1,6 @@
 {
   "ko": {
-    "check": "차량과 요금 확인",
+    "check": "날짜·차량 선택하기",
     "from": "출발지",
     "to": "도착지",
     "search": "장소 또는 호텔 검색",
@@ -37,11 +37,17 @@
         "버디골프는 365일 조인·1인 참여 및 일행 라운드를 상담합니다. 차량 이동만 예약할 때 인원 2명 조건은 없습니다. 차량 예약은 골프 라운드·티타임 확정이 아닙니다.",
         "버디골프 상담"
       ],
-      "preferred": "추천 상담"
-    }
+      "preferred": "추천 상담",
+      "airportGuides": {
+        "bkk": "수하물을 찾은 뒤 피켓 이용 예약은 3번 게이트 안, 피켓 없는 예약은 7번 게이트 밖 안내를 확인하세요. 예약 조회의 해당 옵션·최신 만남 안내와 차량번호를 우선 확인해 주세요.",
+        "dmk": "수하물을 찾은 뒤 예약 조회에서 돈므앙의 해당 만남 장소를 확인하고, 안내받은 기사·차량번호를 대조해 탑승하세요. 수완나품 게이트 안내는 적용되지 않습니다.",
+        "utp": "수하물을 찾은 뒤 예약 조회와 고객센터의 우타파오 만남 안내를 확인하고 기사·차량번호를 대조해 탑승하세요. 다른 공항의 게이트 안내는 적용되지 않습니다."
+      }
+    },
+    "retry": "다시 검색"
   },
   "en": {
-    "check": "Check vehicles and fares",
+    "check": "Choose date and vehicle",
     "from": "From",
     "to": "To",
     "search": "Search a place or hotel",
@@ -78,11 +84,17 @@
         "Private rounds for overseas groups of at least two actual players. Combine golf and transport advice; vehicle-only bookings have no two-player minimum. Booking transport does not confirm a tee time.",
         "Discuss golf and transport"
       ],
-      "preferred": "Suggested channel"
-    }
+      "preferred": "Suggested channel",
+      "airportGuides": {
+        "bkk": "After baggage claim, existing BKK guidance uses inside Gate 3 for name-sign bookings and outside Gate 7 without a name sign. Follow the current instructions for your booked option and verify the assigned vehicle in booking lookup.",
+        "dmk": "After baggage claim, check your booking for the Don Mueang meeting point and verify the assigned driver and plate. BKK gate instructions do not apply.",
+        "utp": "After baggage claim, check your booking or support instructions for U-Tapao and verify the assigned driver and plate. Do not use another airport’s gate instructions."
+      }
+    },
+    "retry": "Search again"
   },
   "ja": {
-    "check": "車種と料金を確認",
+    "check": "日時・車種を選ぶ",
     "from": "出発地",
     "to": "目的地",
     "search": "施設名・ホテル名で検索",
@@ -124,11 +136,17 @@
         "実際にプレーする方2名以上のグループ向け貸切ラウンドをご案内します。送迎のみの予約に2名条件はありません。送迎予約はラウンド・ティータイムの確定ではありません。",
         "公式LINEでゴルフ・送迎を相談"
       ],
-      "preferred": "おすすめ窓口"
-    }
+      "preferred": "おすすめ窓口",
+      "airportGuides": {
+        "bkk": "荷物受取後、ネームボード利用は3番ゲート内、利用なしは7番ゲート外という既存のBKK案内をご確認ください。予約したオプションの最新案内と車両番号を予約照会で確認してください。",
+        "dmk": "荷物受取後、予約照会でドンムアンの待ち合わせ場所を確認し、担当ドライバーとナンバーを照合してご乗車ください。BKKのゲート案内は適用されません。",
+        "utp": "荷物受取後、予約照会または窓口でウタパオの待ち合わせ案内を確認し、ドライバーとナンバーを照合してください。他空港のゲート案内は適用されません。"
+      }
+    },
+    "retry": "再検索"
   },
   "zh": {
-    "check": "查看车型和费用",
+    "check": "选择日期与车型",
     "from": "出发地",
     "to": "目的地",
     "search": "搜索地点或酒店",
@@ -165,11 +183,17 @@
         "海外客户可咨询至少2位实际球员同行的私人轮次。仅预订车辆不受2人限制。提交接送预订不代表球场或开球时间已确认。",
         "咨询高尔夫与接送"
       ],
-      "preferred": "推荐咨询"
-    }
+      "preferred": "推荐咨询",
+      "airportGuides": {
+        "bkk": "领取行李后，BKK现有指引为：举牌接机在3号门内，不举牌在7号门外。请优先查看预订中对应服务的最新会合指引，并确认所安排车辆的车牌。",
+        "dmk": "领取行李后，请查询预订中的廊曼会合地点，核对司机和车牌后上车。BKK的出口指引不适用于廊曼。",
+        "utp": "领取行李后，请查询预订或向客服确认乌塔堡的会合指引，核对司机和车牌。请勿使用其他机场的出口指引。"
+      }
+    },
+    "retry": "重新搜索"
   },
   "th": {
-    "check": "ดูรถและราคา",
+    "check": "เลือกวันเวลาและรถ",
     "from": "จุดรับ",
     "to": "จุดส่ง",
     "search": "ค้นหาสถานที่หรือโรงแรม",
@@ -206,11 +230,17 @@
         "รอบส่วนตัวสำหรับกลุ่มต่างชาติที่มีผู้เล่นจริงตั้งแต่ 2 คนขึ้นไป การจองรถอย่างเดียวไม่มีเงื่อนไขขั้นต่ำ 2 คน การจองรถไม่ได้ยืนยันรอบกอล์ฟหรือเวลาออกรอบ",
         "ปรึกษาเรื่องกอล์ฟและรถรับส่ง"
       ],
-      "preferred": "ช่องทางแนะนำ"
-    }
+      "preferred": "ช่องทางแนะนำ",
+      "airportGuides": {
+        "bkk": "หลังรับสัมภาระ การจองที่มีป้ายชื่อใช้คำแนะนำเดิมของ BKK ที่ด้านในประตู 3 ส่วนแบบไม่มีป้ายชื่อใช้ด้านนอกประตู 7 โปรดตรวจสอบคำแนะนำล่าสุดตามตัวเลือกที่จองและทะเบียนรถในหน้าค้นหาการจอง",
+        "dmk": "หลังรับสัมภาระ ตรวจสอบจุดนัดพบของดอนเมืองในหน้าค้นหาการจอง และตรวจสอบคนขับกับทะเบียนรถก่อนขึ้นรถ คำแนะนำประตูของ BKK ไม่ใช้กับดอนเมือง",
+        "utp": "หลังรับสัมภาระ ตรวจสอบคำแนะนำจุดนัดพบของอู่ตะเภาในหน้าค้นหาการจองหรือสอบถามผู้ดูแล และตรวจสอบคนขับกับทะเบียนรถ ไม่ใช้คำแนะนำประตูของสนามบินอื่น"
+      }
+    },
+    "retry": "ค้นหาอีกครั้ง"
   },
   "zh-TW": {
-    "check": "檢視車型和費用",
+    "check": "選擇日期與車型",
     "from": "出發地",
     "to": "目的地",
     "search": "搜尋地點或酒店",
@@ -252,7 +282,13 @@
         "海外旅客可諮詢至少2位實際球員同行的私人球敘。僅預約車輛不受2人限制。提交接送預約不代表球場或開球時間已確認。",
         "透過官方 LINE 諮詢"
       ],
-      "preferred": "建議洽詢"
-    }
+      "preferred": "建議洽詢",
+      "airportGuides": {
+        "bkk": "領取行李後，BKK既有指引為：舉牌接機在3號門內，未選舉牌則在7號門外。請優先查看預約對應服務的最新會合指引，並確認安排車輛的車牌。",
+        "dmk": "領取行李後，請查詢預約中的廊曼會合地點，核對司機與車牌再上車。BKK的出口指引不適用於廊曼。",
+        "utp": "領取行李後，請查詢預約或向客服確認烏塔堡的會合指引，核對司機與車牌。請勿使用其他機場的出口指引。"
+      }
+    },
+    "retry": "重新搜尋"
   }
 }

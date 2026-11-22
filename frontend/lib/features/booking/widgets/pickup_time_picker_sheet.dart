@@ -46,6 +46,7 @@ class _PickupTimePickerSheetState extends State<PickupTimePickerSheet> {
   late int _minute;
   late final TextEditingController _manualController;
   String? _manualErrorKey;
+  bool _manualInputValid = true;
   bool _use24Hour = false;
   bool _hourModeInitialized = false;
 
@@ -63,7 +64,7 @@ class _PickupTimePickerSheetState extends State<PickupTimePickerSheet> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final nextUse24Hour = context.l10n.languageCode == 'ru';
+    final nextUse24Hour = ['ko', 'ru'].contains(context.l10n.languageCode);
     if (!_hourModeInitialized) {
       _use24Hour = nextUse24Hour;
       _hourController.dispose();
@@ -136,157 +137,187 @@ class _PickupTimePickerSheetState extends State<PickupTimePickerSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final bottomInset =
+        MediaQuery.paddingOf(context).bottom +
+        MediaQuery.viewInsetsOf(context).bottom;
 
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottomInset),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l10n.t('pickup_time_select'),
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(
-                    MaterialLocalizations.of(context).cancelButtonLabel,
-                  ),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(context, (
-                    hour24: _currentHour24(),
-                    minute: _currentMinute(),
-                  )),
-                  child: Text(MaterialLocalizations.of(context).okButtonLabel),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 180,
-              child: Row(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
                 children: [
                   Expanded(
-                    child: CupertinoPicker(
-                      scrollController: _hourController,
-                      itemExtent: 36,
-                      onSelectedItemChanged: (index) {
-                        setState(() {
-                          if (_use24Hour) {
-                            _pm = PickupTimeFormat.isPm(index);
-                            _hour12 = PickupTimeFormat.hour12From24(index);
-                          } else {
-                            _hour12 = index + 1;
-                          }
-                          _syncManualField();
-                        });
-                      },
-                      children: List.generate(
-                        _use24Hour ? 24 : 12,
-                        (index) => Center(
-                          child: Text(
-                            '${_use24Hour ? index : index + 1}'.padLeft(2, '0'),
+                    child: Text(
+                      l10n.t('pickup_time_select'),
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      MaterialLocalizations.of(context).cancelButtonLabel,
+                    ),
+                  ),
+                  FilledButton(
+                    onPressed: !_manualInputValid
+                        ? null
+                        : () => Navigator.pop(context, (
+                            hour24: _currentHour24(),
+                            minute: _currentMinute(),
+                          )),
+                    child: Text(
+                      MaterialLocalizations.of(context).okButtonLabel,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 180,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: CupertinoPicker(
+                        scrollController: _hourController,
+                        itemExtent: 36,
+                        onSelectedItemChanged: (index) {
+                          setState(() {
+                            if (_use24Hour) {
+                              _pm = PickupTimeFormat.isPm(index);
+                              _hour12 = PickupTimeFormat.hour12From24(index);
+                            } else {
+                              _hour12 = index + 1;
+                            }
+                            _syncManualField();
+                          });
+                        },
+                        children: List.generate(
+                          _use24Hour ? 24 : 12,
+                          (index) => Center(
+                            child: Text(
+                              '${_use24Hour ? index : index + 1}'.padLeft(
+                                2,
+                                '0',
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  Expanded(
-                    child: CupertinoPicker(
-                      scrollController: _minuteController,
-                      itemExtent: 36,
-                      onSelectedItemChanged: (index) {
-                        setState(() {
-                          _minute = PickupTimeFormat.minuteOptions[index];
-                          _syncManualField();
-                        });
-                      },
-                      children: PickupTimeFormat.minuteOptions
-                          .map(
-                            (minute) => Center(
-                              child: Text(minute.toString().padLeft(2, '0')),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ),
-                  if (!_use24Hour)
                     Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _PeriodChip(
-                            label: l10n.t('pickup_time_am'),
-                            selected: !_pm,
-                            onTap: () {
-                              setState(() {
-                                _pm = false;
-                                _syncManualField();
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 8),
-                          _PeriodChip(
-                            label: l10n.t('pickup_time_pm'),
-                            selected: _pm,
-                            onTap: () {
-                              setState(() {
-                                _pm = true;
-                                _syncManualField();
-                              });
-                            },
-                          ),
-                        ],
+                      child: CupertinoPicker(
+                        scrollController: _minuteController,
+                        itemExtent: 36,
+                        onSelectedItemChanged: (index) {
+                          setState(() {
+                            _minute = PickupTimeFormat.minuteOptions[index];
+                            _syncManualField();
+                          });
+                        },
+                        children: PickupTimeFormat.minuteOptions
+                            .map(
+                              (minute) => Center(
+                                child: Text(minute.toString().padLeft(2, '0')),
+                              ),
+                            )
+                            .toList(),
                       ),
                     ),
+                    if (!_use24Hour)
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _PeriodChip(
+                              label: l10n.t('pickup_time_am'),
+                              selected: !_pm,
+                              onTap: () {
+                                setState(() {
+                                  _pm = false;
+                                  _syncManualField();
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 8),
+                            _PeriodChip(
+                              label: l10n.t('pickup_time_pm'),
+                              selected: _pm,
+                              onTap: () {
+                                setState(() {
+                                  _pm = true;
+                                  _syncManualField();
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              ExpansionTile(
+                key: const Key('picker_manual_expander'),
+                title: Text(l10n.t('ux_manual_time_toggle')),
+                onExpansionChanged: (value) => setState(() {
+                  if (!value) _manualInputValid = true;
+                }),
+                children: [
+                  TextField(
+                    controller: _manualController,
+                    decoration:
+                        WizardCompact.inputDecoration(
+                          label: l10n.t('pickup_time'),
+                          hint: PickupTimeFormat.formatDisplay(
+                            hour24: 9,
+                            minute: 30,
+                            amLabel: l10n.t('pickup_time_am'),
+                            pmLabel: l10n.t('pickup_time_pm'),
+                            use24Hour: _use24Hour,
+                          ),
+                        ).copyWith(
+                          errorText: _manualErrorKey != null
+                              ? l10n.t(_manualErrorKey!)
+                              : null,
+                        ),
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) {
+                      _applyManualInput();
+                      if (_manualErrorKey == null)
+                        Navigator.pop(context, (
+                          hour24: _currentHour24(),
+                          minute: _minute,
+                        ));
+                    },
+                    onChanged: (value) {
+                      final parsed = PickupTimeFormat.parseManualInput(
+                        value,
+                        amLabel: l10n.t('pickup_time_am'),
+                        pmLabel: l10n.t('pickup_time_pm'),
+                      );
+                      setState(() => _manualInputValid = parsed != null);
+                      if (parsed != null) _applyManualInput();
+                      if (_manualErrorKey != null) {
+                        setState(() => _manualErrorKey = null);
+                      }
+                    },
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _applyManualInput,
+                      child: Text(l10n.t('pickup_time_apply_manual')),
+                    ),
+                  ),
                 ],
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.t('pickup_time_enter_manually'),
-              style: WizardCompact.hintTextStyle,
-            ),
-            const SizedBox(height: 4),
-            TextField(
-              controller: _manualController,
-              decoration:
-                  WizardCompact.inputDecoration(
-                    label: l10n.t('pickup_time'),
-                    hint: PickupTimeFormat.formatDisplay(
-                      hour24: 9,
-                      minute: 30,
-                      amLabel: l10n.t('pickup_time_am'),
-                      pmLabel: l10n.t('pickup_time_pm'),
-                      use24Hour: _use24Hour,
-                    ),
-                  ).copyWith(
-                    errorText: _manualErrorKey != null
-                        ? l10n.t(_manualErrorKey!)
-                        : null,
-                  ),
-              onSubmitted: (_) => _applyManualInput(),
-              onChanged: (_) {
-                if (_manualErrorKey != null) {
-                  setState(() => _manualErrorKey = null);
-                }
-              },
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: _applyManualInput,
-                child: Text(l10n.t('pickup_time_apply_manual')),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

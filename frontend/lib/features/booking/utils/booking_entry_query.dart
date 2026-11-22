@@ -22,12 +22,21 @@ abstract final class BookingEntryQuery {
         final destination = LocationOption.fromJson(
           Map<String, dynamic>.from(entry['destination'] as Map),
         );
-        if (origin.hasCoordinates && destination.hasCoordinates) {
+        if (origin.hasCoordinates &&
+            destination.hasCoordinates &&
+            origin.latitude!.abs() <= 90 &&
+            origin.longitude!.abs() <= 180 &&
+            destination.latitude!.abs() <= 90 &&
+            destination.longitude!.abs() <= 180 &&
+            origin.displayName.trim().isNotEmpty &&
+            destination.displayName.trim().isNotEmpty) {
           return BookingWizardRouteArgs(
             serviceType: service,
             origin: origin,
             destination: destination,
-            initialStep: BookingWizardSteps.route,
+            initialStep: service == BookingServiceType.golfTransfer
+                ? BookingWizardSteps.route
+                : BookingWizardSteps.schedule,
           );
         }
       } catch (_) {

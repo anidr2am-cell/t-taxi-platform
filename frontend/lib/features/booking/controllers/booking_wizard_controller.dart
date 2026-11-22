@@ -97,6 +97,16 @@ class BookingWizardController extends ChangeNotifier {
     });
   }
 
+  bool pickupTimeInputValid = true;
+  void setPickupTimeInputValid(bool valid) {
+    if (pickupTimeInputValid == valid) return;
+    pickupTimeInputValid = valid;
+    notifyListeners();
+  }
+
+  int _originGeneration = 0;
+  int _destinationGeneration = 0;
+  bool routeNeedsReview = false;
   BookingWizardState _state = const BookingWizardState();
   bool _isLoading = false;
   String? _submitIdempotencyKey;
@@ -308,7 +318,9 @@ class BookingWizardController extends ChangeNotifier {
 
   bool _hasSelectablePickupDateTime() {
     final selected = selectedPickupDateTime();
-    return selected != null && isPickupSelectable(selected);
+    return pickupTimeInputValid &&
+        selected != null &&
+        isPickupSelectable(selected);
   }
 
   Future<void> _seedDefaultPickupDateTime() async {
@@ -512,8 +524,37 @@ class BookingWizardController extends ChangeNotifier {
     return false;
   }
 
+  Future<void> invalidateRouteLocation({required bool origin}) async {
+    routeNeedsReview = true;
+    _invalidateSubmitIdempotencyKey();
+    _pricingGeneration++;
+    _recommendationGeneration++;
+    if (origin) {
+      _originGeneration++;
+    } else {
+      _destinationGeneration++;
+    }
+    _isLoading = false;
+    _state = _state.copyWith(
+      clearOrigin: origin,
+      clearDestination: !origin,
+      clearRecommendation: true,
+      clearPricing: true,
+      clearError: true,
+    );
+    vehiclePrices.clear();
+    await _persist();
+    notifyListeners();
+  }
+
   Future<void> setOrigin(LocationOption location) async {
+    final generation = ++_originGeneration;
     final resolved = await _resolveLocationCoordinates(location);
+    if (generation != _originGeneration) return;
+    _recommendationGeneration++;
+    _pricingGeneration++;
+    _isLoading = false;
+    if (_state.pickupDate != null) routeNeedsReview = true;
     _invalidateSubmitIdempotencyKey();
     _state = _state.copyWith(
       origin: resolved,
@@ -528,7 +569,13 @@ class BookingWizardController extends ChangeNotifier {
   }
 
   Future<void> setDestination(LocationOption location) async {
+    final generation = ++_destinationGeneration;
     final resolved = await _resolveLocationCoordinates(location);
+    if (generation != _destinationGeneration) return;
+    _recommendationGeneration++;
+    _pricingGeneration++;
+    _isLoading = false;
+    if (_state.pickupDate != null) routeNeedsReview = true;
     _invalidateSubmitIdempotencyKey();
     _state = _state.copyWith(
       destination: resolved,
@@ -841,6 +888,7 @@ class BookingWizardController extends ChangeNotifier {
   }
 
   Future<bool> setPickupTime({required int hour24, required int minute}) async {
+    pickupTimeInputValid = true;
     final base = pickupDateTimeForPicker();
     return setPickupDateTime(
       DateTime(base.year, base.month, base.day, hour24, minute),
@@ -897,18 +945,7 @@ class BookingWizardController extends ChangeNotifier {
   }
 
   String _normalizedPhone(String value, String dialCode) {
-    final trimmed = value.trim();
-    if (trimmed.startsWith('+')) {
-      final normalized =
-          '+${trimmed.substring(1).replaceAll(RegExp(r'\D'), '')}';
-      return RegExp(r'^\+[1-9]\d{6,14}$').hasMatch(normalized)
-          ? normalized
-          : '';
-    }
-    return BookingContactPreference.normalizeInternationalPhone(
-      dialCode,
-      value,
-    );
+    return BookingContactPreference.normalizeBookingPhone(dialCode, value);
   }
 
   Future<void> updateContactType(String type) async {
@@ -2125,7 +2162,9 @@ class BookingWizardController extends ChangeNotifier {
             _golfComplete(_state);
       case BookingWizardSteps.schedule:
         final selected = selectedPickupDateTime();
-        return selected != null && isPickupSelectable(selected);
+        return pickupTimeInputValid &&
+            selected != null &&
+            isPickupSelectable(selected);
       case BookingWizardSteps.vehicle:
         return _state.adults >= 1 &&
             _isNameSignTextValid() &&

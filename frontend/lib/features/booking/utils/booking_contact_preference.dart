@@ -1,3 +1,7 @@
+import 'package:phone_numbers_parser/phone_numbers_parser.dart';
+import 'package:phone_numbers_parser/metadata.dart';
+import '../../../models/calling_countries.dart';
+
 class BookingContactPreference {
   BookingContactPreference._();
 
@@ -56,14 +60,7 @@ class BookingContactPreference {
 
   static String contactPhone(String type, String dialCode, String localNumber) {
     if (!requiresPhone(type) && !allowsEmergencyPhone(type)) return '';
-    final value = localNumber.trim();
-    if (value.startsWith('+')) {
-      final normalized = '+${value.substring(1).replaceAll(RegExp(r'\D'), '')}';
-      return RegExp(r'^\+[1-9]\d{6,14}$').hasMatch(normalized)
-          ? normalized
-          : '';
-    }
-    return normalizeInternationalPhone(dialCode, value);
+    return normalizeBookingPhone(dialCode, localNumber);
   }
 
   static String summaryValue({
@@ -136,5 +133,104 @@ class BookingContactPreference {
     if (dial.isEmpty || local.isEmpty) return '';
     final normalized = '+$dial$local';
     return RegExp(r'^\+[1-9]\d{6,14}$').hasMatch(normalized) ? normalized : '';
+  }
+
+  static String normalizeBookingPhone(String dialCode, String localNumber) {
+    final raw = localNumber.trim();
+    if (raw.isEmpty || !RegExp(r'^[+0-9\s().-]+$').hasMatch(raw)) return '';
+    // Full international numbers are self-describing, including old drafts
+    // without a dial selection and numbers pasted under a different default.
+    if (raw.startsWith('+') || raw.startsWith('00')) {
+      try {
+        final phone = PhoneNumber.parse(
+          raw.startsWith('00') ? '+${raw.substring(2)}' : raw,
+        );
+        return phone.isValidLength() &&
+                RegExp(r'^\+[1-9]\d{6,14}$').hasMatch(phone.international)
+            ? phone.international
+            : '';
+      } catch (_) {
+        return '';
+      }
+    }
+    final selected = dialCode.trim().toUpperCase();
+    final country = callingCountries
+        .where(
+          (c) =>
+              c.code == selected ||
+              c.dialCode == '+${dialCode.replaceAll(RegExp(r'\D'), '')}',
+        )
+        .firstOrNull;
+    final dial = (country?.dialCode ?? dialCode).replaceAll(RegExp(r'\D'), '');
+    IsoCode? iso;
+    // Shared calling codes retain the chosen dial prefix; metadata resolves the national number.
+    final preferredIso = switch (dial) {
+      '1' => 'US',
+      '7' => 'RU',
+      '44' => 'GB',
+      _ => country?.code,
+    };
+    for (final code in IsoCode.values) {
+      if (code.name == preferredIso) iso = code;
+    }
+    if (iso == null || dial.isEmpty) return '';
+    String? parse(String input) {
+      try {
+        final phone = input.trim().startsWith('+')
+            ? PhoneNumber.parse(input)
+            : PhoneNumber.parse(input, destinationCountry: iso);
+        if (phone.countryCode != dial || !phone.isValidLength()) return null;
+        return RegExp(r'^\+[1-9]\d{6,14}$').hasMatch(phone.international)
+            ? phone.international
+            : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    final normalized = parse(
+      raw.startsWith('00') ? '+${raw.substring(2)}' : raw,
+    );
+    if (normalized != null) return normalized;
+    final digits = raw.replaceAll(RegExp(r'\D'), '');
+    final prefix = metadataByIsoCode[iso]?.nationalPrefix;
+    if (!raw.startsWith('+') &&
+        prefix != null &&
+        RegExp(r'^\d+$').hasMatch(prefix) &&
+        digits.startsWith(prefix)) {
+      final candidate = parse('+$dial${digits.substring(prefix.length)}');
+      if (candidate != null) return candidate;
+    }
+    if (!raw.startsWith('+') && digits.startsWith(dial)) {
+      return parse(digits.substring(dial.length)) ?? '';
+    }
+    return '';
+  }
+
+  static String phoneExample(String dial) => switch (dial) {
+    '+82' => '010-1234-5678',
+    '+66' => '081-234-5678',
+    '+81' => '090-1234-5678',
+    '+86' => '138 0013 8000',
+    '+886' => '0912 345 678',
+    '+1' => '202-555-0123',
+    '+44' => '07700 900123',
+    '+39' => '06 1234 5678',
+    '+7' => '8 916 123 45 67',
+    _ => _internationalExample(dial),
+  };
+  static String _internationalExample(String dial) {
+    final country = callingCountries
+        .where((c) => c.dialCode == dial)
+        .firstOrNull;
+    for (final iso in IsoCode.values) {
+      if (iso.name != country?.code) continue;
+      final example = metadataExamplesByIsoCode[iso];
+      final digits = (example?.mobile.isNotEmpty == true)
+          ? example!.mobile
+          : example?.fixedLine;
+      if (digits != null && digits.isNotEmpty) return '$dial $digits';
+    }
+    return dial;
   }
 }

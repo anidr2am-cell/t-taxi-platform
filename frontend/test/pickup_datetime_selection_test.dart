@@ -106,6 +106,9 @@ void main() {
     await tester.pumpWidget(_testApp(controller));
     await tester.pump();
 
+    await tester.ensureVisible(find.byKey(const Key('manual_time_expander')));
+    await tester.tap(find.byKey(const Key('manual_time_expander')));
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('pickup_manual_time_field')),
       '09:00',

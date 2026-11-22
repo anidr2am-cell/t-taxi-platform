@@ -65,7 +65,13 @@ class FlightLookupApiService {
       );
     }
 
-    return (await _decodeResults(decoded)).first;
+    final results = _decodeResults(decoded);
+    if (results.isEmpty)
+      throw FlightLookupException(
+        errorCode: 'NO_DATA',
+        message: 'No flight found',
+      );
+    return results.first;
   }
 
   Future<List<FlightSearchResult>> searchFlights(
@@ -104,7 +110,7 @@ class FlightLookupApiService {
     }
     final data = Map<String, dynamic>.from(decoded['data'] as Map);
     final matches = data['matches'];
-    if (matches is List && matches.isNotEmpty) {
+    if (matches is List) {
       return matches
           .map(
             (item) => FlightSearchResult.fromJson(

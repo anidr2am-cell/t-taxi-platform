@@ -382,7 +382,7 @@ class StepConfirmation extends StatelessWidget {
               AppUi.summaryRow(
                 label: l10n.t('booking_contact_emergency_summary'),
                 value: BookingContactPreference.formatInternationalPhone(
-                  BookingContactPreference.normalizeInternationalPhone(
+                  BookingContactPreference.normalizeBookingPhone(
                     state.customerCountryCode,
                     state.customerPhone,
                   ),

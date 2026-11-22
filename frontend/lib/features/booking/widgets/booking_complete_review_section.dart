@@ -28,8 +28,11 @@ class BookingCompleteReviewSection extends StatelessWidget {
             children: [
               AppUi.summaryRow(
                 label: l10n.t('pickup_datetime'),
-                value: '${review.pickupDate ?? '-'} ${review.pickupTime ?? ''}'
-                    .trim(),
+                value: CustomerBookingFormat.pickupDate(
+                  l10n,
+                  review.pickupDate,
+                  review.pickupTime,
+                ),
               ),
               if (review.showFlightNumber)
                 AppUi.summaryRow(
@@ -78,7 +81,10 @@ class BookingCompleteReviewSection extends StatelessWidget {
               if (review.selectedVehicle != null)
                 AppUi.summaryRow(
                   label: l10n.t('vehicle'),
-                  value: CustomerBookingFormat.vehicle(l10n, review.selectedVehicle),
+                  value: CustomerBookingFormat.vehicle(
+                    l10n,
+                    review.selectedVehicle,
+                  ),
                 ),
               if (review.customerName.trim().isNotEmpty)
                 AppUi.summaryRow(
@@ -133,7 +139,7 @@ class BookingCompleteReviewSection extends StatelessWidget {
                 AppUi.summaryRow(
                   label: l10n.t('booking_contact_emergency_summary'),
                   value: BookingContactPreference.formatInternationalPhone(
-                    BookingContactPreference.normalizeInternationalPhone(
+                    BookingContactPreference.normalizeBookingPhone(
                       review.customerCountryCode,
                       review.customerPhone,
                     ),
