@@ -136,6 +136,23 @@ class BookingContactPreference {
   }
 
   static String normalizeBookingPhone(String dialCode, String localNumber) {
+    final raw = localNumber.trim();
+    if (raw.isEmpty || !RegExp(r'^[+0-9\s().-]+$').hasMatch(raw)) return '';
+    // Full international numbers are self-describing, including old drafts
+    // without a dial selection and numbers pasted under a different default.
+    if (raw.startsWith('+') || raw.startsWith('00')) {
+      try {
+        final phone = PhoneNumber.parse(
+          raw.startsWith('00') ? '+${raw.substring(2)}' : raw,
+        );
+        return phone.isValidLength() &&
+                RegExp(r'^\+[1-9]\d{6,14}$').hasMatch(phone.international)
+            ? phone.international
+            : '';
+      } catch (_) {
+        return '';
+      }
+    }
     final selected = dialCode.trim().toUpperCase();
     final country = callingCountries
         .where(
@@ -145,8 +162,6 @@ class BookingContactPreference {
         )
         .firstOrNull;
     final dial = (country?.dialCode ?? dialCode).replaceAll(RegExp(r'\D'), '');
-    final raw = localNumber.trim();
-    if (raw.isEmpty || !RegExp(r'^[+0-9\s().-]+$').hasMatch(raw)) return '';
     IsoCode? iso;
     // Shared calling codes retain the chosen dial prefix; metadata resolves the national number.
     final preferredIso = switch (dial) {

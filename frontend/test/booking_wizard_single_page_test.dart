@@ -156,7 +156,7 @@ void main() {
       expect(find.text('Please select an origin.'), findsOneWidget);
     });
 
-    testWidgets('shows flight number prefix icon for airport pickup', (
+    testWidgets('route does not repeat the schedule flight lookup', (
       tester,
     ) async {
       final saved = BookingWizardState(
@@ -180,7 +180,7 @@ void main() {
 
       expect(find.byType(BookingProgressHeader), findsOneWidget);
       expect(find.text('1/5 Route'), findsOneWidget);
-      expect(find.byIcon(Icons.flight_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.flight_outlined), findsNothing);
     });
 
     testWidgets('restores saved wizard state and clamps old step index', (

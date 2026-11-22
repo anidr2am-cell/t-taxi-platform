@@ -59,7 +59,7 @@ void main() {
     );
     expect(
       CustomerBookingFormat.pickupDateTime(ko, '2026-07-18T14:30:00+07:00'),
-      '2026년 7월 18일 오후 2:30',
+      '2026년 7월 18일 14:30 · 태국 시간',
     );
     expect(
       CustomerBookingFormat.pickupDateTime(th, '2026-07-18T14:30:00+07:00'),
