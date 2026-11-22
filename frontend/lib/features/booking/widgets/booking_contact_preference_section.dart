@@ -164,6 +164,7 @@ class _BookingContactPreferenceSectionState
                   decoration: InputDecoration(
                     labelText: l10n.t('phone'),
                     hintText: BookingContactPreference.phoneExample(dialCode),
+                    errorMaxLines: 8,
                     errorText:
                         _phoneController.text.trim().isNotEmpty &&
                             BookingContactPreference.contactPhone(

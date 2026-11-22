@@ -113,6 +113,7 @@ void main() {
             state: const BookingWizardState(
               messengerType: 'LINE',
               customerCountryCode: '+66',
+              customerPhone: '12',
             ),
             onTypeChanged: (_) {},
             onMessengerIdChanged: (_) {},
@@ -127,6 +128,7 @@ void main() {
       );
       expect(input.decoration!.labelText, l10n.t('phone'));
       expect(input.decoration!.hintText, '081-234-5678');
+      expect(find.text(l10n.t('ux_phone_invalid')), findsOneWidget);
       final guidance = find.text(l10n.t('ux_phone_help'));
       expect(guidance, findsOneWidget);
       expect(tester.widget<Text>(guidance).maxLines, isNull);
