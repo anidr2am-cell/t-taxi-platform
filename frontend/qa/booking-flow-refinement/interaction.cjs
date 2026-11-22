@@ -40,4 +40,3 @@ async function load(p,state){await p.goto(base+'/en/');await p.evaluate(state=>{
  });
  }finally{await b.close();fs.writeFileSync(out+'/refinement-results.json',JSON.stringify({realDevicesTested:false,results},null,2));}if(results.some(r=>!r.ok))process.exitCode=1;
 })().catch(e=>{console.error(e);process.exitCode=1});
-
