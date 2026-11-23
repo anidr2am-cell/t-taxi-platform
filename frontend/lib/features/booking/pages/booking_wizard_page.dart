@@ -492,16 +492,18 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
               onRetryRecommendation: _controller.loadRecommendation,
             ),
             const SizedBox(height: WizardCompact.sectionGap),
+            StepPassengersLuggage(
+              showPassengerInputs: false,
+              expandOptions: true,
+              embedded: true,
+              state: state,
+              controller: _controller,
+            ),
+            const SizedBox(height: WizardCompact.sectionGap),
             StepVehicleSelect(
               embedded: true,
               state: state,
               controller: _controller,
-              options: StepPassengersLuggage(
-                showPassengerInputs: false,
-                embedded: true,
-                state: state,
-                controller: _controller,
-              ),
             ),
             const SizedBox(height: WizardCompact.sectionGap),
             _buildTrustNotes(

@@ -17,6 +17,7 @@ class StepPassengersLuggage extends StatelessWidget {
   final bool embedded;
   final bool showPassengerInputs;
   final bool showOptions;
+  final bool expandOptions;
 
   const StepPassengersLuggage({
     super.key,
@@ -26,6 +27,7 @@ class StepPassengersLuggage extends StatelessWidget {
     this.embedded = false,
     this.showPassengerInputs = true,
     this.showOptions = true,
+    this.expandOptions = false,
   });
 
   Widget _counter({
@@ -158,7 +160,8 @@ class StepPassengersLuggage extends StatelessWidget {
         ],
         if (showOptions)
           ExpansionTile(
-            initiallyExpanded: state.nameSign || state.preferFemaleDriver,
+            initiallyExpanded:
+                expandOptions || state.nameSign || state.preferFemaleDriver,
             tilePadding: EdgeInsets.zero,
             title: Text(l10n.t('ux_options')),
             children: [
