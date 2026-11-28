@@ -26,6 +26,12 @@ test('blog build emits crawlable pages and SEO metadata', () => {
   assert.match(html, /href="https:\/\/open\.kakao\.com\/o\/suG4krMi"/);
   assert.match(html, /property="og:image" content="https:\/\/trider\.taxi\/blog\/assets\/og-default\.png"/);
   assert.doesNotMatch(html, /flutter_bootstrap|serviceWorker/);
+  for (const slug of ['pattaya-one-day-golf', 'pattaya-solo-golf-join']) {
+    const golfHtml = fs.readFileSync(path.join(dist, slug, 'index.html'), 'utf8');
+    const footer = golfHtml.match(/<aside class="cta">[\s\S]*?<\/aside>/)[0];
+    assert.match(footer, /href="https:\/\/open\.kakao\.com\/o\/s1NCCSWi"/);
+    assert.doesNotMatch(footer, /suG4krMi/);
+  }
   const defaultOg = fs.readFileSync(path.join(root, 'blog', 'assets', 'og-default.png'));
   assert.equal(defaultOg.readUInt32BE(16), 1200);
   assert.equal(defaultOg.readUInt32BE(20), 630);
