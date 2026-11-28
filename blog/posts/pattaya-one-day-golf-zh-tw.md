@@ -1,12 +1,12 @@
 ---
-title: "泰國芭達雅高爾夫｜兩人起同組開球與球場接送"
-description: "計畫到泰國芭達雅打高爾夫？Buddy Golf 提供至少兩位實際下場球員的同組開球諮詢，可一併確認飯店與球場往返接送。"
+title: "芭達雅高爾夫預訂與球場接送｜兩人起諮詢 Buddy Golf"
+description: "芭達雅（芭堤雅）高爾夫訂場與飯店、球場接送諮詢。至少兩位實際下場球員同行，球場未定也可先提供停留時間與人數。開球時間、兩人一組的安排及費用包含項目以確認回覆為準。"
 slug: pattaya-one-day-golf-zh-tw
 lang: zh-TW
 category: golf
 bookingService: GOLF_TRANSFER
 date: 2026-11-16
-updated: 2026-11-23
+updated: 2026-11-28
 translationKey: pattaya-one-day-golf
 cover: /blog/assets/photos/chee-chan-course.jpg
 coverWidth: 1200
@@ -14,6 +14,14 @@ coverHeight: 863
 ---
 
 來芭達雅自由行，想和朋友或家人留一天打球？Buddy Golf 可協助您確認球場、開球時間及接送安排。國際旅客的高爾夫服務為**至少兩位實際下場球員，由同行者單獨成組**。是否接受兩人一組，仍以球場當日規定與可訂時段為準。
+
+[查看官方聯絡方式，詢問芭達雅高爾夫預訂與接送](/zh/#support) · [透過 WhatsApp 詢問](https://wa.me/66815693445)
+
+第一次可以先寫「芭達雅停留：○月／實際下場2人／球場未定」。搜尋「芭堤雅高爾夫」的旅客也可參考本頁；兩者是 Pattaya 的不同中文譯名。
+
+## 訂場前先看清楚費用包含什麼
+
+請分別確認每人果嶺費、桿弟費、球車費，以及需現場另付的桿弟小費。接送另核對每輛車的車資、單程或來回、飯店上車地點與行李條件。實際球場、開球時間、兩人一組的安排與最終報價，均以確認回覆為準。
 
 ## 先確認希望打球的時間
 
