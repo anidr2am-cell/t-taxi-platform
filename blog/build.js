@@ -268,7 +268,7 @@ function build() {
       ? `<img class="cover" src="${escapeHtml(post.cover)}" alt="" loading="lazy" decoding="async" width="${Number(post.coverWidth)}" height="${Number(post.coverHeight)}">`
       : '';
     const bookingHref = post.bookingService ? `/booking?service=${post.bookingService}&lang=${bookingLanguage(post.lang)}` : `/booking?lang=${bookingLanguage(post.lang)}`;
-    const supportUrl = post.lang === 'ko' && post.translationKey === 'pattaya-one-day-golf' ? 'https://open.kakao.com/o/s1NCCSWi' : ui.supportUrl;
+    const supportUrl = post.lang === 'ko' && ['pattaya-one-day-golf', 'pattaya-solo-golf-join'].includes(post.translationKey) ? 'https://open.kakao.com/o/s1NCCSWi' : ui.supportUrl;
     const ctaTitle = SERVICE_CTA[post.bookingService]?.[post.lang] || ui.cta;
     const body = `<main><article class="article"><nav><a href="${listPath(post.lang)}">${ui.blog}</a> / <a href="${categoryPath(post.lang, post.category)}">${CATEGORY_LABELS[post.lang][post.category]}</a></nav>${languageSwitcher(translations, post.lang)}<h1>${escapeHtml(post.title)}</h1><p class="updated">${ui.updated}: <time datetime="${post.updated}">${post.updated}</time></p>${cover}<div class="content">${localizeBookingLinks(marked.parse(post.content), post.lang)}</div>${relatedBlock(post, posts)}<aside class="cta"><strong>${escapeHtml(ctaTitle)}</strong><div><a class="cta-primary" href="${escapeHtml(bookingHref)}">${ui.book}</a><a class="cta-secondary" href="${supportUrl}" rel="noopener noreferrer">${ui.support}</a></div></aside></article></main>`;
     write(path.join(post.slug, 'index.html'), page({
